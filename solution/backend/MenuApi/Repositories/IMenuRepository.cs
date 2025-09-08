@@ -18,4 +18,14 @@ public interface IMenuRepository
     Task<ComboDto> CreateComboAsync(CreateComboDto dto, string user, CancellationToken ct);
     Task<ComboDto> UpdateComboAsync(long id, UpdateComboDto dto, string user, CancellationToken ct);
     Task DeleteComboAsync(long id, string user, CancellationToken ct);
+
+    // History
+    Task<(IReadOnlyList<HistoryDto> Items, int Total)> ListHistoryAsync(HistoryQueryDto query, CancellationToken ct);
+
+    // Modifiers CRUD
+    Task<(IReadOnlyList<ModifierDto> Items, int Total)> ListModifiersAsync(ModifierQueryDto query, CancellationToken ct);
+    Task<ModifierDto?> GetModifierAsync(long id, CancellationToken ct);
+    Task<ModifierDto> CreateModifierAsync(CreateModifierDto dto, string user, CancellationToken ct);
+    Task<ModifierDto> UpdateModifierAsync(long id, UpdateModifierDto dto, string user, CancellationToken ct);
+    Task DeleteModifierAsync(long id, string user, CancellationToken ct);
 }

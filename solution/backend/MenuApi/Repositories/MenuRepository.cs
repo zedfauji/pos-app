@@ -13,6 +13,174 @@ public sealed class MenuRepository : IMenuRepository
         _dataSource = dataSource;
     }
 
+    // History
+    public async Task<(IReadOnlyList<HistoryDto> Items, int Total)> ListHistoryAsync(HistoryQueryDto query, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        var limit = Math.Clamp(query.PageSize, 1, 200);
+        var offset = (Math.Max(1, query.Page) - 1) * limit;
+        const string sql = @"SELECT history_id, entity_type, entity_id, action, version, changed_at, changed_by, old_value, new_value
+                             FROM menu.menu_history WHERE entity_type = @t AND entity_id = @i
+                             ORDER BY changed_at DESC LIMIT @l OFFSET @o";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@t", query.EntityType);
+        cmd.Parameters.AddWithValue("@i", query.EntityId);
+        cmd.Parameters.AddWithValue("@l", limit);
+        cmd.Parameters.AddWithValue("@o", offset);
+        var list = new List<HistoryDto>();
+        await using (var rdr = await cmd.ExecuteReaderAsync(ct))
+        {
+            while (await rdr.ReadAsync(ct))
+            {
+                list.Add(new HistoryDto(
+                    rdr.GetInt64(0), rdr.GetString(1), rdr.GetInt64(2), rdr.GetString(3), rdr.IsDBNull(4) ? null : rdr.GetInt32(4),
+                    rdr.GetFieldValue<DateTimeOffset>(5), rdr.IsDBNull(6) ? null : rdr.GetString(6),
+                    rdr.IsDBNull(7) ? null : rdr.GetFieldValue<object>(7),
+                    rdr.IsDBNull(8) ? null : rdr.GetFieldValue<object>(8)
+                ));
+            }
+        }
+        const string cnt = "SELECT COUNT(1) FROM menu.menu_history WHERE entity_type = @t AND entity_id = @i";
+        await using var ccmd = new NpgsqlCommand(cnt, conn);
+        ccmd.Parameters.AddWithValue("@t", query.EntityType);
+        ccmd.Parameters.AddWithValue("@i", query.EntityId);
+        var total = Convert.ToInt32(await ccmd.ExecuteScalarAsync(ct));
+        return (list, total);
+    }
+
+    // Modifiers CRUD
+    public async Task<(IReadOnlyList<ModifierDto> Items, int Total)> ListModifiersAsync(ModifierQueryDto query, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        var where = new List<string>();
+        await using var cmd = new NpgsqlCommand { Connection = conn };
+        if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            where.Add("name ILIKE @q");
+            cmd.Parameters.AddWithValue("@q", $"%{query.Q.Trim()}%");
+        }
+        var whereSql = where.Count > 0 ? (" WHERE " + string.Join(" AND ", where)) : string.Empty;
+        var limit = Math.Clamp(query.PageSize, 1, 200);
+        var offset = (Math.Max(1, query.Page) - 1) * limit;
+        cmd.CommandText = $@"SELECT modifier_id, name, description, is_required, allow_multiple, max_selections
+                             FROM menu.modifiers{whereSql}
+                             ORDER BY name LIMIT @l OFFSET @o";
+        cmd.Parameters.AddWithValue("@l", limit);
+        cmd.Parameters.AddWithValue("@o", offset);
+        var list = new List<ModifierDto>();
+        await using (var rdr = await cmd.ExecuteReaderAsync(ct))
+        {
+            while (await rdr.ReadAsync(ct))
+            {
+                var id = rdr.GetInt64(0);
+                var options = await GetModifierOptionsAsync(conn, id, ct);
+                list.Add(new ModifierDto(id, rdr.GetString(1), rdr.GetBoolean(3), rdr.GetBoolean(4), rdr.IsDBNull(5) ? null : rdr.GetInt32(5), options));
+            }
+        }
+        await using var cntCmd = new NpgsqlCommand($"SELECT COUNT(1) FROM menu.modifiers{whereSql}", conn);
+        foreach (NpgsqlParameter p in cmd.Parameters)
+        {
+            if (p.ParameterName is "@l" or "@o") continue;
+            cntCmd.Parameters.AddWithValue(p.ParameterName, p.Value);
+        }
+        var total = Convert.ToInt32(await cntCmd.ExecuteScalarAsync(ct));
+        return (list, total);
+    }
+
+    public async Task<ModifierDto?> GetModifierAsync(long id, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string sql = @"SELECT modifier_id, name, description, is_required, allow_multiple, max_selections FROM menu.modifiers WHERE modifier_id = @id";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@id", id);
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        if (!await rdr.ReadAsync(ct)) return null;
+        var options = await GetModifierOptionsAsync(conn, id, ct);
+        return new ModifierDto(id, rdr.GetString(1), rdr.GetBoolean(3), rdr.GetBoolean(4), rdr.IsDBNull(5) ? null : rdr.GetInt32(5), options);
+    }
+
+    public async Task<ModifierDto> CreateModifierAsync(CreateModifierDto dto, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string ins = @"INSERT INTO menu.modifiers(name, description, is_required, allow_multiple, min_selections, max_selections)
+                            VALUES(@n, @d, @r, @m, @min, @max) RETURNING modifier_id";
+        await using var cmd = new NpgsqlCommand(ins, conn, tx);
+        cmd.Parameters.AddWithValue("@n", dto.Name);
+        cmd.Parameters.AddWithValue("@d", (object?)dto.Description ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@r", dto.IsRequired);
+        cmd.Parameters.AddWithValue("@m", dto.AllowMultiple);
+        cmd.Parameters.AddWithValue("@min", (object?)dto.MinSelections ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@max", (object?)dto.MaxSelections ?? DBNull.Value);
+        var id = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
+        foreach (var opt in dto.Options)
+        {
+            const string insOpt = @"INSERT INTO menu.modifier_options(modifier_id, name, price_delta, is_available, sort_order)
+                                   VALUES(@mid, @name, @delta, @avail, @sort)";
+            await using var oc = new NpgsqlCommand(insOpt, conn, tx);
+            oc.Parameters.AddWithValue("@mid", id);
+            oc.Parameters.AddWithValue("@name", opt.Name);
+            oc.Parameters.AddWithValue("@delta", opt.PriceDelta);
+            oc.Parameters.AddWithValue("@avail", opt.IsAvailable);
+            oc.Parameters.AddWithValue("@sort", opt.SortOrder);
+            await oc.ExecuteNonQueryAsync(ct);
+        }
+        await LogHistoryAsync(conn, tx, "modifier", id, "create", null, JsonSerializer.SerializeToElement(dto), null, user, ct);
+        await tx.CommitAsync(ct);
+        var result = await GetModifierAsync(id, ct);
+        return result!;
+    }
+
+    public async Task<ModifierDto> UpdateModifierAsync(long id, UpdateModifierDto dto, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string upd = @"UPDATE menu.modifiers SET name = COALESCE(@n, name), description = COALESCE(@d, description), is_required = COALESCE(@r, is_required), allow_multiple = COALESCE(@m, allow_multiple), min_selections = COALESCE(@min, min_selections), max_selections = COALESCE(@max, max_selections) WHERE modifier_id = @id";
+        await using var cmd = new NpgsqlCommand(upd, conn, tx);
+        cmd.Parameters.AddWithValue("@n", (object?)dto.Name ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@d", (object?)dto.Description ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@r", (object?)dto.IsRequired ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@m", (object?)dto.AllowMultiple ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@min", (object?)dto.MinSelections ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@max", (object?)dto.MaxSelections ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync(ct);
+        if (dto.Options is not null)
+        {
+            const string del = "DELETE FROM menu.modifier_options WHERE modifier_id = @id";
+            await using (var dc = new NpgsqlCommand(del, conn, tx)) { dc.Parameters.AddWithValue("@id", id); await dc.ExecuteNonQueryAsync(ct); }
+            foreach (var opt in dto.Options)
+            {
+                const string insOpt = @"INSERT INTO menu.modifier_options(modifier_id, name, price_delta, is_available, sort_order)
+                                       VALUES(@mid, @name, @delta, @avail, @sort)";
+                await using var oc = new NpgsqlCommand(insOpt, conn, tx);
+                oc.Parameters.AddWithValue("@mid", id);
+                oc.Parameters.AddWithValue("@name", opt.Name);
+                oc.Parameters.AddWithValue("@delta", opt.PriceDelta);
+                oc.Parameters.AddWithValue("@avail", opt.IsAvailable);
+                oc.Parameters.AddWithValue("@sort", opt.SortOrder);
+                await oc.ExecuteNonQueryAsync(ct);
+            }
+        }
+        await LogHistoryAsync(conn, tx, "modifier", id, "update", null, JsonSerializer.SerializeToElement(dto), null, user, ct);
+        await tx.CommitAsync(ct);
+        var result = await GetModifierAsync(id, ct);
+        return result!;
+    }
+
+    public async Task DeleteModifierAsync(long id, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        // Optional: check links and prevent delete if linked; for now cascade via fk on options and link table handles separately
+        const string delOpts = "DELETE FROM menu.modifier_options WHERE modifier_id = @id";
+        await using (var dc = new NpgsqlCommand(delOpts, conn, tx)) { dc.Parameters.AddWithValue("@id", id); await dc.ExecuteNonQueryAsync(ct); }
+        const string delMod = "DELETE FROM menu.modifiers WHERE modifier_id = @id";
+        await using (var dm = new NpgsqlCommand(delMod, conn, tx)) { dm.Parameters.AddWithValue("@id", id); await dm.ExecuteNonQueryAsync(ct); }
+        await LogHistoryAsync(conn, tx, "modifier", id, "delete", null, null, null, user, ct);
+        await tx.CommitAsync(ct);
+    }
+
     // Items
     public async Task<(IReadOnlyList<MenuItemDto> Items, int Total)> ListItemsAsync(MenuItemQueryDto query, CancellationToken ct)
     {

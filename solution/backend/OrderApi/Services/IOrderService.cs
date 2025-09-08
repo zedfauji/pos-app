@@ -11,4 +11,6 @@ public interface IOrderService
     Task<OrderDto> UpdateItemAsync(long orderId, UpdateOrderItemDto item, CancellationToken ct);
     Task<OrderDto> DeleteItemAsync(long orderId, long orderItemId, CancellationToken ct);
     Task<OrderDto> CloseOrderAsync(long orderId, CancellationToken ct);
+    Task<PagedResult<OrderLogDto>> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct);
+    Task RecalculateTotalsAsync(long orderId, CancellationToken ct);
 }

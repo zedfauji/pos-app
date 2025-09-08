@@ -7,6 +7,7 @@ public sealed class InMemoryOrderService : IOrderService
     private long _nextOrderId = 1;
     private long _nextOrderItemId = 1;
     private readonly Dictionary<long, OrderDto> _orders = new();
+    private readonly Dictionary<long, List<OrderLogDto>> _logs = new();
 
     public Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct)
     {
@@ -25,6 +26,7 @@ public sealed class InMemoryOrderService : IOrderService
         var subtotal = items.Sum(x => x.LineTotal);
         var order = new OrderDto(id, req.SessionId, req.TableId, "open", subtotal, 0m, 0m, subtotal, items.Sum(x => x.Profit), items);
         _orders[id] = order;
+        _logs[id] = new List<OrderLogDto>();
         return Task.FromResult(order);
     }
 
@@ -93,5 +95,26 @@ public sealed class InMemoryOrderService : IOrderService
         var closed = order with { Status = "closed" };
         _orders[orderId] = closed;
         return Task.FromResult(closed);
+    }
+
+    public Task<PagedResult<OrderLogDto>> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct)
+    {
+        if (!_logs.TryGetValue(orderId, out var list)) list = new List<OrderLogDto>();
+        var limit = Math.Clamp(pageSize, 1, 200);
+        var offset = (Math.Max(1, page) - 1) * limit;
+        var items = list.OrderByDescending(l => l.CreatedAt).Skip(offset).Take(limit).ToList();
+        return Task.FromResult(new PagedResult<OrderLogDto>(items, list.Count));
+    }
+
+    public Task RecalculateTotalsAsync(long orderId, CancellationToken ct)
+    {
+        // In-memory recalculation
+        if (_orders.TryGetValue(orderId, out var order))
+        {
+            var subtotal = order.Items.Sum(x => x.LineTotal);
+            var profit = order.Items.Sum(x => x.Profit);
+            _orders[orderId] = order with { Subtotal = subtotal, ProfitTotal = profit, Total = subtotal };
+        }
+        return Task.CompletedTask;
     }
 }

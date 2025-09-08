@@ -23,6 +23,7 @@ public sealed class DatabaseInitializer : IHostedService
 
         await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
         await EnsureMenuSchemaAsync(conn, cancellationToken);
+        await SeedAsync(conn, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -128,5 +129,80 @@ create index if not exists ix_menu_history_entity on menu.menu_history(entity_ty
 ";
         await using var cmd = new NpgsqlCommand(sql, conn);
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    private static async Task SeedAsync(NpgsqlConnection conn, CancellationToken ct)
+    {
+        // Seed minimal data if empty
+        const string hasAny = "SELECT COUNT(1) FROM menu.menu_items";
+        await using (var check = new NpgsqlCommand(hasAny, conn))
+        {
+            var count = Convert.ToInt32(await check.ExecuteScalarAsync(ct));
+            if (count > 0) return;
+        }
+
+        // Insert items
+        long coffeeId, burgerId, friesId;
+        await using (var cmd = new NpgsqlCommand(@"INSERT INTO menu.menu_items(sku_id, name, description, category, group_name, vendor_price, selling_price, picture_url, is_discountable, is_part_of_combo, is_available)
+                                                 VALUES('BEV-COF-001','Coffee','Hot brewed coffee','Beverages','Hot Drinks',0.50,2.50,'',true,true,true)
+                                                 RETURNING menu_item_id", conn))
+        {
+            coffeeId = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
+        }
+        await using (var cmd = new NpgsqlCommand(@"INSERT INTO menu.menu_items(sku_id, name, description, category, group_name, vendor_price, selling_price, picture_url, is_discountable, is_part_of_combo, is_available)
+                                                 VALUES('ENT-BUR-001','Classic Burger','Beef patty with lettuce & tomato','Entrees','Burgers',2.00,7.99,'',true,true,true)
+                                                 RETURNING menu_item_id", conn))
+        {
+            burgerId = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
+        }
+        await using (var cmd = new NpgsqlCommand(@"INSERT INTO menu.menu_items(sku_id, name, description, category, group_name, vendor_price, selling_price, picture_url, is_discountable, is_part_of_combo, is_available)
+                                                 VALUES('SID-FRY-001','French Fries','Crispy fries','Sides','Fries',0.40,2.99,'',true,true,true)
+                                                 RETURNING menu_item_id", conn))
+        {
+            friesId = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
+        }
+
+        // Size modifier for coffee
+        long sizeModId;
+        await using (var cmd = new NpgsqlCommand(@"INSERT INTO menu.modifiers(name, description, is_required, allow_multiple, min_selections, max_selections)
+                                                 VALUES('Size','Choose a size', true, false, 1, 1)
+                                                 RETURNING modifier_id", conn))
+        {
+            sizeModId = Convert.ToInt64(await cmd.ExecuteScalarAsync(ct));
+        }
+        // Options
+        foreach (var tuple in new[] { ("Small",0m,1), ("Medium",0.50m,2), ("Large",1.00m,3) })
+        {
+            await using var op = new NpgsqlCommand(@"INSERT INTO menu.modifier_options(modifier_id, name, price_delta, is_available, sort_order)
+                                                    VALUES(@m, @n, @d, true, @s)", conn);
+            op.Parameters.AddWithValue("@m", sizeModId);
+            op.Parameters.AddWithValue("@n", tuple.Item1);
+            op.Parameters.AddWithValue("@d", tuple.Item2);
+            op.Parameters.AddWithValue("@s", tuple.Item3);
+            await op.ExecuteNonQueryAsync(ct);
+        }
+        // Link Coffee -> Size
+        await using (var link = new NpgsqlCommand(@"INSERT INTO menu.menu_item_modifiers(menu_item_id, modifier_id, sort_order, is_optional) VALUES(@mi, @mo, 1, false)", conn))
+        {
+            link.Parameters.AddWithValue("@mi", coffeeId);
+            link.Parameters.AddWithValue("@mo", sizeModId);
+            await link.ExecuteNonQueryAsync(ct);
+        }
+
+        // Combo
+        long comboId;
+        await using (var cc = new NpgsqlCommand(@"INSERT INTO menu.combos(name, description, price, is_discountable, is_available, picture_url)
+                                                VALUES('Burger Combo','Burger + Fries + Coffee', 11.99, true, true, '')
+                                                RETURNING combo_id", conn))
+        {
+            comboId = Convert.ToInt64(await cc.ExecuteScalarAsync(ct));
+        }
+        foreach (var mid in new[] { burgerId, friesId, coffeeId })
+        {
+            await using var ci = new NpgsqlCommand(@"INSERT INTO menu.combo_items(combo_id, menu_item_id, quantity, is_required) VALUES(@c, @m, 1, true)", conn);
+            ci.Parameters.AddWithValue("@c", comboId);
+            ci.Parameters.AddWithValue("@m", mid);
+            await ci.ExecuteNonQueryAsync(ct);
+        }
     }
 }

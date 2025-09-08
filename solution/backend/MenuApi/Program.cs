@@ -12,7 +12,15 @@ builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 // Npgsql DataSource (dev: use LocalConnectionString)
 var pgSection = builder.Configuration.GetSection("Postgres");
-var connString = pgSection.GetValue<string>("LocalConnectionString") ?? pgSection.GetValue<string>("CloudRunSocketConnectionString");
+string? connString;
+if (builder.Environment.IsDevelopment())
+{
+    connString = pgSection.GetValue<string>("LocalConnectionString");
+}
+else
+{
+    connString = pgSection.GetValue<string>("CloudRunSocketConnectionString");
+}
 if (!string.IsNullOrWhiteSpace(connString))
 {
     var dataSource = new NpgsqlDataSourceBuilder(connString).Build();
