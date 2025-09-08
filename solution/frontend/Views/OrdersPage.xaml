@@ -1,0 +1,46 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.OrdersPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar -->
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock x:Name="Title" Text="Orders" FontSize="20" FontWeight="SemiBold"/>
+            <Button x:Name="BtnStart" Content="Start New Order" Click="Start_Click"/>
+            <Button x:Name="BtnSaveDraft" Content="Save Draft" Click="SaveDraft_Click"/>
+            <Button x:Name="BtnOpenDraft" Content="Open Draft" Click="OpenDraft_Click"/>
+            <Button x:Name="BtnRefresh" Content="Refresh" Click="Refresh_Click"/>
+            <Button x:Name="BtnJobs" Content="Job History" Click="Jobs_Click"/>
+            <Button x:Name="BtnNotifications" Content="Notifications" Click="Notifications_Click"/>
+        </StackPanel>
+
+        <!-- Orders History Grid -->
+        <ct:DataGrid Grid.Row="1"
+                     x:Name="OrdersGrid"
+                     AutoGenerateColumns="False"
+                     IsReadOnly="True"
+                     ItemsSource="{Binding Orders}">
+            <ct:DataGrid.Columns>
+                <ct:DataGridTextColumn Header="orderId" Binding="{Binding OrderId}" Width="2*"/>
+                <ct:DataGridTextColumn Header="vendorName" Binding="{Binding VendorName}" Width="2*"/>
+                <ct:DataGridTextColumn Header="itemsCount" Binding="{Binding Items.Count}" Width="*"/>
+                <ct:DataGridTextColumn Header="totalAmount" Binding="{Binding TotalAmount}" Width="*"/>
+                <ct:DataGridTextColumn Header="status" Binding="{Binding Status}" Width="*"/>
+                <ct:DataGridTextColumn Header="createdAt" Binding="{Binding CreatedAt}" Width="2*"/>
+            </ct:DataGrid.Columns>
+        </ct:DataGrid>
+
+        <!-- Notifications Panel (on demand via button) -->
+        <InfoBar Grid.Row="2" x:Name="Info" IsOpen="False"/>
+    </Grid>
+</Page>

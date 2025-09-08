@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+        <OutputType>WinExe</OutputType>
+
+        <!-- WinUI 3 -->
+        <UseWinUI>true</UseWinUI>
+        <EnableMsixTooling>true</EnableMsixTooling>
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <!-- Project Options -->
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>MagiDesk.Frontend</RootNamespace>
+
+        <!-- App Options -->
+        <UseRidGraph>true</UseRidGraph>
+        <Platforms>x86;x64;ARM64</Platforms>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+        <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)')) >= 8">win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)')) &lt; 8">win10-x86;win10-x64;win10-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="Assets\SplashScreen.scale-200.png" />
+        <Content Include="Assets\LockScreenLogo.scale-200.png" />
+        <Content Include="Assets\Square150x150Logo.scale-200.png" />
+        <Content Include="Assets\Square44x44Logo.scale-200.png" />
+        <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+        <Content Include="Assets\StoreLogo.png" />
+        <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+        <Content Include="Assets\App.ico" Condition="Exists('Assets\App.ico')" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\shared\MagiDesk.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3405.78" />
+        <PackageReference Include="Npgsql" Version="8.0.3" />
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.8" />
+        <PackageReference Include="System.Net.Http.Json" Version="9.0.8" />
+
+        <Manifest Include="$(ApplicationManifest)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="Services\FirestoreSettingsService.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <!-- Allow isolating XAML compile by excluding complex pages when -p:XamlSkip=true -->
+    <ItemGroup Condition="'$(XamlSkip)'=='true'">
+        <Page Remove="Views\BillingPage.xaml" />
+        <Page Remove="Views\TablesPage.xaml" />
+        <Page Remove="Views\UsersPage.xaml" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(XamlSkipAll)'=='true'">
+        <Page Remove="Views\*.xaml" />
+        <Page Remove="Dialogs\*.xaml" />
+    </ItemGroup>
+
+    <!-- Keep only MainPage for isolation when -p:XamlOnlyMain=true -->
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true'">
+        <Page Remove="Views\*.xaml" />
+        <Page Remove="Dialogs\*.xaml" />
+        <Compile Remove="Views\*.xaml.cs" />
+        <Compile Remove="Dialogs\*.xaml.cs" />
+        <Page Include="Views\MainPage.xaml" />
+        <Compile Include="Views\MainPage.xaml.cs" />
+    </ItemGroup>
+
+    <!-- Optionally include specific pages during isolation builds -->
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeBilling)'=='true'">
+        <Page Include="Views\BillingPage.xaml" />
+        <Compile Include="Views\BillingPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeTables)'=='true'">
+        <Page Include="Views\TablesPage.xaml" />
+        <Compile Include="Views\TablesPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeUsers)'=='true'">
+        <Page Include="Views\UsersPage.xaml" />
+        <Compile Include="Views\UsersPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeItems)'=='true'">
+        <Page Include="Views\ItemsPage.xaml" />
+        <Compile Include="Views\ItemsPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeVendors)'=='true'">
+        <Page Include="Views\VendorsPage.xaml" />
+        <Compile Include="Views\VendorsPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrders)'=='true'">
+        <Page Include="Views\OrdersPage.xaml" />
+        <Compile Include="Views\OrdersPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrderBuilder)'=='true'">
+        <Page Include="Views\OrderBuilderPage.xaml" />
+        <Compile Include="Views\OrderBuilderPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeInventory)'=='true'">
+        <Page Include="Views\InventoryPage.xaml" />
+        <Compile Include="Views\InventoryPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
+        <Page Include="Views\CashFlowPage.xaml" />
+        <Compile Include="Views\CashFlowPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeSettings)'=='true'">
+        <Page Include="Views\SettingsPage.xaml" />
+        <Compile Include="Views\SettingsPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeLogin)'=='true'">
+        <Page Include="Views\LoginPage.xaml" />
+        <Compile Include="Views\LoginPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeDashboard)'=='true'">
+        <Page Include="Views\DashboardPage.xaml" />
+        <Compile Include="Views\DashboardPage.xaml.cs" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrderBuilderDialog)'=='true'">
+        <Page Include="Dialogs\OrderBuilderDialog.xaml" />
+        <Compile Include="Dialogs\OrderBuilderDialog.xaml.cs" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(XamlOnlyMain)'=='true'">
+        <DefineConstants>$(DefineConstants);XAML_ONLY_MAIN</DefineConstants>
+    </PropertyGroup>
+
+    <!-- 
+        Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+        Tools extension to be activated for this project even if the Windows App SDK Nuget
+        package has not yet been restored.
+    -->
+    <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+        <ProjectCapability Include="Msix"/>
+    </ItemGroup>
+
+    <!-- 
+        Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution 
+        Explorer "Package and Publish" context menu entry to be enabled for this project even if 
+        the Windows App SDK Nuget package has not yet been restored.
+    -->
+    <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+        <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+    </PropertyGroup>
+</Project>

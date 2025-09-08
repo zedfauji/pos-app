@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{657AD4B1-2FB5-47E6-A690-9379106ABBBF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Backend", "backend\MagiDesk.Backend\MagiDesk.Backend.csproj", "{AAF6FF87-7EED-497D-92BA-1482A96E8802}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Shared", "shared\MagiDesk.Shared.csproj", "{497194E1-CED4-421C-A36D-94A05ABB0886}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Frontend", "frontend\MagiDesk.Frontend.csproj", "{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AAF6FF87-7EED-497D-92BA-1482A96E8802}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAF6FF87-7EED-497D-92BA-1482A96E8802}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAF6FF87-7EED-497D-92BA-1482A96E8802}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAF6FF87-7EED-497D-92BA-1482A96E8802}.Release|Any CPU.Build.0 = Release|Any CPU
+		{497194E1-CED4-421C-A36D-94A05ABB0886}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{497194E1-CED4-421C-A36D-94A05ABB0886}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{497194E1-CED4-421C-A36D-94A05ABB0886}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{497194E1-CED4-421C-A36D-94A05ABB0886}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}.Debug|Any CPU.Build.0 = Debug|x86
+		{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}.Release|Any CPU.ActiveCfg = Release|x86
+		{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}.Release|Any CPU.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{AAF6FF87-7EED-497D-92BA-1482A96E8802} = {657AD4B1-2FB5-47E6-A690-9379106ABBBF}
+	EndGlobalSection
+EndGlobal

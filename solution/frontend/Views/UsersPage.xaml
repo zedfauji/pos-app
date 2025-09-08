@@ -1,0 +1,38 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.UsersPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="12" RowSpacing="8">
+        <controls:DataGrid x:Name="Grid"
+                           AutoGenerateColumns="False"
+                           IsReadOnly="True"
+                           SelectionMode="Single"
+                           ItemsSource="{Binding Users}"
+                           RightTapped="Grid_RightTapped">
+            <controls:DataGrid.Columns>
+                <controls:DataGridTextColumn Header="Username" Binding="{Binding Username}"/>
+                <controls:DataGridTextColumn Header="Role" Binding="{Binding Role}"/>
+                <controls:DataGridTextColumn Header="Created" Binding="{Binding CreatedAt}"/>
+                <controls:DataGridTextColumn Header="Updated" Binding="{Binding UpdatedAt}"/>
+                <controls:DataGridCheckBoxColumn Header="Active" Binding="{Binding IsActive}"/>
+            </controls:DataGrid.Columns>
+            <controls:DataGrid.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="Refresh" Icon="Refresh" Click="Refresh_Click" />
+                    <MenuFlyoutSeparator/>
+                    <MenuFlyoutItem Text="New" Icon="Add" Click="New_Click" />
+                    <MenuFlyoutItem Text="Edit" Icon="Edit" Click="Edit_Click" />
+                    <MenuFlyoutItem Text="Toggle Active" Icon="Accept" Click="Deactivate_Click" />
+                    <MenuFlyoutItem Text="Delete" Icon="Delete" Click="Delete_Click" />
+                </MenuFlyout>
+            </controls:DataGrid.ContextFlyout>
+        </controls:DataGrid>
+
+        <InfoBar x:Name="Info" IsOpen="False" Severity="Success"/>
+    </Grid>
+</Page>

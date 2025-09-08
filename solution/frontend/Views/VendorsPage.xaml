@@ -1,0 +1,55 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.VendorsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="Title" Text="Vendors" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+        <InfoBar x:Name="FeedbackBar" Grid.Row="1" IsOpen="False" Severity="Informational" Margin="0,0,0,8"/>
+
+        <ct:DataGrid Grid.Row="2"
+                     x:Name="VendorsGrid"
+                     AutoGenerateColumns="False"
+                     IsReadOnly="True"
+                     SelectionMode="Single"
+                     DoubleTapped="VendorsGrid_DoubleTapped"
+                     ItemsSource="{Binding Vendors}">
+            <ct:DataGrid.Columns>
+                <ct:DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*"/>
+                <ct:DataGridTextColumn Header="Contact" Binding="{Binding ContactInfo}" Width="3*"/>
+                <ct:DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
+                <ct:DataGridTextColumn Header="Budget" Binding="{Binding Budget}" Width="*"/>
+                <ct:DataGridTextColumn Header="Reminder" Binding="{Binding Reminder}" Width="*"/>
+            </ct:DataGrid.Columns>
+            <ct:DataGrid.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="Edit" Click="Vendor_Edit_Click" Tag="{Binding}"/>
+                    <MenuFlyoutItem Text="Delete" Click="Vendor_Delete_Click" Tag="{Binding}"/>
+                    <MenuFlyoutSeparator/>
+                    <MenuFlyoutItem Text="View Items" Click="Vendor_ViewItems_Click" Tag="{Binding}"/>
+                    <MenuFlyoutSeparator/>
+                    <MenuFlyoutSubItem Text="Export Items">
+                        <MenuFlyoutItem Text="CSV" Click="Vendor_ExportCsv_Click" Tag="{Binding}"/>
+                        <MenuFlyoutItem Text="JSON" Click="Vendor_ExportJson_Click" Tag="{Binding}"/>
+                        <MenuFlyoutItem Text="YAML" Click="Vendor_ExportYaml_Click" Tag="{Binding}"/>
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSubItem Text="Import Items">
+                        <MenuFlyoutItem Text="CSV" Click="Vendor_ImportCsv_Click" Tag="{Binding}"/>
+                        <MenuFlyoutItem Text="JSON" Click="Vendor_ImportJson_Click" Tag="{Binding}"/>
+                        <MenuFlyoutItem Text="YAML" Click="Vendor_ImportYaml_Click" Tag="{Binding}"/>
+                    </MenuFlyoutSubItem>
+                </MenuFlyout>
+            </ct:DataGrid.ContextFlyout>
+        </ct:DataGrid>
+    </Grid>
+</Page>

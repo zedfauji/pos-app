@@ -1,0 +1,33 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.LoginPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="32" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock x:Name="TitleText" Text="Sign in" FontSize="24" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock x:Name="LanguageLabel" Text="Language:" Margin="24,0,0,0"/>
+                <ComboBox x:Name="LanguageSelector" Width="100" SelectionChanged="LanguageSelector_SelectionChanged">
+                    <ComboBoxItem Content="Eng"/>
+                    <ComboBoxItem Content="ESP"/>
+                </ComboBox>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Spacing="12" Width="420">
+            <InfoBar x:Name="Info" IsOpen="False" Severity="Error"/>
+            <TextBox x:Name="UsernameBox" PlaceholderText="Username"/>
+            <PasswordBox x:Name="PasswordBox" Header="Passcode"/>
+            <Button x:Name="LoginButton" Content="Login" Click="Login_Click"/>
+        </StackPanel>
+    </Grid>
+</Page>

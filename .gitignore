@@ -1,0 +1,37 @@
+# .NET build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# VS/IDE
+.vscode/
+.vs/
+*.user
+*.suo
+*.cache
+*.logs
+
+# WinUI/Packaging
+*.appx*
+*.msix*
+Package.StoreAssociation.xml
+
+# Logs
+*.log
+*.binlog
+
+# User-specific
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Node/npm (if any future tooling)
+node_modules/
+
+# Secrets
+solution/backend/config/serviceAccount.json
+# Any other potential secrets files
+*.secret.json
+*.secrets.json
+secrets/*.json

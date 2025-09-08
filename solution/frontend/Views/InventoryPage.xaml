@@ -1,0 +1,38 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.InventoryPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Inventory" FontSize="20" FontWeight="SemiBold"/>
+            <Button Content="Sync Product Names" Click="Sync_Click"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <Button Content="Job History" Click="JobHistory_Click"/>
+            <TextBox x:Name="SearchBox" Width="260" PlaceholderText="Search clave or product name" TextChanged="SearchBox_TextChanged"/>
+        </StackPanel>
+
+        <ct:DataGrid Grid.Row="1"
+                     x:Name="InventoryGrid"
+                     AutoGenerateColumns="False"
+                     IsReadOnly="True"
+                     ItemsSource="{Binding InventoryDisplayFiltered}">
+            <ct:DataGrid.Columns>
+                <ct:DataGridTextColumn Header="clave" Binding="{Binding clave}" Width="2*"/>
+                <ct:DataGridTextColumn Header="productname" Binding="{Binding productname}" Width="3*"/>
+                <ct:DataGridTextColumn Header="entradas" Binding="{Binding entradas}" Width="*"/>
+                <ct:DataGridTextColumn Header="salidas" Binding="{Binding salidas}" Width="*"/>
+                <ct:DataGridTextColumn Header="saldo" Binding="{Binding saldo}" Width="*"/>
+                <ct:DataGridTextColumn Header="migrated_at" Binding="{Binding migrated_at}" Width="2*"/>
+            </ct:DataGrid.Columns>
+        </ct:DataGrid>
+    </Grid>
+</Page>
