@@ -46,6 +46,121 @@ app.MapGet("/health", async () =>
         await conn.OpenAsync();
         await EnsureSchemaAsync(conn);
         return Results.Ok(new { status = "ok" });
+
+// Move an active session from one table to another
+app.MapPost("/tables/{fromLabel}/move", async (string fromLabel, string to, HttpContext ctx) =>
+{
+    if (string.IsNullOrWhiteSpace(to)) return Results.BadRequest(new { message = "Target table is required" });
+    var toLabel = to;
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+
+    // Find active session on source
+    const string findSql = @"SELECT session_id, server_id, server_name, start_time, billing_id FROM public.table_sessions
+                             WHERE table_label = @label AND status = 'active' ORDER BY start_time DESC LIMIT 1";
+    Guid sessionId; string serverId; string serverName; DateTime startTime; Guid? billingId = null;
+    await using (var find = new NpgsqlCommand(findSql, conn))
+    {
+        find.Parameters.AddWithValue("@label", fromLabel);
+        await using var rdr = await find.ExecuteReaderAsync();
+        if (!await rdr.ReadAsync()) return Results.NotFound(new { message = "No active session on source table." });
+        sessionId = rdr.GetFieldValue<Guid>(0);
+        serverId = rdr.GetString(1);
+        serverName = rdr.GetString(2);
+        startTime = rdr.GetFieldValue<DateTime>(3);
+        if (!rdr.IsDBNull(4)) billingId = rdr.GetFieldValue<Guid>(4);
+    }
+
+    // Ensure destination is not occupied
+    const string checkDest = @"SELECT occupied FROM public.table_status WHERE label = @l";
+    await using (var chk = new NpgsqlCommand(checkDest, conn))
+    {
+        chk.Parameters.AddWithValue("@l", toLabel);
+        var obj = await chk.ExecuteScalarAsync();
+        if (obj is bool occ && occ) return Results.Conflict(new { message = "Destination table is occupied." });
+    }
+
+    await using var tx = await conn.BeginTransactionAsync();
+    // Audit record
+    const string auditSql = "INSERT INTO public.table_session_moves(session_id, from_label, to_label, moved_at) VALUES(@sid, @from, @to, now())";
+    await using (var aud = new NpgsqlCommand(auditSql, conn, tx))
+    {
+        aud.Parameters.AddWithValue("@sid", sessionId);
+        aud.Parameters.AddWithValue("@from", fromLabel);
+        aud.Parameters.AddWithValue("@to", toLabel);
+        await aud.ExecuteNonQueryAsync();
+    }
+    // Update session to new table label
+    const string updSession = "UPDATE public.table_sessions SET table_label = @to, status = 'active' WHERE session_id = @sid";
+    await using (var us = new NpgsqlCommand(updSession, conn, tx))
+    {
+        us.Parameters.AddWithValue("@to", toLabel);
+        us.Parameters.AddWithValue("@sid", sessionId);
+        await us.ExecuteNonQueryAsync();
+    }
+    // Free source table
+    const string freeSrc = @"UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL, updated_at = now() WHERE label = @l";
+    await using (var fs = new NpgsqlCommand(freeSrc, conn, tx))
+    {
+        fs.Parameters.AddWithValue("@l", fromLabel);
+        await fs.ExecuteNonQueryAsync();
+    }
+    // Occupy destination table with original start and server
+    const string occDest = @"INSERT INTO public.table_status(label, type, occupied, order_id, start_time, server)
+                             VALUES(@l, 'billiard', true, NULL, @st, @srv)
+                             ON CONFLICT (label) DO UPDATE SET occupied = EXCLUDED.occupied, start_time = EXCLUDED.start_time, server = EXCLUDED.server, updated_at = now();";
+    await using (var od = new NpgsqlCommand(occDest, conn, tx))
+    {
+        od.Parameters.AddWithValue("@l", toLabel);
+        od.Parameters.AddWithValue("@st", startTime);
+        od.Parameters.AddWithValue("@srv", (object?)serverName ?? DBNull.Value);
+        await od.ExecuteNonQueryAsync();
+    }
+    await tx.CommitAsync();
+
+    return Results.Ok(new { session_id = sessionId, billing_id = billingId, from = fromLabel, to = toLabel });
+});
+
+// List active sessions with computed fields
+app.MapGet("/sessions/active", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = @"SELECT s.session_id, s.billing_id, s.table_label, s.server_name, s.start_time, s.status, s.items
+                         FROM public.table_sessions s WHERE s.status = 'active' ORDER BY s.start_time";
+    var list = new List<object>();
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    var sessions = new List<(Guid sid, Guid? bid, string table, string server, DateTime start, string status, string itemsJson)>();
+    while (await rdr.ReadAsync())
+    {
+        sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.IsDBNull(1) ? null : rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4), rdr.GetString(5), rdr.IsDBNull(6) ? "[]" : rdr.GetString(6)));
+    }
+    decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+    foreach (var s in sessions)
+    {
+        List<ItemLine> items;
+        try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(s.itemsJson) ?? new(); } catch { items = new(); }
+        var minutes = (int)Math.Max(0, (DateTime.UtcNow - s.start).TotalMinutes);
+        var itemsCost = items.Sum(i => i.price * i.quantity);
+        var timeCost = ratePerMinute * minutes;
+        var total = timeCost + itemsCost;
+        list.Add(new
+        {
+            sessionId = s.sid,
+            billingId = s.bid,
+            tableId = s.table,
+            serverName = s.server,
+            startTime = s.start,
+            status = s.status,
+            itemsCount = items.Count,
+            total
+        });
+    }
+    return Results.Ok(list);
+});
     }
     catch (Exception ex)
     {
@@ -138,9 +253,10 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
     }
 
     var sessionId = Guid.NewGuid();
+    var billingId = Guid.NewGuid();
     var now = DateTime.UtcNow;
-    const string insertSql = @"INSERT INTO public.table_sessions(session_id, table_label, server_id, server_name, start_time, status)
-                               VALUES(@sid, @label, @srvId, @srvName, @start, 'active')";
+    const string insertSql = @"INSERT INTO public.table_sessions(session_id, table_label, server_id, server_name, start_time, status, billing_id)
+                               VALUES(@sid, @label, @srvId, @srvName, @start, 'active', @bid)";
     await using (var ins = new NpgsqlCommand(insertSql, conn))
     {
         ins.Parameters.AddWithValue("@sid", sessionId);
@@ -148,6 +264,7 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
         ins.Parameters.AddWithValue("@srvId", req.ServerId);
         ins.Parameters.AddWithValue("@srvName", req.ServerName);
         ins.Parameters.AddWithValue("@start", now);
+        ins.Parameters.AddWithValue("@bid", billingId);
         await ins.ExecuteNonQueryAsync();
     }
 
@@ -163,7 +280,7 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
         await upd.ExecuteNonQueryAsync();
     }
 
-    return Results.Ok(new { session_id = sessionId, start_time = now });
+    return Results.Ok(new { session_id = sessionId, billing_id = billingId, start_time = now });
 });
 
 // Stop a table session and generate bill
@@ -606,7 +723,8 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         start_time timestamp NOT NULL,
         end_time timestamp NULL,
         status text NOT NULL CHECK (status IN ('active','closed')) DEFAULT 'active',
-        items jsonb NOT NULL DEFAULT '[]'
+        items jsonb NOT NULL DEFAULT '[]',
+        billing_id uuid NULL
     );
 
     CREATE TABLE IF NOT EXISTS public.bills (
@@ -632,12 +750,21 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
                             key text PRIMARY KEY,
                             value text NOT NULL
                           );";
+    // Audit table for moves
+    const string sql4 = @"CREATE TABLE IF NOT EXISTS public.table_session_moves(
+                            session_id uuid NOT NULL,
+                            from_label text NOT NULL,
+                            to_label text NOT NULL,
+                            moved_at timestamp NOT NULL DEFAULT now()
+                          );";
     await using var cmd = new NpgsqlCommand(sql, conn);
     await cmd.ExecuteNonQueryAsync();
     await using var cmd2 = new NpgsqlCommand(sql2, conn);
     await cmd2.ExecuteNonQueryAsync();
     await using var cmd3 = new NpgsqlCommand(sql3, conn);
     await cmd3.ExecuteNonQueryAsync();
+    await using var cmd4 = new NpgsqlCommand(sql4, conn);
+    await cmd4.ExecuteNonQueryAsync();
 }
 
 static async Task<decimal> GetRatePerMinuteAsync(NpgsqlConnection conn, decimal fallback)

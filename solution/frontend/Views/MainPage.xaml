@@ -43,6 +43,7 @@
                 <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
                 <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="List"/>
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
+                <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
                 <NavigationViewItem Content="Settings" Tag="SettingsPage" Icon="Setting"/>
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>

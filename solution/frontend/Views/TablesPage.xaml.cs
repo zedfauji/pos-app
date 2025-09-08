@@ -35,6 +35,42 @@ public sealed partial class TablesPage : Page
         _pollTimer.Tick += PollTimer_Tick;
     }
 
+    private async void MoveMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        // List available tables
+        var available = await _repo.GetAvailableTableLabelsAsync();
+        // Remove current label if it somehow appears as available
+        available.RemoveAll(l => string.Equals(l, item.Label, StringComparison.OrdinalIgnoreCase));
+        if (available.Count == 0)
+        {
+            await new ContentDialog { Title = "No available tables", Content = "There are no free tables to move to.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+            return;
+        }
+        var combo = new ComboBox { ItemsSource = available, SelectedIndex = 0, Width = 280 };
+        var dlg = new ContentDialog
+        {
+            Title = $"Move {item.Label} to:",
+            Content = combo,
+            PrimaryButtonText = "Move",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+        var res = await dlg.ShowAsync();
+        if (res != ContentDialogResult.Primary) return;
+        var target = combo.SelectedItem?.ToString();
+        if (string.IsNullOrWhiteSpace(target)) return;
+
+        var move = await _repo.MoveSessionAsync(item.Label, target!);
+        if (!move.ok)
+        {
+            await new ContentDialog { Title = "Move failed", Content = move.message, CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+            return;
+        }
+        await RefreshFromStoreAsync();
+    }
+
     private (int paperMm, decimal taxPercent) ReadPrinterConfig()
     {
         try

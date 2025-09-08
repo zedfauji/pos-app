@@ -165,6 +165,12 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(TablesPage));
 #endif
                             break;
+                        case "SessionsPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(SessionsPage));
+#endif
+                            break;
                         case "CashFlowPage":
 #if XAML_ONLY_MAIN
 #else
