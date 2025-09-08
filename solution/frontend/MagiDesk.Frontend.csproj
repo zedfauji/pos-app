@@ -36,6 +36,12 @@
         <Content Include="Assets\App.ico" Condition="Exists('Assets\App.ico')" />
     </ItemGroup>
 
+  <!-- Rename OrdersPage -> VendorOrdersPage: exclude old files -->
+  <ItemGroup>
+    <Page Remove="Views\OrdersPage.xaml" />
+    <Compile Remove="Views\OrdersPage.xaml.cs" />
+  </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\shared\MagiDesk.Shared.csproj" />
     </ItemGroup>
@@ -106,8 +112,8 @@
         <Compile Include="Views\VendorsPage.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrders)'=='true'">
-        <Page Include="Views\OrdersPage.xaml" />
-        <Compile Include="Views\OrdersPage.xaml.cs" />
+        <Page Include="Views\VendorOrdersPage.xaml" />
+        <Compile Include="Views\VendorOrdersPage.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrderBuilder)'=='true'">
         <Page Include="Views\OrderBuilderPage.xaml" />

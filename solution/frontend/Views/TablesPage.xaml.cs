@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Text.Json;
 using MagiDesk.Frontend.Services;
 using Microsoft.Extensions.Configuration;
 using MagiDesk.Shared.DTOs.Auth;
@@ -26,6 +27,8 @@ public sealed partial class TablesPage : Page
     public ObservableCollection<TableItem> FilteredBarTables { get; } = new();
     private TableRepository _repo = new TableRepository();
     private DispatcherTimer _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+    private readonly string _timerCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "timers.json");
+    private readonly string _thresholdsCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "thresholds.json");
 
     public TablesPage()
     {
@@ -33,6 +36,69 @@ public sealed partial class TablesPage : Page
         this.DataContext = this;
         Loaded += TablesPage_Loaded;
         _pollTimer.Tick += PollTimer_Tick;
+    }
+
+    private Dictionary<string, int> LoadThresholdsCache()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_thresholdsCachePath)!;
+            Directory.CreateDirectory(dir);
+            if (!File.Exists(_thresholdsCachePath)) return new();
+            var json = File.ReadAllText(_thresholdsCachePath);
+            var map = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            return map ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private void SaveThresholdsCache(Dictionary<string, int> map)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_thresholdsCachePath)!;
+            Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_thresholdsCachePath, json);
+        }
+        catch { }
+    }
+
+    private async void SetThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        // Prompt for minutes
+        var panel = new StackPanel { Spacing = 8 };
+        var nb = new NumberBox { SmallChange = 5, Minimum = 1, Maximum = 720, Value = item.ThresholdMinutes.HasValue ? item.ThresholdMinutes.Value : 30 };
+        panel.Children.Add(new TextBlock { Text = $"Set threshold for {item.Label} (minutes):" });
+        panel.Children.Add(nb);
+        var dlg = new ContentDialog
+        {
+            Title = "Set Threshold",
+            Content = panel,
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+        var res = await dlg.ShowAsync();
+        if (res != ContentDialogResult.Primary) return;
+        item.ThresholdMinutes = (int)Math.Round(nb.Value);
+        // Persist immediately
+        var thresholds = LoadThresholdsCache();
+        thresholds[item.Label] = item.ThresholdMinutes.Value;
+        SaveThresholdsCache(thresholds);
+        // Refresh visuals
+        item.Tick();
+    }
+
+    private void ClearThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        item.ThresholdMinutes = null;
+        var thresholds = LoadThresholdsCache();
+        if (thresholds.ContainsKey(item.Label)) { thresholds.Remove(item.Label); SaveThresholdsCache(thresholds); }
+        item.Tick();
     }
 
     private async void MoveMenu_Click(object sender, RoutedEventArgs e)
@@ -123,8 +189,34 @@ public class AddItemRow : INotifyPropertyChanged
     {
         FilterCombo.SelectedIndex = 0; // All
         await LoadFromDatabaseAsync();
-        ApplyFilter();
-        UpdateStatus();
+        // Leverage the unified refresh to load caches, rehydrate, and persist
+        await RefreshFromStoreAsync();
+    }
+
+    private Dictionary<string, DateTimeOffset> LoadTimersCache()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_timerCachePath)!;
+            Directory.CreateDirectory(dir);
+            if (!File.Exists(_timerCachePath)) return new();
+            var json = File.ReadAllText(_timerCachePath);
+            var map = JsonSerializer.Deserialize<Dictionary<string, DateTimeOffset>>(json);
+            return map ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private void SaveTimersCache(Dictionary<string, DateTimeOffset> map)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_timerCachePath)!;
+            Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_timerCachePath, json);
+        }
+        catch { }
     }
 
     private async Task LoadFromDatabaseAsync()
@@ -188,12 +280,24 @@ public class AddItemRow : INotifyPropertyChanged
     private async void PollTimer_Tick(object sender, object e)
     {
         await RefreshFromStoreAsync();
+        try
+        {
+            foreach (var t in FilteredBilliardTables)
+            {
+                t.Tick();
+            }
+        }
+        catch { }
     }
 
     private async Task RefreshFromStoreAsync()
     {
+        // Load latest tables
         var rows = await _repo.GetAllAsync();
         var dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        // Load local timers cache for offline resiliency
+        var timers = LoadTimersCache();
+        var thresholds = LoadThresholdsCache();
         void reconcile(ObservableCollection<TableItem> list, string type)
         {
             foreach (var item in list)
@@ -202,11 +306,47 @@ public class AddItemRow : INotifyPropertyChanged
                 {
                     item.Occupied = rec.Occupied;
                     item.OrderId = rec.OrderId; item.StartTime = rec.StartTime; item.Server = rec.Server;
+                    // If occupied but start time missing, try local cache
+                    if (item.Occupied && !item.StartTime.HasValue && timers.TryGetValue(item.Label, out var cached))
+                    {
+                        item.StartTime = cached;
+                    }
+                    // Load threshold if present for this table
+                    if (thresholds.TryGetValue(item.Label, out var thVal))
+                    {
+                        item.ThresholdMinutes = thVal;
+                    }
+                    else
+                    {
+                        item.ThresholdMinutes = null; // default: no threshold
+                    }
                 }
             }
         }
         reconcile(BilliardTables, "billiard");
         reconcile(BarTables, "bar");
+        // Recovery: if any occupied billiard table has null StartTime, try to rehydrate from active sessions API
+        try
+        {
+            var needsStart = BilliardTables.Where(t => t.Occupied && !t.StartTime.HasValue).Select(t => t.Label).ToList();
+            if (needsStart.Count > 0)
+            {
+                var actives = await _repo.GetActiveSessionsAsync();
+                if (actives != null && actives.Count > 0)
+                {
+                    var map = actives.Where(a => !string.IsNullOrWhiteSpace(a.TableId))
+                                     .ToDictionary(a => a.TableId, a => a, StringComparer.OrdinalIgnoreCase);
+                    foreach (var t in BilliardTables)
+                    {
+                        if (t.Occupied && !t.StartTime.HasValue && map.TryGetValue(t.Label, out var s))
+                        {
+                            t.StartTime = new DateTimeOffset(s.StartTime, TimeSpan.Zero);
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
         ApplyFilter();
         UpdateStatus();
     }
@@ -534,6 +674,46 @@ public class TableItem : INotifyPropertyChanged
         }
     }
 
+    // Shows only for billiard tables when a session is running
+    public bool HasTimer => Occupied && StartTime.HasValue;
+
+    public string ElapsedMinutesText
+    {
+        get
+        {
+            if (!HasTimer) return string.Empty;
+            var mins = (int)Math.Floor((DateTimeOffset.Now - StartTime!.Value).TotalMinutes);
+            if (mins < 0) mins = 0;
+            return $"{Label}: {mins} min elapsed";
+        }
+    }
+
+    public Brush ChipBackground
+    {
+        get
+        {
+            // Default: semi-transparent black
+            var dark = global::Windows.UI.Color.FromArgb(0xB3, 0x00, 0x00, 0x00);
+            if (!HasTimer) return new SolidColorBrush(dark);
+            var mins = (int)Math.Floor((DateTimeOffset.Now - StartTime!.Value).TotalMinutes);
+            // If a per-table threshold is set, use it; otherwise no threshold highlighting
+            if (ThresholdMinutes.HasValue && mins >= ThresholdMinutes.Value)
+            {
+                var amber = global::Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xB3, 0x00);
+                return new SolidColorBrush(amber);
+            }
+            return new SolidColorBrush(dark);
+        }
+    }
+
+    // Optional per-table threshold in minutes; when null, feature is off
+    private int? _thresholdMinutes;
+    public int? ThresholdMinutes
+    {
+        get => _thresholdMinutes;
+        set { _thresholdMinutes = value; OnPropertyChanged(); OnPropertyChanged(nameof(ChipBackground)); }
+    }
+
     private string _itemsSummary = string.Empty;
     public string ItemsSummary
     {
@@ -544,6 +724,12 @@ public class TableItem : INotifyPropertyChanged
     private void UpdateBrush()
     {
         BackgroundBrush = new SolidColorBrush(_occupied ? Microsoft.UI.Colors.Firebrick : Microsoft.UI.Colors.SeaGreen);
+    }
+
+    public void Tick()
+    {
+        OnPropertyChanged(nameof(ElapsedMinutesText));
+        OnPropertyChanged(nameof(ChipBackground));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

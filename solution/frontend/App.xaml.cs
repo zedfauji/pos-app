@@ -32,6 +32,15 @@ namespace MagiDesk.Frontend
             ApplyThemeFromConfig();
         }
 
+        public static void ReinitializeApi(string backendBase, string inventoryBase)
+        {
+            try
+            {
+                Api = new Services.ApiService(backendBase, inventoryBase);
+            }
+            catch { }
+        }
+
         private void ApplyThemeFromConfig()
         {
             try
@@ -115,17 +124,18 @@ namespace MagiDesk.Frontend
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                     .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true);
                 var config = builder.Build();
-                var baseUrl = config["Api:BaseUrl"] ?? "https://localhost:7016";
-                Api = new Services.ApiService(baseUrl);
+                var backendBase = config["Api:BaseUrl"] ?? "https://localhost:7016";
+                var inventoryBase = config["InventoryApi:BaseUrl"] ?? backendBase;
+                Api = new Services.ApiService(backendBase, inventoryBase);
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
-                var http = new HttpClient(logging) { BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/") };
+                var http = new HttpClient(logging) { BaseAddress = new Uri(backendBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
             }
             catch
             {
-                Api = new Services.ApiService("https://localhost:7016");
+                Api = new Services.ApiService("https://localhost:7016", "https://localhost:7016");
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);

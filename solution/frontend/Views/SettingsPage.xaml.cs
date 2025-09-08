@@ -25,7 +25,7 @@ public sealed partial class SettingsPage : Page
         // Rate controls removed in minimal layout
         // Prefer dedicated SettingsApi base URL from config if available
         var settingsBase = _config?["SettingsApi:BaseUrl"]
-            ?? App.Api?.BaseAddress?.ToString()
+            ?? App.Api?.BackendBase?.ToString()
             ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
         _settingsApi = new SettingsApiService(settingsBase);
         // Default to first category
@@ -72,6 +72,7 @@ public sealed partial class SettingsPage : Page
 
             var baseUrl = _config["Api:BaseUrl"] ?? string.Empty;
             BaseUrlText.Text = baseUrl;
+            InventoryApiUrlText.Text = _config["InventoryApi:BaseUrl"] ?? InventoryApiUrlText.Text;
             // Prepopulate Settings/Tables API URLs when available
             SettingsApiUrlText.Text = _config["SettingsApi:BaseUrl"] ?? SettingsApiUrlText.Text;
             SettingsHostText.Text = _config["SettingsApi:Host"] ?? SettingsHostText.Text;
@@ -423,6 +424,7 @@ public sealed partial class SettingsPage : Page
             root["Api"] = new { BaseUrl = BaseUrlText.Text };
             var theme = ThemeSelector.SelectedIndex == 1 ? "Dark" : ThemeSelector.SelectedIndex == 2 ? "Light" : "System";
             root["UI"] = new { Theme = theme };
+            root["InventoryApi"] = new { BaseUrl = InventoryApiUrlText.Text };
             root["SettingsApi"] = new { BaseUrl = SettingsApiUrlText.Text };
             if (!string.IsNullOrWhiteSpace(SettingsHostText.Text))
             {
@@ -465,6 +467,13 @@ public sealed partial class SettingsPage : Page
             if (!string.IsNullOrWhiteSpace(settingsUrl))
             {
                 _settingsApi = new SettingsApiService(settingsUrl!);
+            }
+            // Recreate core ApiService with backend + inventory URLs
+            var backendUrl = BaseUrlText.Text?.Trim();
+            var inventoryUrl = string.IsNullOrWhiteSpace(InventoryApiUrlText.Text) ? backendUrl : InventoryApiUrlText.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(backendUrl))
+            {
+                MagiDesk.Frontend.App.ReinitializeApi(backendUrl!, inventoryUrl ?? backendUrl!);
             }
         }
         catch { }
@@ -540,6 +549,18 @@ public sealed partial class SettingsPage : Page
                 catch { return ("Err", false); }
             }
 
+            async Task<(string status, bool ok)> PingInventoryAsync(string? baseUrl)
+            {
+                if (string.IsNullOrWhiteSpace(baseUrl)) return ("-", false);
+                try
+                {
+                    var u = baseUrl.TrimEnd('/') + "/health";
+                    using var res = await http.GetAsync(u);
+                    return res.IsSuccessStatusCode ? ("Online", true) : ($"HTTP {(int)res.StatusCode}", true);
+                }
+                catch { return ("Err", false); }
+            }
+
             async Task<(string status, bool ok)> PingBackendAsync(string? baseUrl)
             {
                 if (string.IsNullOrWhiteSpace(baseUrl)) return ("-", false);
@@ -557,14 +578,17 @@ public sealed partial class SettingsPage : Page
             }
 
             var (settingsStatus, settingsOk) = await PingSettingsAsync(SettingsApiUrlText.Text);
+            var (inventoryStatus, inventoryOk) = await PingInventoryAsync(InventoryApiUrlText.Text);
             var (tablesStatus, tablesOk) = await PingTablesAsync(TablesApiUrlText.Text);
             var (backendStatus, backendOk) = await PingBackendAsync(BaseUrlText.Text);
 
             SettingsStatusText.Text = $"Settings API: {settingsStatus}";
+            InventoryStatusText.Text = $"Inventory API: {inventoryStatus}";
             TablesStatusText.Text = $"Tables API: {tablesStatus}";
             BackendSummaryText.Text = $"Backend: {BaseUrlText.Text} ({backendStatus})";
 
             SettingsStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(settingsOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
+            InventoryStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(inventoryOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
             TablesStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(tablesOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
             BackendStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(backendOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
         }

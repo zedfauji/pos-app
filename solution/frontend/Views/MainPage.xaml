@@ -39,21 +39,23 @@
                 <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
                 <NavigationViewItemSeparator/>
 
-                <!-- Operations Group -->
-                <NavigationViewItemHeader Content="Operations"/>
+                <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
-                <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="List"/>
                 <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
-                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
+                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
                 <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
 
                 <NavigationViewItemSeparator/>
 
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
-                <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People"/>
+                <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="Vendor-Orders" Tag="VendorOrdersPage" Icon="List"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
                 <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
-                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
+                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
 
                 <NavigationViewItemSeparator/>
 

@@ -6,11 +6,11 @@ using MagiDesk.Frontend.Dialogs;
 
 namespace MagiDesk.Frontend.Views;
 
-public sealed partial class OrdersPage : Page, IToolbarConsumer
+public sealed partial class VendorOrdersPage : Page, IToolbarConsumer
 {
     private readonly OrdersViewModel _vm;
 
-    public OrdersPage()
+    public VendorOrdersPage()
     {
         this.InitializeComponent();
         _vm = new OrdersViewModel(App.Api!);
