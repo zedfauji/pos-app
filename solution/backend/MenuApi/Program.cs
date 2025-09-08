@@ -1,4 +1,5 @@
 using MenuApi.Services;
+using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,6 +8,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IMenuService, InMemoryMenuService>();
+// Npgsql DataSource (dev: use LocalConnectionString)
+var pgSection = builder.Configuration.GetSection("Postgres");
+var connString = pgSection.GetValue<string>("LocalConnectionString") ?? pgSection.GetValue<string>("CloudRunSocketConnectionString");
+if (!string.IsNullOrWhiteSpace(connString))
+{
+    var dataSource = new NpgsqlDataSourceBuilder(connString).Build();
+    builder.Services.AddSingleton(dataSource);
+}
 
 var app = builder.Build();
 

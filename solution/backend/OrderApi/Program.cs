@@ -1,3 +1,4 @@
+using Npgsql;
 using OrderApi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IOrderService, InMemoryOrderService>();
+// Npgsql DataSource (dev: use LocalConnectionString)
+var pgSection = builder.Configuration.GetSection("Postgres");
+var connString = pgSection.GetValue<string>("LocalConnectionString") ?? pgSection.GetValue<string>("CloudRunSocketConnectionString");
+if (!string.IsNullOrWhiteSpace(connString))
+{
+    var dataSource = new NpgsqlDataSourceBuilder(connString).Build();
+    builder.Services.AddSingleton(dataSource);
+}
 
 var app = builder.Build();
 
