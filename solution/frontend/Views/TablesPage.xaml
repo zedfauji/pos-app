@@ -67,6 +67,7 @@
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="Start" Click="StartMenu_Click" Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
+                                    <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Stop" Click="StopMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                 </MenuFlyout>
                             </StackPanel.ContextFlyout>
@@ -107,6 +108,7 @@
                                 <MenuFlyout>
                                     <MenuFlyoutItem Text="Start" Click="StartMenu_Click" Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
+                                    <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Stop" Click="StopMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                 </MenuFlyout>
                             </StackPanel.ContextFlyout>

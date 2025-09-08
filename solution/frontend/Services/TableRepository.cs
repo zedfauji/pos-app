@@ -419,4 +419,51 @@ public class TableRepository
         }
         catch { return false; }
     }
+
+    // --- New: Move session to another table ---
+    public async Task<(bool ok, string message)> MoveSessionAsync(string fromLabel, string toLabel, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return (false, "API base URL not configured");
+        try
+        {
+            var baseUri = new Uri(new Uri(_apiBaseUrl!), $"/tables/{Uri.EscapeDataString(fromLabel)}/move");
+            var url = new Uri(baseUri + $"?to={Uri.EscapeDataString(toLabel)}");
+            var res = await _http.PostAsync(url, content: null, ct);
+            if (res.IsSuccessStatusCode) return (true, "");
+            var body = await res.Content.ReadAsStringAsync(ct);
+            return (false, body);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    // --- New: List active sessions overview ---
+    public async Task<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>> GetActiveSessionsAsync(CancellationToken ct = default)
+    {
+        var list = new List<MagiDesk.Shared.DTOs.Tables.SessionOverview>();
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
+        try
+        {
+            var url = new Uri(new Uri(_apiBaseUrl!), "/sessions/active");
+            var res = await _http.GetAsync(url, ct);
+            if (!res.IsSuccessStatusCode) return list;
+            var data = await res.Content.ReadFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>(cancellationToken: ct) ?? new();
+            return data;
+        }
+        catch { return list; }
+    }
+
+    // --- Helper: get available tables (not occupied) ---
+    public async Task<List<string>> GetAvailableTableLabelsAsync(CancellationToken ct = default)
+    {
+        var all = await GetAllAsync();
+        var labels = new List<string>();
+        foreach (var t in all)
+        {
+            if (!t.Occupied) labels.Add(t.Label);
+        }
+        return labels;
+    }
 }
