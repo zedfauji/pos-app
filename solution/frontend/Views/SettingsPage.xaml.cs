@@ -28,6 +28,8 @@ public sealed partial class SettingsPage : Page
             ?? App.Api?.BaseAddress?.ToString()
             ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
         _settingsApi = new SettingsApiService(settingsBase);
+        // Default to first category
+        try { CategoryList.SelectedIndex = 0; } catch { }
         _ = LoadFromBackendAsync();
         _ = UpdateAppSummaryAsync();
     }
@@ -124,7 +126,9 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            var fe = await _settingsApi.GetFrontendAsync();
+            LoadingRing.IsActive = true; LoadingRing.Visibility = Visibility.Visible;
+            var host = GetSettingsHost();
+            var fe = await _settingsApi.GetFrontendAsync(host);
             if (fe != null)
             {
                 if (!string.IsNullOrWhiteSpace(fe.ApiBaseUrl)) BaseUrlText.Text = fe.ApiBaseUrl;
@@ -137,8 +141,24 @@ public sealed partial class SettingsPage : Page
                     CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
                 }
             }
+
+            // Load backend connection settings
+            var be = await _settingsApi.GetBackendAsync(host);
+            if (be != null)
+            {
+                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            LoadingRing.IsActive = false; LoadingRing.Visibility = Visibility.Collapsed;
+        }
     }
 
     private async Task SaveToBackendAsync(string apiBaseUrl, string theme)
@@ -147,7 +167,7 @@ public sealed partial class SettingsPage : Page
         {
             // Do not include rate here; edited via dialog and saved immediately
             var fe = new SettingsApiService.FrontendSettings { ApiBaseUrl = apiBaseUrl, Theme = theme };
-            await _settingsApi.SaveFrontendAsync(fe);
+            await _settingsApi.SaveFrontendAsync(fe, GetSettingsHost());
             BackendSummaryText.Text = $"Backend: {BaseUrlText.Text}";
             ThemeSummaryText.Text = $"Theme: {theme}";
         }
@@ -340,6 +360,12 @@ public sealed partial class SettingsPage : Page
             CopyOthers(baseDoc.RootElement);
             CopyOthers(userDoc.RootElement);
 
+            // Validate inputs
+            var paperTag = ((PrinterWidthCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "58";
+            if (paperTag != "58" && paperTag != "80") { StatusText.Text = "Paper width must be 58 or 80"; return; }
+            var taxText = string.IsNullOrWhiteSpace(TaxPercentText.Text) ? "0" : TaxPercentText.Text.Trim();
+            if (!decimal.TryParse(taxText, NumberStyles.Number, CultureInfo.InvariantCulture, out var _)) { StatusText.Text = "Tax % must be a decimal"; return; }
+
             root["Api"] = new { BaseUrl = BaseUrlText.Text };
             var theme = ThemeSelector.SelectedIndex == 1 ? "Dark" : ThemeSelector.SelectedIndex == 2 ? "Light" : "System";
             root["UI"] = new { Theme = theme };
@@ -350,8 +376,6 @@ public sealed partial class SettingsPage : Page
             }
             root["TablesApi"] = new { BaseUrl = TablesApiUrlText.Text };
             // Printer settings
-            var paperTag = ((PrinterWidthCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "58";
-            var taxText = string.IsNullOrWhiteSpace(TaxPercentText.Text) ? "0" : TaxPercentText.Text.Trim();
             root["Printer"] = new { PaperWidthMm = paperTag, TaxPercent = taxText };
 
             var json = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
@@ -362,6 +386,15 @@ public sealed partial class SettingsPage : Page
             StatusText.Text = App.I18n.T("saved");
             // Re-init services using the new URLs immediately
             ReinitServicesFromUI();
+
+            // Persist to backend settings (source of truth)
+            var be = new SettingsApiService.BackendSettings
+            {
+                BackendApiUrl = BaseUrlText.Text?.Trim(),
+                SettingsApiUrl = SettingsApiUrlText.Text?.Trim(),
+                TablesApiUrl = TablesApiUrlText.Text?.Trim()
+            };
+            await _settingsApi.SaveBackendAsync(be, GetSettingsHost());
         }
         catch (Exception ex)
         {
@@ -483,5 +516,19 @@ public sealed partial class SettingsPage : Page
         {
             StatusText.Text = $"Error: {ex.Message}";
         }
+    }
+
+    // Category switching: show only selected panel
+    private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            var idx = CategoryList.SelectedIndex;
+            GeneralPanel.Visibility = idx == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ConnectionsPanel.Visibility = idx == 1 ? Visibility.Visible : Visibility.Collapsed;
+            BillingPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
+            TablesPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch { }
     }
 }

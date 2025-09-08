@@ -28,6 +28,14 @@ public class SettingsApiService
         public Dictionary<string, object?>? Extras { get; set; }
     }
 
+    public class BackendSettings
+    {
+        // Service URLs used by the frontend (persisted server-side to keep clients in sync)
+        public string? SettingsApiUrl { get; set; }
+        public string? TablesApiUrl { get; set; }
+        public string? BackendApiUrl { get; set; }
+    }
+
     public async Task<FrontendSettings?> GetFrontendAsync(string? host = null, CancellationToken ct = default)
     {
         try
@@ -95,6 +103,43 @@ public class SettingsApiService
         catch (Exception ex)
         {
             Log.Error("PUT settings/app failed", ex);
+            return false;
+        }
+    }
+
+    public async Task<BackendSettings?> GetBackendAsync(string? host = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var uri = string.IsNullOrWhiteSpace(host) ? "api/settings/backend" : $"api/settings/backend?host={Uri.EscapeDataString(host)}";
+            var res = await _http.GetAsync(uri, ct);
+            if (res.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+            res.EnsureSuccessStatusCode();
+            return await res.Content.ReadFromJsonAsync<BackendSettings>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GET settings/backend failed", ex);
+            return null;
+        }
+    }
+
+    public async Task<bool> SaveBackendAsync(BackendSettings settings, string? host = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var uri = string.IsNullOrWhiteSpace(host) ? "api/settings/backend" : $"api/settings/backend?host={Uri.EscapeDataString(host)}";
+            var res = await _http.PutAsJsonAsync(uri, settings, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                var msg = await res.Content.ReadAsStringAsync(ct);
+                Log.Error($"PUT settings/backend HTTP {(int)res.StatusCode}: {msg}");
+            }
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("PUT settings/backend failed", ex);
             return false;
         }
     }
