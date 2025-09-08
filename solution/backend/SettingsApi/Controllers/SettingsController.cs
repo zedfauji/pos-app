@@ -16,6 +16,10 @@ public class SettingsController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("frontend/defaults")]
+    public ActionResult<FrontendSettings> GetFrontendDefaults()
+        => Ok(SettingsService.DefaultFrontend());
+
     [HttpGet("frontend")]
     public async Task<ActionResult<FrontendSettings>> GetFrontend([FromQuery] string? host = null, CancellationToken ct = default)
     {
@@ -31,6 +35,10 @@ public class SettingsController : ControllerBase
         await _settings.SaveFrontendAsync(body, host, ct);
         return NoContent();
     }
+
+    [HttpGet("backend/defaults")]
+    public ActionResult<BackendSettings> GetBackendDefaults()
+        => Ok(SettingsService.DefaultBackend());
 
     [HttpGet("backend")]
     public async Task<ActionResult<BackendSettings>> GetBackend([FromQuery] string? host = null, CancellationToken ct = default)
@@ -49,6 +57,10 @@ public class SettingsController : ControllerBase
     }
 
     // GET api/settings/app?host=HOSTNAME
+    [HttpGet("app/defaults")]
+    public ActionResult<AppSettings> GetAppDefaults()
+        => Ok(SettingsService.DefaultApp());
+
     [HttpGet("app")]
     public async Task<ActionResult<AppSettings>> GetApp([FromQuery] string? host = null, CancellationToken ct = default)
     {

@@ -143,4 +143,23 @@ public class SettingsApiService
             return false;
         }
     }
+
+    // Defaults accessors
+    public async Task<FrontendSettings?> GetFrontendDefaultsAsync(CancellationToken ct = default)
+    {
+        try { return await _http.GetFromJsonAsync<FrontendSettings>("api/settings/frontend/defaults", ct); }
+        catch (Exception ex) { Log.Error("GET settings/frontend/defaults failed", ex); return null; }
+    }
+
+    public async Task<BackendSettings?> GetBackendDefaultsAsync(CancellationToken ct = default)
+    {
+        try { return await _http.GetFromJsonAsync<BackendSettings>("api/settings/backend/defaults", ct); }
+        catch (Exception ex) { Log.Error("GET settings/backend/defaults failed", ex); return null; }
+    }
+
+    public async Task<AppSettings?> GetAppDefaultsAsync(CancellationToken ct = default)
+    {
+        try { return await _http.GetFromJsonAsync<AppSettings>("api/settings/app/defaults", ct); }
+        catch (Exception ex) { Log.Error("GET settings/app/defaults failed", ex); return null; }
+    }
 }

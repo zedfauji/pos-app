@@ -22,6 +22,10 @@ public class BackendSettings
 {
     public string? ConnectionString { get; set; }
     public string? Notes { get; set; }
+    // Optional URL fields to centralize client configuration
+    public string? BackendApiUrl { get; set; }
+    public string? SettingsApiUrl { get; set; }
+    public string? TablesApiUrl { get; set; }
 }
 
 public class AppSettings
@@ -100,6 +104,7 @@ public class SettingsService : ISettingsService
             ["ratePerMinute"] = settings.RatePerMinute.HasValue ? Convert.ToDouble(settings.RatePerMinute.Value) : null
         };
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "frontend", data, ct);
         return true;
     }
 
@@ -113,6 +118,9 @@ public class SettingsService : ISettingsService
         var res = new BackendSettings();
         if (dict.TryGetValue("connectionString", out var c)) res.ConnectionString = c?.ToString();
         if (dict.TryGetValue("notes", out var n)) res.Notes = n?.ToString();
+        if (dict.TryGetValue("backendApiUrl", out var b)) res.BackendApiUrl = b?.ToString();
+        if (dict.TryGetValue("settingsApiUrl", out var s)) res.SettingsApiUrl = s?.ToString();
+        if (dict.TryGetValue("tablesApiUrl", out var t)) res.TablesApiUrl = t?.ToString();
         return res;
     }
 
@@ -123,7 +131,10 @@ public class SettingsService : ISettingsService
         var data = new Dictionary<string, object?>
         {
             ["connectionString"] = settings.ConnectionString,
-            ["notes"] = settings.Notes
+            ["notes"] = settings.Notes,
+            ["backendApiUrl"] = settings.BackendApiUrl,
+            ["settingsApiUrl"] = settings.SettingsApiUrl,
+            ["tablesApiUrl"] = settings.TablesApiUrl
         };
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
         return true;
@@ -161,6 +172,23 @@ public class SettingsService : ISettingsService
             }
         }
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "app", data, ct);
         return true;
+    }
+
+    private async Task WriteAuditAsync(string host, string section, Dictionary<string, object?> data, CancellationToken ct)
+    {
+        try
+        {
+            var audit = _db.Collection(RootCollection).Document(host).Collection("audit").Document();
+            var payload = new Dictionary<string, object?>
+            {
+                ["section"] = section,
+                ["timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["changes"] = data
+            };
+            await audit.SetAsync(payload, cancellationToken: ct);
+        }
+        catch { }
     }
 }

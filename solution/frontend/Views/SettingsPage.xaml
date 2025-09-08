@@ -101,6 +101,17 @@
                     <StackPanel x:Name="TablesPanel" Spacing="8" Visibility="Collapsed">
                         <TextBlock Text="Tables" FontSize="18" FontWeight="SemiBold"/>
                         <TextBlock x:Name="CurrentRateText" Text="Current Rate: -"/>
+                        <TextBlock Text="Session Timers" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <StackPanel>
+                                <TextBlock Text="Warn after (minutes)"/>
+                                <NumberBox x:Name="WarnMinutesBox" Minimum="0" SmallChange="1" Width="160"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Auto-stop after (minutes)"/>
+                                <NumberBox x:Name="AutoStopMinutesBox" Minimum="0" SmallChange="5" Width="180"/>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -111,10 +122,13 @@
                 <Button x:Name="SaveApiButton" Content="Save API URLs" Click="SaveApi_Click"/>
                 <Button x:Name="PingApisButton" Content="Refresh Status" Click="PingApis_Click"/>
                 <Button x:Name="TestPrintButton" Content="Print test receipt" Click="TestPrint_Click"/>
-                <Button x:Name="EditAppSettingsButton" Content="Reset to Defaults" Click="EditAppSettings_Click"/>
+                <Button x:Name="ResetDefaultsButton" Content="Reset to Defaults" Click="ResetDefaults_Click"/>
             </StackPanel>
 
-            <TextBlock x:Name="StatusText" Grid.Row="2" HorizontalAlignment="Right"/>
+            <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
+                <InfoBar x:Name="ToastBar" IsOpen="False" Severity="Success" Message="Saved"/>
+                <TextBlock x:Name="StatusText"/>
+            </StackPanel>
         </Grid>
     </Grid>
 </Page>

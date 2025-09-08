@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Linq;
 using Npgsql;
@@ -46,6 +48,106 @@ app.MapGet("/health", async () =>
         await conn.OpenAsync();
         await EnsureSchemaAsync(conn);
         return Results.Ok(new { status = "ok" });
+
+// Enforce session timers (auto-stop) based on SettingsApi app settings
+// Env var SETTINGSAPI_BASEURL must point to SettingsApi base URL
+app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
+{
+    string? settingsUrl = Environment.GetEnvironmentVariable("SETTINGSAPI_BASEURL");
+    if (string.IsNullOrWhiteSpace(settingsUrl))
+        return Results.Problem("SETTINGSAPI_BASEURL not configured", statusCode: 500);
+
+    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+    { BaseAddress = new Uri(settingsUrl.TrimEnd('/') + "/") };
+    var appEndpoint = string.IsNullOrWhiteSpace(host) ? "api/settings/app" : $"api/settings/app?host={Uri.EscapeDataString(host)}";
+    var appSettings = await http.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(appEndpoint);
+    int autoStop = 0;
+    try
+    {
+        if (appSettings != null && appSettings.TryGetPropertyValue("extras", out var extras) && extras is System.Text.Json.Nodes.JsonObject obj)
+        {
+            if (obj.TryGetPropertyValue("tables.session.autoStopMinutes", out var val) && val != null)
+            {
+                int.TryParse(val.ToString(), out autoStop);
+            }
+        }
+    }
+    catch { }
+    if (autoStop <= 0) return Results.Ok(new { enforced = 0, autoStop });
+
+    int enforced = 0;
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    // Get active sessions
+    const string findActives = @"SELECT session_id, table_label, server_id, server_name, start_time FROM public.table_sessions WHERE status='active'";
+    var sessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start)>();
+    await using (var cmd = new NpgsqlCommand(findActives, conn))
+    await using (var rdr = await cmd.ExecuteReaderAsync())
+    {
+        while (await rdr.ReadAsync())
+        {
+            sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4)));
+        }
+    }
+    foreach (var s in sessions)
+    {
+        var minutes = (int)Math.Max(0, (DateTime.UtcNow - s.start).TotalMinutes);
+        if (minutes < autoStop) continue;
+        // close session and create bill (reuse logic similar to /tables/{label}/stop)
+        const string closeSql = "UPDATE public.table_sessions SET end_time = @end, status = 'closed' WHERE session_id = @sid";
+        await using (var close = new NpgsqlCommand(closeSql, conn))
+        {
+            close.Parameters.AddWithValue("@end", DateTime.UtcNow);
+            close.Parameters.AddWithValue("@sid", s.sid);
+            await close.ExecuteNonQueryAsync();
+        }
+        // items
+        var items = new List<ItemLine>();
+        const string itemsSql = @"SELECT items FROM public.table_sessions WHERE session_id = @sid";
+        await using (var gi = new NpgsqlCommand(itemsSql, conn))
+        {
+            gi.Parameters.AddWithValue("@sid", s.sid);
+            await using var rdr2 = await gi.ExecuteReaderAsync();
+            if (await rdr2.ReadAsync() && !rdr2.IsDBNull(0))
+            {
+                var json = rdr2.GetString(0);
+                try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { items = new(); }
+            }
+        }
+        decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+        decimal itemsCost = items.Sum(i => i.price * i.quantity);
+        decimal timeCost = ratePerMinute * minutes;
+        decimal total = timeCost + itemsCost;
+        var billId = Guid.NewGuid();
+        const string billSql = @"INSERT INTO public.bills(bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount)
+                                VALUES(@bid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total)";
+        await using (var bill = new NpgsqlCommand(billSql, conn))
+        {
+            bill.Parameters.AddWithValue("@bid", billId);
+            bill.Parameters.AddWithValue("@label", s.table);
+            bill.Parameters.AddWithValue("@srvId", s.serverId);
+            bill.Parameters.AddWithValue("@srvName", s.serverName);
+            bill.Parameters.AddWithValue("@start", s.start);
+            bill.Parameters.AddWithValue("@end", DateTime.UtcNow);
+            bill.Parameters.AddWithValue("@mins", minutes);
+            bill.Parameters.Add("@items", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(items);
+            bill.Parameters.AddWithValue("@timeCost", timeCost);
+            bill.Parameters.AddWithValue("@itemsCost", itemsCost);
+            bill.Parameters.AddWithValue("@total", total);
+            await bill.ExecuteNonQueryAsync();
+        }
+        // free table
+        const string freeSql = @"UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL, updated_at = now() WHERE label = @l";
+        await using (var free = new NpgsqlCommand(freeSql, conn))
+        {
+            free.Parameters.AddWithValue("@l", s.table);
+            await free.ExecuteNonQueryAsync();
+        }
+        enforced++;
+    }
+    return Results.Ok(new { enforced, autoStop });
+});
 
 // Move an active session from one table to another
 app.MapPost("/tables/{fromLabel}/move", async (string fromLabel, string to, HttpContext ctx) =>

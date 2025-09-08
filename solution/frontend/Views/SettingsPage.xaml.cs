@@ -114,7 +114,20 @@ public sealed partial class SettingsPage : Page
 
             // Save to backend as the source of truth
             _ = SaveToBackendAsync(BaseUrlText.Text, theme);
+            // Also persist session timers via App settings Extras
+            try
+            {
+                var extras = new System.Collections.Generic.Dictionary<string, object?>
+                {
+                    ["tables.session.warnMinutes"] = (int)(WarnMinutesBox.Value <= 0 ? 0 : WarnMinutesBox.Value),
+                    ["tables.session.autoStopMinutes"] = (int)(AutoStopMinutesBox.Value <= 0 ? 0 : AutoStopMinutesBox.Value)
+                };
+                var appSet = new SettingsApiService.AppSettings { Extras = extras };
+                _ = _settingsApi.SaveAppAsync(appSet, GetSettingsHost());
+            }
+            catch { }
             StatusText.Text = App.I18n.T("saved");
+            Toast("Saved");
         }
         catch (Exception ex)
         {
@@ -187,6 +200,22 @@ public sealed partial class SettingsPage : Page
             var locale = string.IsNullOrWhiteSpace(app.Locale) ? "(default)" : app.Locale;
             var notif = app.EnableNotifications == true ? "On" : "Off";
             AppSummaryText.Text = $"App Settings: Locale={locale}; Notifications={notif}";
+            // Load session timers if present
+            try
+            {
+                if (app.Extras != null)
+                {
+                    if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null)
+                    {
+                        if (int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
+                    }
+                    if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null)
+                    {
+                        if (int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+                    }
+                }
+            }
+            catch { }
         }
         catch
         {
@@ -395,6 +424,7 @@ public sealed partial class SettingsPage : Page
                 TablesApiUrl = TablesApiUrlText.Text?.Trim()
             };
             await _settingsApi.SaveBackendAsync(be, GetSettingsHost());
+            Toast("Saved");
         }
         catch (Exception ex)
         {
@@ -446,6 +476,7 @@ public sealed partial class SettingsPage : Page
 
             var view = Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
             await Services.PrintService.PrintVisualAsync(view);
+            Toast("Printed test receipt");
         }
         catch (Exception ex)
         {
@@ -528,6 +559,58 @@ public sealed partial class SettingsPage : Page
             ConnectionsPanel.Visibility = idx == 1 ? Visibility.Visible : Visibility.Collapsed;
             BillingPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
             TablesPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch { }
+    }
+
+    private async void ResetDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            LoadingRing.IsActive = true; LoadingRing.Visibility = Visibility.Visible;
+            var fe = await _settingsApi.GetFrontendDefaultsAsync();
+            var be = await _settingsApi.GetBackendDefaultsAsync();
+            var app = await _settingsApi.GetAppDefaultsAsync();
+            if (fe != null)
+            {
+                BaseUrlText.Text = fe.ApiBaseUrl ?? BaseUrlText.Text;
+                var theme = string.IsNullOrWhiteSpace(fe.Theme) ? "System" : fe.Theme!;
+                ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+                if (fe.RatePerMinute.HasValue)
+                {
+                    CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                }
+            }
+            if (be != null)
+            {
+                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+            }
+            if (app != null && app.Extras != null)
+            {
+                if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null && int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
+                if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null && int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+            }
+            Toast("Defaults loaded");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            LoadingRing.IsActive = false; LoadingRing.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void Toast(string message)
+    {
+        try
+        {
+            ToastBar.Message = message;
+            ToastBar.IsOpen = true;
+            var _ = Task.Delay(2500).ContinueWith(_ => DispatcherQueue.TryEnqueue(() => ToastBar.IsOpen = false));
         }
         catch { }
     }
