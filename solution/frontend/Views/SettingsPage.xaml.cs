@@ -614,4 +614,55 @@ public sealed partial class SettingsPage : Page
         }
         catch { }
     }
+
+    private async void RateLoad_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var repo = new Services.TableRepository();
+            var rate = await repo.GetRatePerMinuteAsync();
+            if (rate.HasValue)
+            {
+                RatePerMinuteBox.Value = (double)rate.Value;
+                CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                Toast("Rate loaded");
+            }
+            else
+            {
+                StatusText.Text = "Rate not configured";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+    }
+
+    private async void RateSave_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var val = RatePerMinuteBox.Value;
+            if (val < 0)
+            {
+                StatusText.Text = "Rate must be >= 0";
+                return;
+            }
+            var repo = new Services.TableRepository();
+            var ok = await repo.SetRatePerMinuteAsync(Convert.ToDecimal(val));
+            if (ok)
+            {
+                CurrentRateText.Text = $"Current Rate: {Convert.ToDecimal(val).ToString("0.##", CultureInfo.InvariantCulture)}";
+                Toast("Rate saved");
+            }
+            else
+            {
+                StatusText.Text = "Failed to save rate (check Tables API URL)";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+    }
 }

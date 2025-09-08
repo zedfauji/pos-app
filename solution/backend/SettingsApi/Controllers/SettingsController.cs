@@ -77,4 +77,11 @@ public class SettingsController : ControllerBase
         await _settings.SaveAppAsync(body, host, ct);
         return NoContent();
     }
+
+    [HttpGet("audit")]
+    public async Task<ActionResult<List<Dictionary<string, object?>>>> GetAudit([FromQuery] string? host = null, [FromQuery] int limit = 50, CancellationToken ct = default)
+    {
+        var list = await _settings.GetAuditAsync(host, limit, ct);
+        return Ok(list);
+    }
 }

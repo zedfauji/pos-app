@@ -43,6 +43,7 @@ public interface ISettingsService
     Task<bool> SaveBackendAsync(BackendSettings settings, string? hostOverride = null, CancellationToken ct = default);
     Task<AppSettings?> GetAppAsync(string? hostOverride = null, CancellationToken ct = default);
     Task<bool> SaveAppAsync(AppSettings settings, string? hostOverride = null, CancellationToken ct = default);
+    Task<List<Dictionary<string, object?>>> GetAuditAsync(string? hostOverride = null, int limit = 50, CancellationToken ct = default);
 }
 
 public class SettingsService : ISettingsService
@@ -137,6 +138,7 @@ public class SettingsService : ISettingsService
             ["tablesApiUrl"] = settings.TablesApiUrl
         };
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "backend", data, ct);
         return true;
     }
 
@@ -191,4 +193,44 @@ public class SettingsService : ISettingsService
         }
         catch { }
     }
+
+    public async Task<List<Dictionary<string, object?>>> GetAuditAsync(string? hostOverride = null, int limit = 50, CancellationToken ct = default)
+    {
+        var host = HostKey(hostOverride);
+        var col = _db.Collection(RootCollection).Document(host).Collection("audit");
+        var query = col.OrderByDescending("timestamp").Limit(limit);
+        var snaps = await query.GetSnapshotAsync(ct);
+        var list = new List<Dictionary<string, object?>>();
+        foreach (var doc in snaps.Documents)
+        {
+            list.Add(doc.ToDictionary());
+        }
+        return list;
+    }
+
+    // Defaults providers
+    public static FrontendSettings DefaultFrontend() => new FrontendSettings
+    {
+        ApiBaseUrl = "https://localhost:5001",
+        Theme = "System",
+        RatePerMinute = 0m
+    };
+
+    public static BackendSettings DefaultBackend() => new BackendSettings
+    {
+        BackendApiUrl = "https://localhost:5001",
+        SettingsApiUrl = "https://localhost:5003",
+        TablesApiUrl = "https://localhost:5005"
+    };
+
+    public static AppSettings DefaultApp() => new AppSettings
+    {
+        Locale = "en-US",
+        EnableNotifications = false,
+        Extras = new Dictionary<string, object?>
+        {
+            ["tables.session.warnMinutes"] = 0,
+            ["tables.session.autoStopMinutes"] = 0
+        }
+    };
 }

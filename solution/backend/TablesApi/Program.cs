@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using NpgsqlTypes;
 using MagiDesk.Shared.DTOs.Tables;
@@ -48,6 +49,49 @@ app.MapGet("/health", async () =>
         await conn.OpenAsync();
         await EnsureSchemaAsync(conn);
         return Results.Ok(new { status = "ok" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message, statusCode: 500);
+    }
+});
+
+// Settings: rate per minute for table sessions
+app.MapGet("/settings/rate", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = "SELECT value FROM public.app_settings WHERE key = 'Tables.RatePerMinute'";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    var obj = await cmd.ExecuteScalarAsync();
+    decimal rate = 0m;
+    if (obj is string s && decimal.TryParse(s, out var r)) rate = r;
+    return Results.Ok(new { ratePerMinute = rate });
+});
+
+app.MapPut("/settings/rate", async (HttpContext ctx) =>
+{
+    try
+    {
+        decimal? bodyRate = await ctx.Request.ReadFromJsonAsync<decimal?>();
+        if (!bodyRate.HasValue) return Results.BadRequest(new { message = "Invalid body; expected number" });
+        var rate = bodyRate.Value;
+        await using var conn = new NpgsqlConnection(connString);
+        await conn.OpenAsync();
+        await EnsureSchemaAsync(conn);
+        const string up = @"INSERT INTO public.app_settings(key, value) VALUES('Tables.RatePerMinute', @v)
+                           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value";
+        await using var cmd = new NpgsqlCommand(up, conn);
+        cmd.Parameters.AddWithValue("@v", rate.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await cmd.ExecuteNonQueryAsync();
+        return Results.Ok(new { ratePerMinute = rate });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message, statusCode: 500);
+    }
+});
 
 // Enforce session timers (auto-stop) based on SettingsApi app settings
 // Env var SETTINGSAPI_BASEURL must point to SettingsApi base URL
@@ -262,12 +306,6 @@ app.MapGet("/sessions/active", async () =>
         });
     }
     return Results.Ok(list);
-});
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(ex.Message, statusCode: 500);
-    }
 });
 
 // Force free a table even if there is no active session (recovery path)
