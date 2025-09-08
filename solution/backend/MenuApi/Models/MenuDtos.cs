@@ -40,3 +40,11 @@ public sealed record UpdateMenuItemDto(
 );
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
+
+// Combo DTOs
+public sealed record ComboItemLinkDto(long MenuItemId, int Quantity, bool IsRequired);
+public sealed record ComboDto(long Id, string Name, string? Description, decimal Price, bool IsDiscountable, bool IsAvailable, string? PictureUrl, int Version);
+public sealed record ComboDetailsDto(ComboDto Combo, IReadOnlyList<ComboItemLinkDto> Items);
+public sealed record ComboQueryDto(string? Q, bool? AvailableOnly, int Page = 1, int PageSize = 50);
+public sealed record CreateComboDto(string Name, string? Description, decimal Price, bool IsDiscountable, bool IsAvailable, string? PictureUrl, IReadOnlyList<ComboItemLinkDto> Items);
+public sealed record UpdateComboDto(string? Name, string? Description, decimal? Price, bool? IsDiscountable, bool? IsAvailable, string? PictureUrl, IReadOnlyList<ComboItemLinkDto>? Items);

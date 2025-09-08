@@ -5,6 +5,8 @@ namespace MenuApi.Services;
 public sealed class InMemoryMenuService : IMenuService
 {
     private readonly List<MenuItemDto> _items = new();
+    private readonly List<ComboDto> _combos = new();
+    private readonly Dictionary<long, List<ComboItemLinkDto>> _comboItems = new();
 
     public Task<PagedResult<MenuItemDto>> ListItemsAsync(MenuItemQueryDto query, CancellationToken ct)
     {
@@ -101,6 +103,76 @@ public sealed class InMemoryMenuService : IMenuService
     {
         var idx = _items.FindIndex(i => i.Id == id);
         if (idx >= 0) _items.RemoveAt(idx);
+        return Task.CompletedTask;
+    }
+
+    public Task<PagedResult<ComboDto>> ListCombosAsync(ComboQueryDto query, CancellationToken ct)
+    {
+        var items = _combos.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            var q = query.Q.Trim();
+            items = items.Where(i => i.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+        }
+        if (query.AvailableOnly == true)
+        {
+            items = items.Where(i => i.IsAvailable);
+        }
+        var total = items.Count();
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, 200);
+        var pageItems = items.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult(new PagedResult<ComboDto>(pageItems, total));
+    }
+
+    public Task<ComboDetailsDto?> GetComboAsync(long id, CancellationToken ct)
+    {
+        var combo = _combos.FirstOrDefault(c => c.Id == id);
+        if (combo is null) return Task.FromResult<ComboDetailsDto?>(null);
+        var links = _comboItems.TryGetValue(id, out var list) ? list : new List<ComboItemLinkDto>();
+        return Task.FromResult<ComboDetailsDto?>(new ComboDetailsDto(combo, links));
+    }
+
+    public Task<ComboDto> CreateComboAsync(CreateComboDto dto, string user, CancellationToken ct)
+    {
+        var id = _combos.Count == 0 ? 1 : _combos.Max(c => c.Id) + 1;
+        var combo = new ComboDto(id, dto.Name, dto.Description, dto.Price, dto.IsDiscountable, dto.IsAvailable, dto.PictureUrl, 1);
+        _combos.Add(combo);
+        _comboItems[id] = dto.Items.ToList();
+        return Task.FromResult(combo);
+    }
+
+    public Task<ComboDto> UpdateComboAsync(long id, UpdateComboDto dto, string user, CancellationToken ct)
+    {
+        var idx = _combos.FindIndex(c => c.Id == id);
+        if (idx < 0) throw new KeyNotFoundException("Combo not found");
+        var cur = _combos[idx];
+        var updated = cur with
+        {
+            Name = dto.Name ?? cur.Name,
+            Description = dto.Description ?? cur.Description,
+            Price = dto.Price ?? cur.Price,
+            IsDiscountable = dto.IsDiscountable ?? cur.IsDiscountable,
+            IsAvailable = dto.IsAvailable ?? cur.IsAvailable,
+            PictureUrl = dto.PictureUrl ?? cur.PictureUrl,
+            Version = cur.Version + 1
+        };
+        _combos[idx] = updated;
+        if (dto.Items is not null)
+        {
+            _comboItems[id] = dto.Items.ToList();
+        }
+        return Task.FromResult(updated);
+    }
+
+    public Task DeleteComboAsync(long id, string user, CancellationToken ct)
+    {
+        var idx = _combos.FindIndex(c => c.Id == id);
+        if (idx >= 0)
+        {
+            _combos.RemoveAt(idx);
+            _comboItems.Remove(id);
+        }
         return Task.CompletedTask;
     }
 }
