@@ -19,6 +19,7 @@
                 <ListViewItem Content="Connections"/>
                 <ListViewItem Content="Billing &amp; Printing"/>
                 <ListViewItem Content="Tables"/>
+                <ListViewItem Content="Audit"/>
             </ListView>
         </StackPanel>
 
@@ -119,6 +120,23 @@
                             <Button Content="Load Rate" Click="RateLoad_Click"/>
                             <Button Content="Save Rate" Click="RateSave_Click"/>
                         </StackPanel>
+                    </StackPanel>
+
+                    <!-- Audit -->
+                    <StackPanel x:Name="AuditPanel" Spacing="8" Visibility="Collapsed">
+                        <TextBlock Text="Settings Audit" FontSize="18" FontWeight="SemiBold"/>
+                        <Button Content="Refresh Audit" Click="AuditRefresh_Click" Width="160"/>
+                        <ListView x:Name="AuditList" Height="240">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding section}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding timestamp}" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding changes}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>

@@ -34,6 +34,31 @@ public sealed partial class SettingsPage : Page
         _ = UpdateAppSummaryAsync();
     }
 
+    private async Task LoadAuditAsync()
+    {
+        try
+        {
+            var list = await _settingsApi.GetAuditAsync(GetSettingsHost(), 50);
+            // Display a simplified projection for readability
+            var view = list.Select(x => new
+            {
+                section = x.ContainsKey("section") ? x["section"] : null,
+                timestamp = x.ContainsKey("timestamp") ? x["timestamp"] : null,
+                changes = x.ContainsKey("changes") ? System.Text.Json.JsonSerializer.Serialize(x["changes"]) : null
+            }).ToList();
+            AuditList.ItemsSource = view;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Audit error: {ex.Message}";
+        }
+    }
+
+    private async void AuditRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadAuditAsync();
+    }
+
     private void LoadConfig()
     {
         try
@@ -559,6 +584,33 @@ public sealed partial class SettingsPage : Page
             ConnectionsPanel.Visibility = idx == 1 ? Visibility.Visible : Visibility.Collapsed;
             BillingPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
             TablesPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
+            AuditPanel.Visibility = idx == 4 ? Visibility.Visible : Visibility.Collapsed;
+            if (idx == 3)
+            {
+                // Prefill rate from Tables API
+                _ = DispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        var repo = new Services.TableRepository();
+                        var rate = await repo.GetRatePerMinuteAsync();
+                        if (rate.HasValue)
+                        {
+                            RatePerMinuteBox.Value = (double)rate.Value;
+                            CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                        }
+                    }
+                    catch { }
+                });
+            }
+            else if (idx == 4)
+            {
+                // Auto-load audit on first show
+                _ = DispatcherQueue.TryEnqueue(async () =>
+                {
+                    try { await LoadAuditAsync(); } catch { }
+                });
+            }
         }
         catch { }
     }

@@ -162,4 +162,21 @@ public class SettingsApiService
         try { return await _http.GetFromJsonAsync<AppSettings>("api/settings/app/defaults", ct); }
         catch (Exception ex) { Log.Error("GET settings/app/defaults failed", ex); return null; }
     }
+
+    public async Task<List<Dictionary<string, object?>>> GetAuditAsync(string? host = null, int limit = 50, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = string.IsNullOrWhiteSpace(host)
+                ? $"api/settings/audit?limit={limit}"
+                : $"api/settings/audit?host={Uri.EscapeDataString(host)}&limit={limit}";
+            var list = await _http.GetFromJsonAsync<List<Dictionary<string, object?>>>(url, ct) ?? new();
+            return list;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GET settings/audit failed", ex);
+            return new List<Dictionary<string, object?>>();
+        }
+    }
 }

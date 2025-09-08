@@ -455,6 +455,28 @@ public class TableRepository
         catch { return list; }
     }
 
+    public async Task<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>> GetSessionsAsync(int limit = 100, DateTimeOffset? from = null, DateTimeOffset? to = null, string? table = null, string? server = null, CancellationToken ct = default)
+    {
+        var list = new List<MagiDesk.Shared.DTOs.Tables.SessionOverview>();
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
+        try
+        {
+            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/sessions");
+            var qp = new List<string>();
+            qp.Add($"limit={limit}");
+            if (from.HasValue) qp.Add($"from={Uri.EscapeDataString(from.Value.UtcDateTime.ToString("o"))}");
+            if (to.HasValue) qp.Add($"to={Uri.EscapeDataString(to.Value.UtcDateTime.ToString("o"))}");
+            if (!string.IsNullOrWhiteSpace(table)) qp.Add($"table={Uri.EscapeDataString(table)}");
+            if (!string.IsNullOrWhiteSpace(server)) qp.Add($"server={Uri.EscapeDataString(server)}");
+            var url = new Uri(baseUri + (qp.Count > 0 ? ("?" + string.Join("&", qp)) : string.Empty));
+            var res = await _http.GetAsync(url, ct);
+            if (!res.IsSuccessStatusCode) return list;
+            var data = await res.Content.ReadFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>(cancellationToken: ct) ?? new();
+            return data;
+        }
+        catch { return list; }
+    }
+
     // --- Helper: get available tables (not occupied) ---
     public async Task<List<string>> GetAvailableTableLabelsAsync(CancellationToken ct = default)
     {
