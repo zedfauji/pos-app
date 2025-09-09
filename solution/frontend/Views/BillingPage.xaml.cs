@@ -208,6 +208,42 @@ public sealed partial class BillingPage : Page
             await new ContentDialog { Title = "Error", Content = ex.Message, CloseButtonText = "Close", XamlRoot = this.XamlRoot }.ShowAsync();
         }
     }
+
+    private async void CloseBillButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            BillItem? bi = (sender as FrameworkElement)?.DataContext as BillItem;
+            if (bi == null)
+            {
+                bi = BillsList.SelectedItem as BillItem;
+                if (bi == null) return;
+            }
+            var dlg = new ContentDialog
+            {
+                Title = "Close Bill",
+                Content = $"Mark bill {bi.ShortBillId} as closed?",
+                PrimaryButtonText = "Close Bill",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = GetXamlRoot()
+            };
+            var res = await dlg.ShowAsync();
+            if (res != ContentDialogResult.Primary) return;
+            var ok = await _repo.CloseBillAsync(bi.BillId);
+            if (!ok)
+            {
+                await new ContentDialog { Title = "Close Bill", Content = "Unable to close. Ensure payments settle the bill, then try again.", CloseButtonText = "OK", XamlRoot = GetXamlRoot() }.ShowAsync();
+                return;
+            }
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Close bill failed", ex);
+            await new ContentDialog { Title = "Error", Content = ex.Message, CloseButtonText = "Close", XamlRoot = GetXamlRoot() }.ShowAsync();
+        }
+    }
 }
 
 public class BillItem : INotifyPropertyChanged

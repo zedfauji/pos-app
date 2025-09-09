@@ -378,6 +378,18 @@ public class TableRepository
         }
     }
 
+    public async Task<bool> CloseBillAsync(Guid billId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return false;
+        try
+        {
+            var url = new Uri(new Uri(_apiBaseUrl!), $"/bills/{billId:D}/close");
+            var res = await _http.PostAsync(url, content: null, ct);
+            return res.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     public async Task<List<ItemLine>> GetSessionItemsAsync(string label, CancellationToken ct = default)
     {
         var items = new List<ItemLine>();

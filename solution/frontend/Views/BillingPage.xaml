@@ -81,6 +81,7 @@
                             <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
                                 <Button Content="View" Click="ViewReceipt_Click"/>
                                 <Button Content="Print" Click="ReprintButton_Click"/>
+                                <Button Content="Close" Click="CloseBillButton_Click"/>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
