@@ -618,14 +618,41 @@ public class AddItemRow : INotifyPropertyChanged
                     if (toAdd.Count > 0)
                     {
                         var updated = await ordersSvc.AddItemsAsync(orderId, toAdd);
-                        // Notify for verification
-                        await new ContentDialog
+                        if (updated == null)
                         {
-                            Title = "Order updated",
-                            Content = $"Added {toAdd.Count} item(s) to Order #{orderId}.",
-                            CloseButtonText = "OK",
-                            XamlRoot = this.XamlRoot
-                        }.ShowAsync();
+                            // Fallback: resolve or recreate order, then retry once
+                            OrderContext.CurrentOrderId = null;
+                            var sid = OrderContext.CurrentSessionId;
+                            if (!string.IsNullOrWhiteSpace(sid))
+                            {
+                                var orderList = await ordersSvc.GetOrdersBySessionAsync(sid);
+                                var currentOrder = orderList.FirstOrDefault(o => string.Equals(o.SessionId, sid, StringComparison.OrdinalIgnoreCase));
+                                if (currentOrder == null)
+                                {
+                                    var req = new Services.OrderApiService.CreateOrderRequestDto(sid, OrderContext.CurrentBillingId, item.Label, string.Empty, null, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
+                                    currentOrder = await ordersSvc.CreateOrderAsync(req);
+                                }
+                                if (currentOrder != null)
+                                {
+                                    OrderContext.CurrentOrderId = currentOrder.Id;
+                                    updated = await ordersSvc.AddItemsAsync(currentOrder.Id, toAdd);
+                                }
+                            }
+                        }
+                        if (updated != null)
+                        {
+                            await new ContentDialog
+                            {
+                                Title = "Order updated",
+                                Content = $"Added {toAdd.Count} item(s) to Order #{OrderContext.CurrentOrderId?.ToString() ?? orderId.ToString()}.",
+                                CloseButtonText = "OK",
+                                XamlRoot = this.XamlRoot
+                            }.ShowAsync();
+                        }
+                        else
+                        {
+                            await new ContentDialog { Title = "Order update failed", Content = "Could not add items to order.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+                        }
                     }
                     else
                     {
