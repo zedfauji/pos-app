@@ -78,6 +78,8 @@ public sealed class PaymentRepository : IPaymentRepository
 
         // compute status: paid if paid+disc >= due; partial if >0 else unpaid
         var newStatus = (paid + disc >= due) ? "paid" : (paid + disc > 0m ? "partial" : "unpaid");
+        
+        System.Diagnostics.Debug.WriteLine($"PaymentRepository.UpsertLedgerAsync: BillingId={billingId}, Due={due}, Paid={paid}, Disc={disc}, Tip={tip}, Status={newStatus}");
 
         const string upsert = @"INSERT INTO pay.bill_ledger(billing_id, session_id, total_due, total_discount, total_paid, total_tip, status, updated_at)
                                VALUES(@bid, @sid, @due, @disc, @paid, @tip, @st, now())
@@ -171,5 +173,24 @@ public sealed class PaymentRepository : IPaymentRepository
         cc.Parameters.AddWithValue("@bid", billingId);
         var total = Convert.ToInt32(await cc.ExecuteScalarAsync(ct));
         return (list, total);
+    }
+
+    public async Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
+                             FROM pay.payments ORDER BY created_at DESC LIMIT @l";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@l", Math.Clamp(limit, 1, 1000));
+        var list = new List<PaymentDto>();
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        while (await rdr.ReadAsync(ct))
+        {
+            list.Add(new PaymentDto(
+                rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
+                rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
+                rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
+        }
+        return list;
     }
 }

@@ -19,7 +19,8 @@ public sealed class PaymentsController : ControllerBase
     public async Task<ActionResult<BillLedgerDto>> RegisterAsync([FromBody] RegisterPaymentRequestDto req, CancellationToken ct)
     {
         var ledger = await _service.RegisterPaymentAsync(req, ct);
-        return CreatedAtAction(nameof(GetLedgerAsync), new { billingId = req.BillingId }, ledger);
+        // Avoid route link-generation issues across hosting environments
+        return Created($"/api/payments/{req.BillingId}/ledger", ledger);
     }
 
     [HttpPost("{billingId}/discounts")]
@@ -56,5 +57,12 @@ public sealed class PaymentsController : ControllerBase
     {
         var ledger = await _service.CloseBillAsync(billingId, serverId, ct);
         return Ok(ledger);
+    }
+
+    [HttpGet("all")]
+    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> GetAllPaymentsAsync([FromQuery] int limit = 100, CancellationToken ct = default)
+    {
+        var list = await _service.GetAllPaymentsAsync(limit, ct);
+        return Ok(list);
     }
 }

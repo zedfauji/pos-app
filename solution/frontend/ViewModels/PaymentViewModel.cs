@@ -24,15 +24,16 @@ namespace MagiDesk.Frontend.ViewModels
         public ObservableCollection<OrderItemLineVm> Items { get; } = new();
 
         private string _selectedMethod = "Cash"; public string SelectedMethod { get => _selectedMethod; set { _selectedMethod = value; OnPropertyChanged(); } }
-        private decimal _amount; public decimal Amount { get => _amount; set { _amount = value; OnPropertyChanged(); UpdateComputed(); } }
-        private decimal _tip; public decimal Tip { get => _tip; set { _tip = value; OnPropertyChanged(); UpdateComputed(); } }
+        // Use double to align with NumberBox.Value type; convert to decimal internally
+        private double _amount; public double Amount { get => _amount; set { _amount = value; OnPropertyChanged(); UpdateComputed(); } }
+        private double _tip; public double Tip { get => _tip; set { _tip = value; OnPropertyChanged(); UpdateComputed(); } }
 
         private decimal _totalDue; public decimal TotalDue { get => _totalDue; set { _totalDue = value; OnPropertyChanged(); UpdateComputed(); } }
         private decimal _paid; public decimal Paid { get => _paid; private set { _paid = value; OnPropertyChanged(); OnPropertyChanged(nameof(PaidText)); OnPropertyChanged(nameof(BalanceText)); } }
         private decimal _balance; public decimal Balance { get => _balance; private set { _balance = value; OnPropertyChanged(); OnPropertyChanged(nameof(BalanceText)); } }
 
         public string PaidText => $"Paid: {Paid:C}";
-        public string BalanceText => $"Balance: {Balance:C}";
+        public string BalanceText => Balance < 0 ? $"Change: {Math.Abs(Balance):C}" : $"Balance: {Balance:C}";
 
         private decimal _ledgerPaid; public decimal LedgerPaid { get => _ledgerPaid; private set { _ledgerPaid = value; OnPropertyChanged(); OnPropertyChanged(nameof(LedgerPaidText)); } }
         private decimal _ledgerTip; public decimal LedgerTip { get => _ledgerTip; private set { _ledgerTip = value; OnPropertyChanged(); OnPropertyChanged(nameof(LedgerTipText)); } }
@@ -48,10 +49,11 @@ namespace MagiDesk.Frontend.ViewModels
 
         public string? Error { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(Error);
+        public string? DebugInfo { get; private set; }
 
-        public PaymentViewModel()
+        public PaymentViewModel(PaymentApiService paymentService)
         {
-            _payments = App.Payments ?? throw new InvalidOperationException("Payments API not initialized");
+            _payments = paymentService;
         }
 
         public void Initialize(string billingId, string sessionId, decimal totalDue, IEnumerable<OrderItemLineVm>? items = null)
@@ -82,8 +84,12 @@ namespace MagiDesk.Frontend.ViewModels
         private void UpdateComputed()
         {
             var splitSum = SplitLines.Sum(x => x.AmountPaid);
-            Paid = Amount + splitSum + Tip;
-            Balance = Math.Max(0, TotalDue - Paid);
+            var amt = (decimal)Amount;
+            var tip = (decimal)Tip;
+            Paid = amt + splitSum + tip;
+            Balance = TotalDue - Paid; // Allow negative values for change
+            DebugInfo = $"amt={Amount:0.##}, tip={Tip:0.##}, splits={splitSum:0.##}, paid={Paid:0.##}, due={TotalDue:0.##}";
+            OnPropertyChanged(nameof(DebugInfo));
         }
 
         public async Task LoadLedgerAsync(CancellationToken ct = default)
@@ -101,10 +107,11 @@ namespace MagiDesk.Frontend.ViewModels
 
         public async Task<bool> ApplyDiscountAsync(CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(BillingId) || string.IsNullOrWhiteSpace(SessionId)) return false;
+            if (string.IsNullOrWhiteSpace(BillingId)) { Error = "Missing billing"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
+            var safeSessionId = string.IsNullOrWhiteSpace(SessionId) ? BillingId! : SessionId!;
             if (DiscountValue <= 0) { Error = "Discount must be > 0"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
             decimal amount = SelectedDiscountType == "%" ? Math.Round(TotalDue * (DiscountValue / 100m), 2) : DiscountValue;
-            var ledger = await _payments.ApplyDiscountAsync(BillingId!, SessionId!, amount, DiscountReason);
+            var ledger = await _payments.ApplyDiscountAsync(BillingId!, safeSessionId, amount, DiscountReason);
             if (ledger is null) { Error = "Failed to apply discount"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
             TotalDue = ledger.TotalDue;
             LedgerDiscount = ledger.TotalDiscount;
@@ -116,26 +123,111 @@ namespace MagiDesk.Frontend.ViewModels
 
         public async Task<bool> ConfirmAsync(CancellationToken ct = default)
         {
-            Error = null; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError));
-            if (string.IsNullOrWhiteSpace(BillingId) || string.IsNullOrWhiteSpace(SessionId)) { Error = "Missing billing/session"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
-            if (Paid <= 0) { Error = "Payment amount must be > 0"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
-            if (Paid > TotalDue) { Error = "Overpayment not allowed"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
-
-            var lines = new List<PaymentApiService.RegisterPaymentLineDto>();
-            if (Amount > 0) lines.Add(new PaymentApiService.RegisterPaymentLineDto(Amount, SelectedMethod, 0, null, Tip, null, null));
-            foreach (var s in SplitLines)
-                if (s.AmountPaid > 0)
-                    lines.Add(new PaymentApiService.RegisterPaymentLineDto(s.AmountPaid, s.PaymentMethod, 0, null, 0, null, null));
-
-            var req = new PaymentApiService.RegisterPaymentRequestDto(SessionId!, BillingId!, TotalDue, lines, Services.SessionService.Current?.UserId);
-            var ledger = await _payments.RegisterPaymentAsync(req, ct);
-            if (ledger is null) { Error = "Payment failed"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
-            // Update ledger fields after payment
-            TotalDue = ledger.TotalDue;
-            LedgerDiscount = ledger.TotalDiscount;
-            LedgerPaid = ledger.TotalPaid;
-            LedgerTip = ledger.TotalTip;
-            return true;
+            DebugLogger.LogMethodEntry("PaymentViewModel.ConfirmAsync");
+            try
+            {
+                DebugLogger.LogStep("ConfirmAsync", "Setting Error to null");
+                Error = null; 
+                OnPropertyChanged(nameof(Error)); 
+                OnPropertyChanged(nameof(HasError));
+                DebugLogger.LogStep("ConfirmAsync", "Error properties updated");
+                
+                // Validate required fields
+                if (string.IsNullOrWhiteSpace(BillingId))
+                {
+                    DebugLogger.LogStep("ConfirmAsync", "ERROR: BillingId is null or empty");
+                    Error = "Missing billing ID";
+                    OnPropertyChanged(nameof(Error)); 
+                    OnPropertyChanged(nameof(HasError));
+                    DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Failed - Missing BillingId");
+                    return false;
+                }
+                
+                DebugLogger.LogStep("ConfirmAsync", $"BillingId: {BillingId}");
+                
+                // Get session ID (fallback to billing ID if session is null)
+                var safeSessionId = string.IsNullOrWhiteSpace(SessionId) ? BillingId! : SessionId!;
+                DebugLogger.LogStep("ConfirmAsync", $"SessionId: {safeSessionId}");
+                
+                // Validate payment amount
+                if (Paid <= 0)
+                {
+                    DebugLogger.LogStep("ConfirmAsync", "ERROR: Paid amount is <= 0");
+                    Error = "Payment amount must be greater than 0";
+                    OnPropertyChanged(nameof(Error)); 
+                    OnPropertyChanged(nameof(HasError));
+                    DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Failed - Invalid payment amount");
+                    return false;
+                }
+                
+                DebugLogger.LogStep("ConfirmAsync", $"Paid amount: {Paid}");
+                
+                // Get user ID (fallback to system if null)
+                var userId = Services.SessionService.Current?.UserId ?? "system";
+                DebugLogger.LogStep("ConfirmAsync", $"UserId: {userId}");
+                
+                try
+                {
+                    // Create payment line
+                    var paymentLine = new PaymentApiService.RegisterPaymentLineDto(
+                        AmountPaid: Paid,
+                        PaymentMethod: SelectedMethod,
+                        DiscountAmount: 0, // No discount applied in this flow
+                        DiscountReason: null,
+                        TipAmount: (decimal)Tip,
+                        ExternalRef: null,
+                        Meta: null
+                    );
+                    
+                    // Create payment request
+                    var paymentRequest = new PaymentApiService.RegisterPaymentRequestDto(
+                        SessionId: safeSessionId,
+                        BillingId: BillingId!,
+                        TotalDue: TotalDue,
+                        Lines: new[] { paymentLine },
+                        ServerId: userId
+                    );
+                    
+                    DebugLogger.LogStep("ConfirmAsync", $"Payment request: BillingId={BillingId}, SessionId={safeSessionId}, TotalDue={TotalDue}, AmountPaid={Paid}, TipAmount={(decimal)Tip}, PaymentMethod={SelectedMethod}");
+                    
+                    // Register the payment
+                    DebugLogger.LogStep("ConfirmAsync", "Calling _payments.RegisterPaymentAsync");
+                    var payment = await _payments.RegisterPaymentAsync(paymentRequest);
+                    DebugLogger.LogStep("ConfirmAsync", $"RegisterPaymentAsync completed, ledger: {payment?.BillingId ?? "null"}");
+                    
+                    if (payment == null)
+                    {
+                        DebugLogger.LogStep("ConfirmAsync", "ERROR: RegisterPaymentAsync returned null");
+                        Error = "Failed to register payment";
+                        OnPropertyChanged(nameof(Error)); 
+                        OnPropertyChanged(nameof(HasError));
+                        DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Failed - Payment registration returned null");
+                        return false;
+                    }
+                    
+                    DebugLogger.LogStep("ConfirmAsync", $"Payment registered successfully: BillingId={payment.BillingId}, Status={payment.Status}");
+                    DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Success");
+                    return true;
+                }
+                catch (Exception paymentEx)
+                {
+                    DebugLogger.LogException("ConfirmAsync.PaymentRegistration", paymentEx);
+                    Error = $"Payment registration failed: {paymentEx.Message}";
+                    OnPropertyChanged(nameof(Error)); 
+                    OnPropertyChanged(nameof(HasError));
+                    DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Exception during payment registration");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogException("PaymentViewModel.ConfirmAsync", ex);
+                Error = $"Payment failed: {ex.Message}";
+                OnPropertyChanged(nameof(Error)); 
+                OnPropertyChanged(nameof(HasError)); 
+                DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Critical Exception");
+                return false;
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

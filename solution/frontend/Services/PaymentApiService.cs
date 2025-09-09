@@ -23,9 +23,34 @@ public sealed class PaymentApiService
     // Register payments (supports split via multiple lines)
     public async Task<BillLedgerDto?> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct = default)
     {
-        var res = await _http.PostAsJsonAsync("api/payments", req, ct);
-        if (!res.IsSuccessStatusCode) return null;
-        return await res.Content.ReadFromJsonAsync<BillLedgerDto>(cancellationToken: ct);
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Registering payment - SessionId={req.SessionId}, BillingId={req.BillingId}, TotalDue={req.TotalDue}, Lines={req.Lines.Count}, ServerId={req.ServerId}");
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: HttpClient BaseAddress = {_http.BaseAddress}");
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Full URL will be = {_http.BaseAddress}api/payments");
+        
+        try
+        {
+            var res = await _http.PostAsJsonAsync("api/payments", req, ct);
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Register payment HTTP response status = {res.StatusCode}");
+            
+            if (!res.IsSuccessStatusCode) 
+            {
+                System.Diagnostics.Debug.WriteLine($"PaymentApiService: Register payment failed with status {res.StatusCode}");
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                System.Diagnostics.Debug.WriteLine($"PaymentApiService: Error response content = {errorContent}");
+                return null;
+            }
+            
+            var ledger = await res.Content.ReadFromJsonAsync<BillLedgerDto>(cancellationToken: ct);
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Register payment successful - TotalDue={ledger?.TotalDue}, TotalPaid={ledger?.TotalPaid}, Status={ledger?.Status}");
+            
+            return ledger;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Exception during RegisterPaymentAsync: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Exception stack trace: {ex.StackTrace}");
+            return null;
+        }
     }
 
     // Apply discount (bill-level)
@@ -59,5 +84,27 @@ public sealed class PaymentApiService
         var res = await _http.GetAsync($"api/payments/{Uri.EscapeDataString(billingId)}/logs?page={page}&pageSize={pageSize}", ct);
         res.EnsureSuccessStatusCode();
         return await res.Content.ReadFromJsonAsync<PagedResult<PaymentLogDto>>(cancellationToken: ct) ?? new PagedResult<PaymentLogDto>(Array.Empty<PaymentLogDto>(), 0);
+    }
+
+    // Get all payments across all bills
+    public async Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit = 100, CancellationToken ct = default)
+    {
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Calling GetAllPaymentsAsync with limit={limit}");
+        var res = await _http.GetAsync($"api/payments/all?limit={limit}", ct);
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: HTTP response status = {res.StatusCode}");
+        
+        if (!res.IsSuccessStatusCode) 
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: HTTP request failed with status {res.StatusCode}");
+            return Array.Empty<PaymentDto>();
+        }
+        
+        var content = await res.Content.ReadAsStringAsync(ct);
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Raw response content = {content}");
+        
+        var payments = await res.Content.ReadFromJsonAsync<IReadOnlyList<PaymentDto>>(cancellationToken: ct) ?? Array.Empty<PaymentDto>();
+        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Parsed {payments.Count} payments from response");
+        
+        return payments;
     }
 }

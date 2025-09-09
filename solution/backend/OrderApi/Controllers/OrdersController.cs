@@ -19,7 +19,8 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<OrderDto>> CreateAsync([FromBody] CreateOrderRequestDto req, CancellationToken ct)
     {
         var order = await _service.CreateOrderAsync(req, ct);
-        return CreatedAtAction(nameof(GetAsync), new { orderId = order.Id }, order);
+        // Use explicit URI to avoid link generation issues in some hosting setups
+        return Created($"/api/orders/{order.Id}", order);
     }
 
     [HttpGet("{orderId:long}")]

@@ -1,0 +1,144 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using MagiDesk.Frontend.ViewModels;
+using MagiDesk.Frontend.Services;
+
+namespace MagiDesk.Frontend.Views;
+
+public sealed partial class AllPaymentsPage : Page
+{
+    public AllPaymentsViewModel ViewModel { get; }
+
+    public AllPaymentsPage()
+    {
+        this.InitializeComponent();
+        ViewModel = new AllPaymentsViewModel(App.Payments ?? throw new InvalidOperationException("PaymentApiService not initialized"));
+        DataContext = ViewModel;
+        Loaded += AllPaymentsPage_Loaded;
+    }
+
+    private async void AllPaymentsPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.LoadPaymentsAsync();
+    }
+
+    private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+    {
+        await ViewModel.LoadPaymentsAsync();
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            ViewModel.SearchTerm = textBox.Text;
+        }
+    }
+
+    private void PaymentMethodFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.PaymentMethodFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
+    private void DateRangeFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.DateRangeFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
+    private async void ViewPaymentDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PaymentApiService.PaymentDto payment)
+        {
+            try
+            {
+                var detailsDialog = new ContentDialog
+                {
+                    Title = $"Payment Details - {payment.PaymentId}",
+                    Content = CreatePaymentDetailsContent(payment),
+                    CloseButtonText = "Close",
+                    XamlRoot = this.XamlRoot
+                };
+                await detailsDialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Failed to load payment details: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+    }
+
+    private async void ProcessRefund_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PaymentApiService.PaymentDto payment)
+        {
+            try
+            {
+                var confirmDialog = new ContentDialog
+                {
+                    Title = "Confirm Refund",
+                    Content = $"Are you sure you want to refund payment {payment.PaymentId} for {payment.AmountPaid:C}?",
+                    PrimaryButtonText = "Refund",
+                    CloseButtonText = "Cancel",
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await confirmDialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    // Process refund logic here
+                    // await ViewModel.ProcessRefundAsync(payment.PaymentId);
+                    
+                    var successDialog = new ContentDialog
+                    {
+                        Title = "Refund Processed",
+                        Content = $"Refund for payment {payment.PaymentId} has been processed successfully.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    };
+                    await successDialog.ShowAsync();
+                    
+                    // Refresh the payments list
+                    await ViewModel.LoadPaymentsAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Failed to process refund: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+    }
+
+    private StackPanel CreatePaymentDetailsContent(PaymentApiService.PaymentDto payment)
+    {
+        var panel = new StackPanel();
+        
+        panel.Children.Add(new TextBlock { Text = $"Payment ID: {payment.PaymentId}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        panel.Children.Add(new TextBlock { Text = $"Amount: {payment.AmountPaid:C}", Margin = new Thickness(0, 5, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = $"Method: {payment.PaymentMethod}", Margin = new Thickness(0, 5, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = $"Session ID: {payment.SessionId}", Margin = new Thickness(0, 5, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = $"Created: {payment.CreatedAt:g}", Margin = new Thickness(0, 5, 0, 0) });
+        panel.Children.Add(new TextBlock { Text = $"Created By: {payment.CreatedBy}", Margin = new Thickness(0, 5, 0, 0) });
+        
+        return panel;
+    }
+}

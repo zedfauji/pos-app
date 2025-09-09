@@ -25,10 +25,37 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Prioritize env var to make Cloud Run overrides take effect
-string? connString = Environment.GetEnvironmentVariable("TABLESAPI__CONNSTRING")
-    ?? builder.Configuration.GetConnectionString("Postgres")
+// Resolve Postgres connection string with Cloud Run socket preference
+string? connString = null;
+string? socketConnFromConfig = builder.Configuration.GetConnectionString("PostgresSocket")
+    ?? builder.Configuration["Db:Postgres:SocketConnectionString"];
+string? ipConnFromConfig = builder.Configuration.GetConnectionString("Postgres")
     ?? builder.Configuration["Db:Postgres:ConnectionString"];
+
+// If running on Cloud Run, prefer Unix domain socket if provided
+bool isCloudRun = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("K_SERVICE"));
+if (isCloudRun && !string.IsNullOrWhiteSpace(socketConnFromConfig))
+{
+    connString = socketConnFromConfig;
+}
+else
+{
+    connString = Environment.GetEnvironmentVariable("TABLESAPI__CONNSTRING")
+        ?? ipConnFromConfig
+        ?? socketConnFromConfig; // fallback to socket if explicitly configured even outside Cloud Run
+}
+
+// If still missing but Cloud SQL instance name is provided, synthesize a socket connection string
+if (string.IsNullOrWhiteSpace(connString))
+{
+    var instance = Environment.GetEnvironmentVariable("CLOUDSQL_INSTANCE")
+        ?? builder.Configuration["Db:Postgres:InstanceConnectionName"];
+    if (!string.IsNullOrWhiteSpace(instance))
+    {
+        // NOTE: SSL is not used for Unix sockets
+        connString = $"Host=/cloudsql/{instance};Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Disable";
+    }
+}
 
 // Optional: per-minute rate for table time cost
 decimal defaultRatePerMinute = 0m;
@@ -97,7 +124,8 @@ app.MapPut("/settings/rate", async (HttpContext ctx) =>
 // Env var SETTINGSAPI_BASEURL must point to SettingsApi base URL
 app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
 {
-    string? settingsUrl = Environment.GetEnvironmentVariable("SETTINGSAPI_BASEURL");
+    string? settingsUrl = Environment.GetEnvironmentVariable("SETTINGSAPI_BASEURL")
+        ?? builder.Configuration["SettingsApi:BaseUrl"];
     if (string.IsNullOrWhiteSpace(settingsUrl))
         return Results.Problem("SETTINGSAPI_BASEURL not configured", statusCode: 500);
 
@@ -581,8 +609,8 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
 
     // Create bill
     var billId = Guid.NewGuid();
-    const string billSql = @"INSERT INTO public.bills(bill_id, billing_id, session_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status)
-                            VALUES(@bid, @billingId, @sid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total, 'awaiting_payment')";
+    const string billSql = @"INSERT INTO public.bills(bill_id, billing_id, session_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status, is_settled, payment_state)
+                            VALUES(@bid, @billingId, @sid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total, 'awaiting_payment', false, 'not-paid')";
     await using (var bill = new NpgsqlCommand(billSql, conn))
     {
         bill.Parameters.AddWithValue("@bid", billId);
@@ -667,11 +695,124 @@ app.MapGet("/bills", async (string? from, string? to, string? table, string? ser
     if (DateTime.TryParse(to, out var toDt)) { where.Add("end_time <= @to"); cmd.Parameters.AddWithValue("@to", toDt.ToUniversalTime()); }
 
     var whereSql = where.Count > 0 ? (" WHERE " + string.Join(" AND ", where)) : string.Empty;
-    cmd.CommandText = $@"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount
+    cmd.CommandText = $@"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, is_settled, payment_state
                          FROM public.bills{whereSql}
                          ORDER BY end_time DESC
                          LIMIT 500";
     var list = new List<BillResult>();
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    while (await rdr.ReadAsync())
+    {
+        var br = new BillResult
+        {
+            BillId = rdr.GetFieldValue<Guid>(0),
+            TableLabel = rdr.GetString(1),
+            ServerId = rdr.GetString(2),
+            ServerName = rdr.GetString(3),
+            StartTime = rdr.GetFieldValue<DateTime>(4),
+            EndTime = rdr.GetFieldValue<DateTime>(5),
+            TotalTimeMinutes = rdr.GetInt32(6)
+        };
+        if (!rdr.IsDBNull(7))
+        {
+            var json = rdr.GetString(7);
+            try { br.Items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { br.Items = new(); }
+        }
+        br.TimeCost = rdr.IsDBNull(8) ? 0m : rdr.GetDecimal(8);
+        br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
+        br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
+        // extra fields are available to clients that need them
+        list.Add(br);
+    }
+    return Results.Ok(list);
+});
+
+// Get single bill by id
+app.MapGet("/bills/{billId}", async (Guid billId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = @"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, session_id, billing_id, is_settled, payment_state
+                         FROM public.bills WHERE bill_id = @id";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", billId);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    if (!await rdr.ReadAsync()) return Results.NotFound();
+    var br = new BillResult
+    {
+        BillId = rdr.GetFieldValue<Guid>(0),
+        TableLabel = rdr.GetString(1),
+        ServerId = rdr.GetString(2),
+        ServerName = rdr.GetString(3),
+        StartTime = rdr.GetFieldValue<DateTime>(4),
+        EndTime = rdr.GetFieldValue<DateTime>(5),
+        TotalTimeMinutes = rdr.GetInt32(6)
+    };
+    if (!rdr.IsDBNull(7))
+    {
+        var json = rdr.GetString(7);
+        try { br.Items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { br.Items = new(); }
+    }
+    br.TimeCost = rdr.IsDBNull(8) ? 0m : rdr.GetDecimal(8);
+    br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
+    br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
+    br.SessionId = rdr.IsDBNull(11) ? null : rdr.GetString(11);
+    br.BillingId = rdr.IsDBNull(12) ? null : rdr.GetString(12);
+    return Results.Ok(br);
+});
+
+// Close bill: verify PaymentApi ledger settled then mark bill closed
+app.MapPost("/bills/{billId}/close", async (Guid billId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    // Lookup billing_id
+    const string getSql = @"SELECT billing_id FROM public.bills WHERE bill_id = @id";
+    string? billingId = null;
+    await using (var cmd = new NpgsqlCommand(getSql, conn))
+    {
+        cmd.Parameters.AddWithValue("@id", billId);
+        var obj = await cmd.ExecuteScalarAsync();
+        billingId = obj as string;
+    }
+    if (string.IsNullOrWhiteSpace(billingId)) return Results.Problem("Missing billing_id for bill", statusCode: 400);
+
+    // Call PaymentApi to close (idempotent)
+    var payBase = Environment.GetEnvironmentVariable("PAYMENTAPI_BASEURL")
+        ?? builder.Configuration["PaymentApi:BaseUrl"];
+    if (string.IsNullOrWhiteSpace(payBase)) return Results.Problem("PAYMENTAPI_BASEURL not configured", statusCode: 500);
+    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+    { BaseAddress = new Uri(payBase!.TrimEnd('/') + "/") };
+    using var res = await http.PostAsync($"api/payments/{billingId}/close", new StringContent(string.Empty));
+    if (!res.IsSuccessStatusCode)
+    {
+        var body = await res.Content.ReadAsStringAsync();
+        return Results.Problem($"Payment close failed: {(int)res.StatusCode} {body}", statusCode: 502);
+    }
+
+    // Mark bill closed
+    const string upd = @"UPDATE public.bills SET status = 'closed', closed_at = now() WHERE bill_id = @id";
+    await using (var u = new NpgsqlCommand(upd, conn))
+    {
+        u.Parameters.AddWithValue("@id", billId);
+        await u.ExecuteNonQueryAsync();
+    }
+    return Results.Ok(new { closed = true, billId });
+});
+
+// List unsettled bills only
+app.MapGet("/bills/unsettled", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = @"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount
+                         FROM public.bills WHERE COALESCE(is_settled, false) = false AND status = 'awaiting_payment'
+                         ORDER BY end_time DESC LIMIT 500";
+    var list = new List<BillResult>();
+    await using var cmd = new NpgsqlCommand(sql, conn);
     await using var rdr = await cmd.ExecuteReaderAsync();
     while (await rdr.ReadAsync())
     {
@@ -698,16 +839,42 @@ app.MapGet("/bills", async (string? from, string? to, string? table, string? ser
     return Results.Ok(list);
 });
 
-// Get single bill by id
-app.MapGet("/bills/{billId}", async (Guid billId) =>
+// Mark bill settled (by bill id)
+app.MapPost("/bills/{billId}/settle", async (Guid billId) =>
 {
     await using var conn = new NpgsqlConnection(connString);
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
-    const string sql = @"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount
-                         FROM public.bills WHERE bill_id = @id";
-    await using var cmd = new NpgsqlCommand(sql, conn);
+    const string upd = @"UPDATE public.bills SET is_settled = true, payment_state = 'paid' WHERE bill_id = @id";
+    await using var cmd = new NpgsqlCommand(upd, conn);
     cmd.Parameters.AddWithValue("@id", billId);
+    var rows = await cmd.ExecuteNonQueryAsync();
+    return rows > 0 ? Results.Ok(new { billId, settled = true }) : Results.NotFound();
+});
+
+// Mark bill settled by billingId (used by PaymentApi when ledger reaches paid)
+app.MapPost("/bills/by-billing/{billingId}/settle", async (string billingId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string upd = @"UPDATE public.bills SET is_settled = true, payment_state = 'paid' WHERE billing_id = @bid";
+    await using var cmd = new NpgsqlCommand(upd, conn);
+    cmd.Parameters.AddWithValue("@bid", billingId);
+    var rows = await cmd.ExecuteNonQueryAsync();
+    return Results.Ok(new { billingId, updated = rows });
+});
+
+// Check if billing ID exists (used by PaymentApi for validation)
+app.MapGet("/bills/by-billing/{billingId}", async (string billingId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = @"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, session_id, billing_id, is_settled, payment_state
+                         FROM public.bills WHERE billing_id = @bid";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@bid", billingId);
     await using var rdr = await cmd.ExecuteReaderAsync();
     if (!await rdr.ReadAsync()) return Results.NotFound();
     var br = new BillResult
@@ -716,58 +883,17 @@ app.MapGet("/bills/{billId}", async (Guid billId) =>
         TableLabel = rdr.GetString(1),
         ServerId = rdr.GetString(2),
         ServerName = rdr.GetString(3),
-        StartTime = rdr.GetFieldValue<DateTime>(4),
-        EndTime = rdr.GetFieldValue<DateTime>(5),
-        TotalTimeMinutes = rdr.GetInt32(6)
+        StartTime = rdr.GetFieldValue<DateTimeOffset>(4).DateTime,
+        EndTime = rdr.GetFieldValue<DateTimeOffset>(5).DateTime,
+        TotalTimeMinutes = rdr.GetInt32(6),
+        Items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(rdr.GetString(7)) ?? new(),
+        TimeCost = rdr.GetDecimal(8),
+        ItemsCost = rdr.GetDecimal(9),
+        TotalAmount = rdr.GetDecimal(10)
     };
-    if (!rdr.IsDBNull(7))
-    {
-        var json = rdr.GetString(7);
-        try { br.Items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { br.Items = new(); }
-    }
-    br.TimeCost = rdr.IsDBNull(8) ? 0m : rdr.GetDecimal(8);
-    br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
-    br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
+    br.SessionId = rdr.IsDBNull(11) ? null : rdr.GetString(11);
+    br.BillingId = rdr.IsDBNull(12) ? null : rdr.GetString(12);
     return Results.Ok(br);
-});
-
-// Close bill: verify PaymentApi ledger settled then mark bill closed
-app.MapPost("/bills/{billId}/close", async (Guid billId) =>
-{
-    await using var conn = new NpgsqlConnection(connString);
-    await conn.OpenAsync();
-    await EnsureSchemaAsync(conn);
-    // Lookup billing_id
-    const string getSql = @"SELECT billing_id FROM public.bills WHERE bill_id = @id";
-    string? billingId = null;
-    await using (var cmd = new NpgsqlCommand(getSql, conn))
-    {
-        cmd.Parameters.AddWithValue("@id", billId);
-        var obj = await cmd.ExecuteScalarAsync();
-        billingId = obj as string;
-    }
-    if (string.IsNullOrWhiteSpace(billingId)) return Results.Problem("Missing billing_id for bill", statusCode: 400);
-
-    // Call PaymentApi to close (idempotent)
-    var payBase = Environment.GetEnvironmentVariable("PAYMENTAPI_BASEURL");
-    if (string.IsNullOrWhiteSpace(payBase)) return Results.Problem("PAYMENTAPI_BASEURL not configured", statusCode: 500);
-    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
-    { BaseAddress = new Uri(payBase!.TrimEnd('/') + "/") };
-    using var res = await http.PostAsync($"api/payments/{billingId}/close", new StringContent(string.Empty));
-    if (!res.IsSuccessStatusCode)
-    {
-        var body = await res.Content.ReadAsStringAsync();
-        return Results.Problem($"Payment close failed: {(int)res.StatusCode} {body}", statusCode: 502);
-    }
-
-    // Mark bill closed
-    const string upd = @"UPDATE public.bills SET status = 'closed', closed_at = now() WHERE bill_id = @id";
-    await using (var u = new NpgsqlCommand(upd, conn))
-    {
-        u.Parameters.AddWithValue("@id", billId);
-        await u.ExecuteNonQueryAsync();
-    }
-    return Results.Ok(new { closed = true, billId });
 });
 
 // Get items for active session
@@ -1023,6 +1149,8 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         items_cost numeric NOT NULL DEFAULT 0,
         total_amount numeric NOT NULL DEFAULT 0,
         status text NOT NULL DEFAULT 'awaiting_payment' CHECK (status IN ('awaiting_payment','closed')),
+        is_settled boolean NOT NULL DEFAULT false,
+        payment_state text NOT NULL DEFAULT 'not-paid' CHECK (payment_state IN ('not-paid','partial-paid','paid','partial-refunded','refunded','cancelled')),
         closed_at timestamp NULL,
         created_at timestamp NOT NULL DEFAULT now()
     );";
@@ -1034,6 +1162,8 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS billing_id text NULL;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS session_id text NULL;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'awaiting_payment';
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS is_settled boolean NOT NULL DEFAULT false;
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS payment_state text NOT NULL DEFAULT 'not-paid';
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS closed_at timestamp NULL;";
     const string sql3 = @"CREATE TABLE IF NOT EXISTS public.app_settings(
                             key text PRIMARY KEY,

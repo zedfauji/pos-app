@@ -21,6 +21,19 @@ public class DateShortConverter : IValueConverter
                 return dt.ToString("d", CultureInfo.InvariantCulture);
             }
         }
+        if (value is DateTimeOffset dto)
+        {
+            // Short date per current culture if provided, else en-US fallback
+            try
+            {
+                var culture = !string.IsNullOrWhiteSpace(language) ? new CultureInfo(language) : CultureInfo.CurrentCulture;
+                return dto.ToString(culture.DateTimeFormat.ShortDatePattern, culture);
+            }
+            catch
+            {
+                return dto.ToString("d", CultureInfo.InvariantCulture);
+            }
+        }
         return string.Empty;
     }
 

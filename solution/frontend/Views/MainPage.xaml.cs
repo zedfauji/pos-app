@@ -207,6 +207,18 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(BillingPage));
 #endif
                             break;
+                        case "PaymentPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(PaymentPage));
+#endif
+                            break;
+                        case "AllPaymentsPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(AllPaymentsPage));
+#endif
+                            break;
                     }
                     // Update back button after navigation
                     NavView.IsBackEnabled = ContentFrame.CanGoBack;

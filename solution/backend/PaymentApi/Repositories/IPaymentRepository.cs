@@ -16,4 +16,6 @@ public interface IPaymentRepository
 
     Task AppendLogAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string billingId, string sessionId, string action, object? oldValue, object? newValue, string? serverId, CancellationToken ct);
     Task<(IReadOnlyList<PaymentLogDto> Items, int Total)> ListLogsAsync(string billingId, int page, int pageSize, CancellationToken ct);
+
+    Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct);
 }

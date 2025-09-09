@@ -6,10 +6,12 @@ namespace PaymentApi.Services;
 public sealed class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _repo;
+    private readonly IConfiguration _config;
 
-    public PaymentService(IPaymentRepository repo)
+    public PaymentService(IPaymentRepository repo, IConfiguration config)
     {
         _repo = repo;
+        _config = config;
     }
 
     public async Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
@@ -18,6 +20,47 @@ public sealed class PaymentService : IPaymentService
             throw new InvalidOperationException("NO_PAYMENT_LINES");
         if (req.Lines.Any(l => l.AmountPaid < 0 || l.DiscountAmount < 0 || l.TipAmount < 0))
             throw new InvalidOperationException("INVALID_AMOUNTS");
+
+        // Validate that the billing ID exists in TablesApi before allowing payment
+        var tablesApiBaseUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") 
+            ?? _config["TablesApi:BaseUrl"];
+        
+        if (!string.IsNullOrWhiteSpace(tablesApiBaseUrl))
+        {
+            try
+            {
+                using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+                { BaseAddress = new Uri(tablesApiBaseUrl.TrimEnd('/') + "/") };
+                
+                var billUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}";
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Checking if billing ID exists in TablesApi: {billUrl}");
+                
+                using var res = await http.GetAsync(billUrl, ct);
+                System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi bill check response: {(int)res.StatusCode} {res.ReasonPhrase}");
+                
+                if (!res.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in TablesApi, rejecting payment");
+                    throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in TablesApi");
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} exists in TablesApi, proceeding with payment");
+            }
+            catch (HttpRequestException ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PaymentService: HTTP error checking TablesApi: {ex.Message}");
+                throw new InvalidOperationException($"TABLESAPI_UNAVAILABLE: Cannot verify billing ID {req.BillingId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Error checking TablesApi: {ex.Message}");
+                throw new InvalidOperationException($"TABLESAPI_ERROR: Cannot verify billing ID {req.BillingId}");
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentService: TABLESAPI_BASEURL not configured, skipping billing ID validation");
+        }
 
         BillLedgerDto? ledger = null;
         await _repo.ExecuteInTransactionAsync(async (conn, tx, token) =>
@@ -33,6 +76,8 @@ public sealed class PaymentService : IPaymentService
             var addDisc = req.Lines.Sum(l => l.DiscountAmount);
             var addTip = req.Lines.Sum(l => l.TipAmount);
 
+            System.Diagnostics.Debug.WriteLine($"PaymentService.RegisterPaymentAsync: BillingId={req.BillingId}, SessionId={req.SessionId}, TotalDue={req.TotalDue}, AddPaid={addPaid}, AddDisc={addDisc}, AddTip={addTip}");
+
             // Upsert ledger, compute status
             var (due, disc, paid, tip, status) = await _repo.UpsertLedgerAsync(conn, tx, req.SessionId, req.BillingId, req.TotalDue, (addPaid, addDisc, addTip), token);
             ledger = new BillLedgerDto(req.BillingId, req.SessionId, due, disc, paid, tip, status);
@@ -40,6 +85,51 @@ public sealed class PaymentService : IPaymentService
             // Log
             await _repo.AppendLogAsync(conn, tx, req.BillingId, req.SessionId, "register_payment", old, new { lines = req.Lines, ledger }, req.ServerId, token);
         }, ct);
+
+        // If fully settled, notify TablesApi to mark the bill settled (best-effort)
+        try
+        {
+            if (ledger!.Status?.Equals("paid", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var tablesBase = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") 
+                    ?? _config["TablesApi:BaseUrl"];
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Ledger status is 'paid', attempting to notify TablesApi. TABLESAPI_BASEURL = {tablesBase ?? "NOT SET"}");
+                
+                if (!string.IsNullOrWhiteSpace(tablesBase))
+                {
+                    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+                    { BaseAddress = new Uri(tablesBase.TrimEnd('/') + "/") };
+                    
+                    var settleUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}/settle";
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Calling TablesApi settle endpoint: {settleUrl}");
+                    
+                    using var res = await http.PostAsync(settleUrl, new StringContent(string.Empty), ct);
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi settle response: {(int)res.StatusCode} {res.ReasonPhrase}");
+                    
+                    if (res.IsSuccessStatusCode)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Successfully notified TablesApi to settle bill {req.BillingId}");
+                    }
+                    else
+                    {
+                        var errorContent = await res.Content.ReadAsStringAsync();
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi settle failed: {errorContent}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: TABLESAPI_BASEURL not configured, skipping TablesApi notification");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Ledger status is '{ledger?.Status}', not notifying TablesApi");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentService: Exception while notifying TablesApi: {ex.Message}");
+        }
 
         return ledger!;
     }
@@ -87,4 +177,7 @@ public sealed class PaymentService : IPaymentService
         var (items, total) = await _repo.ListLogsAsync(billingId, page, pageSize, ct);
         return new PagedResult<PaymentLogDto>(items, total);
     }
+
+    public Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct)
+        => _repo.GetAllPaymentsAsync(limit, ct);
 }

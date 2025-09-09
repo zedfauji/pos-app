@@ -47,8 +47,8 @@
             <!-- Direct Payment Line -->
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <ComboBox Header="Method" ItemsSource="{Binding Methods}" SelectedItem="{Binding SelectedMethod}" Width="180"/>
-                <TextBox Header="Amount" Text="{Binding Amount, Mode=TwoWay}" Width="120"/>
-                <TextBox Header="Tip" Text="{Binding Tip, Mode=TwoWay}" Width="120"/>
+                <NumberBox Header="Amount" Value="{Binding Amount, Mode=TwoWay}" Width="120" Minimum="0" SmallChange="0.5"/>
+                <NumberBox Header="Tip" Value="{Binding Tip, Mode=TwoWay}" Width="120" Minimum="0" SmallChange="0.5"/>
             </StackPanel>
 
             <!-- Split Payments -->
@@ -59,7 +59,7 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <ComboBox ItemsSource="{Binding ElementName=DialogRoot, Path=DataContext.Methods}" SelectedItem="{Binding PaymentMethod, Mode=TwoWay}" Width="160"/>
-                                    <TextBox Text="{Binding AmountPaid, Mode=TwoWay}" Width="120"/>
+                                    <NumberBox Value="{Binding AmountPaid, Mode=TwoWay}" Width="120" Minimum="0" SmallChange="0.5"/>
                                     <Button Content="Remove" Click="OnRemoveSplit"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -79,7 +79,10 @@
                 </StackPanel>
             </Expander>
 
-            <InfoBar IsOpen="{Binding HasError}" Severity="Error" Message="{Binding Error}"/>
+            <StackPanel Spacing="4">
+                <InfoBar IsOpen="{Binding HasError}" Severity="Error" Message="{Binding Error}"/>
+                <TextBlock Text="{Binding DebugInfo}" Opacity="0.7"/>
+            </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
                 <TextBlock Text="{Binding PaidText}"/>

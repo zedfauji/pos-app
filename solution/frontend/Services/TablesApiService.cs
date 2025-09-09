@@ -57,6 +57,9 @@ namespace MagiDesk.Frontend.Services
         public Task<BillResult?> GetBillAsync(Guid billId, CancellationToken ct = default)
             => _http.GetFromJsonAsync<BillResult>($"bills/{billId:D}", ct);
 
+        public Task<List<BillResult>?> GetUnsettledBillsAsync(CancellationToken ct = default)
+            => _http.GetFromJsonAsync<List<BillResult>>("bills/unsettled", ct);
+
         public Task<List<ItemLine>?> GetSessionItemsAsync(string label, CancellationToken ct = default)
             => _http.GetFromJsonAsync<List<ItemLine>>($"tables/{Uri.EscapeDataString(label)}/items", ct);
 

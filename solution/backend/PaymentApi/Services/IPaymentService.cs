@@ -12,4 +12,7 @@ public interface IPaymentService
 
     // Close bill when fully settled (paid or paid+discount >= due)
     Task<BillLedgerDto> CloseBillAsync(string billingId, string? serverId, CancellationToken ct);
+
+    // Get all payments across all bills
+    Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct);
 }

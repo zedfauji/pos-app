@@ -359,12 +359,9 @@ public class TableRepository
         if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
         try
         {
-            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/bills");
+            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/bills/unsettled");
             var query = new List<string>();
-            if (from.HasValue) query.Add($"from={Uri.EscapeDataString(from.Value.UtcDateTime.ToString("o"))}");
-            if (to.HasValue) query.Add($"to={Uri.EscapeDataString(to.Value.UtcDateTime.ToString("o"))}");
-            if (!string.IsNullOrWhiteSpace(table)) query.Add($"table={Uri.EscapeDataString(table)}");
-            if (!string.IsNullOrWhiteSpace(server)) query.Add($"server={Uri.EscapeDataString(server)}");
+            // filters are not needed for unsettled listing, keep hooks for future
             var url = new Uri(baseUri + (query.Count > 0 ? ("?" + string.Join("&", query)) : string.Empty));
             var res = await _http.GetAsync(url, ct);
             if (!res.IsSuccessStatusCode) return list;
