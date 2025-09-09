@@ -527,9 +527,9 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     await EnsureSchemaAsync(conn);
 
     // Find active session
-    const string findSql = @"SELECT session_id, server_id, server_name, start_time FROM public.table_sessions
+    const string findSql = @"SELECT session_id, server_id, server_name, start_time, billing_id FROM public.table_sessions
                              WHERE table_label = @label AND status = 'active' ORDER BY start_time DESC LIMIT 1";
-    Guid sessionId;
+    Guid sessionId; Guid? billingGuid = null;
     string serverId;
     string serverName;
     DateTime startTime;
@@ -542,6 +542,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         serverId = rdr.GetString(1);
         serverName = rdr.GetString(2);
         startTime = rdr.GetFieldValue<DateTime>(3);
+        if (!rdr.IsDBNull(4)) billingGuid = rdr.GetFieldValue<Guid>(4);
     }
 
     var end = DateTime.UtcNow;
@@ -580,11 +581,13 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
 
     // Create bill
     var billId = Guid.NewGuid();
-    const string billSql = @"INSERT INTO public.bills(bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount)
-                            VALUES(@bid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total)";
+    const string billSql = @"INSERT INTO public.bills(bill_id, billing_id, session_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status)
+                            VALUES(@bid, @billingId, @sid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total, 'awaiting_payment')";
     await using (var bill = new NpgsqlCommand(billSql, conn))
     {
         bill.Parameters.AddWithValue("@bid", billId);
+        bill.Parameters.AddWithValue("@billingId", (object?)(billingGuid?.ToString()) ?? DBNull.Value);
+        bill.Parameters.AddWithValue("@sid", sessionId.ToString());
         bill.Parameters.AddWithValue("@label", label);
         bill.Parameters.AddWithValue("@srvId", serverId);
         bill.Parameters.AddWithValue("@srvName", serverName);
@@ -609,6 +612,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     return Results.Ok(new BillResult
     {
         BillId = billId,
+        // Note: client can correlate using returned BillId; billing_id is retrievable via GET /bills/{billId}
         TableLabel = label,
         ServerId = serverId,
         ServerName = serverName,
@@ -725,6 +729,45 @@ app.MapGet("/bills/{billId}", async (Guid billId) =>
     br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
     br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
     return Results.Ok(br);
+});
+
+// Close bill: verify PaymentApi ledger settled then mark bill closed
+app.MapPost("/bills/{billId}/close", async (Guid billId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    // Lookup billing_id
+    const string getSql = @"SELECT billing_id FROM public.bills WHERE bill_id = @id";
+    string? billingId = null;
+    await using (var cmd = new NpgsqlCommand(getSql, conn))
+    {
+        cmd.Parameters.AddWithValue("@id", billId);
+        var obj = await cmd.ExecuteScalarAsync();
+        billingId = obj as string;
+    }
+    if (string.IsNullOrWhiteSpace(billingId)) return Results.Problem("Missing billing_id for bill", statusCode: 400);
+
+    // Call PaymentApi to close (idempotent)
+    var payBase = Environment.GetEnvironmentVariable("PAYMENTAPI_BASEURL");
+    if (string.IsNullOrWhiteSpace(payBase)) return Results.Problem("PAYMENTAPI_BASEURL not configured", statusCode: 500);
+    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+    { BaseAddress = new Uri(payBase!.TrimEnd('/') + "/") };
+    using var res = await http.PostAsync($"api/payments/{billingId}/close", new StringContent(string.Empty));
+    if (!res.IsSuccessStatusCode)
+    {
+        var body = await res.Content.ReadAsStringAsync();
+        return Results.Problem($"Payment close failed: {(int)res.StatusCode} {body}", statusCode: 502);
+    }
+
+    // Mark bill closed
+    const string upd = @"UPDATE public.bills SET status = 'closed', closed_at = now() WHERE bill_id = @id";
+    await using (var u = new NpgsqlCommand(upd, conn))
+    {
+        u.Parameters.AddWithValue("@id", billId);
+        await u.ExecuteNonQueryAsync();
+    }
+    return Results.Ok(new { closed = true, billId });
 });
 
 // Get items for active session
@@ -967,6 +1010,8 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
 
     CREATE TABLE IF NOT EXISTS public.bills (
         bill_id uuid PRIMARY KEY,
+        billing_id text NULL UNIQUE,
+        session_id text NULL,
         table_label text NOT NULL,
         server_id text NOT NULL,
         server_name text NOT NULL,
@@ -977,13 +1022,19 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         time_cost numeric NOT NULL DEFAULT 0,
         items_cost numeric NOT NULL DEFAULT 0,
         total_amount numeric NOT NULL DEFAULT 0,
+        status text NOT NULL DEFAULT 'awaiting_payment' CHECK (status IN ('awaiting_payment','closed')),
+        closed_at timestamp NULL,
         created_at timestamp NOT NULL DEFAULT now()
     );";
     // Ensure new columns for bills
     const string sql2 = @"ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]';
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS time_cost numeric NOT NULL DEFAULT 0;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS items_cost numeric NOT NULL DEFAULT 0;
-                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS total_amount numeric NOT NULL DEFAULT 0;";
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS total_amount numeric NOT NULL DEFAULT 0;
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS billing_id text NULL;
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS session_id text NULL;
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'awaiting_payment';
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS closed_at timestamp NULL;";
     const string sql3 = @"CREATE TABLE IF NOT EXISTS public.app_settings(
                             key text PRIMARY KEY,
                             value text NOT NULL

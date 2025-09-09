@@ -50,4 +50,11 @@ public sealed class PaymentsController : ControllerBase
         var res = await _service.ListLogsAsync(billingId, page, pageSize, ct);
         return Ok(res);
     }
+
+    [HttpPost("{billingId}/close")]
+    public async Task<ActionResult<BillLedgerDto>> CloseAsync([FromRoute] string billingId, [FromQuery] string? serverId, CancellationToken ct)
+    {
+        var ledger = await _service.CloseBillAsync(billingId, serverId, ct);
+        return Ok(ledger);
+    }
 }

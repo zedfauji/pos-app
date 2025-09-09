@@ -62,7 +62,13 @@ public sealed class OrderService : IOrderService
             }
             else if (it.ComboId is not null)
             {
-                // TODO: expand combo to items and aggregate SKU quantities (requires repository method). For now skip deduction.
+                // Expand combo to items: aggregate menu item SKUs by quantity via repository
+                var links = await _repo.GetComboItemsAsync(it.ComboId.Value, ct);
+                foreach (var link in links)
+                {
+                    var snap = await _repo.GetMenuItemSnapshotAsync(link.MenuItemId, ct);
+                    skuQty.Add((snap.sku, it.Quantity * link.Quantity));
+                }
             }
         }
         if (skuQty.Count > 0)

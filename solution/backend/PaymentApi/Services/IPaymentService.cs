@@ -9,4 +9,7 @@ public interface IPaymentService
     Task<BillLedgerDto?> GetLedgerAsync(string billingId, CancellationToken ct);
     Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(string billingId, CancellationToken ct);
     Task<PagedResult<PaymentLogDto>> ListLogsAsync(string billingId, int page, int pageSize, CancellationToken ct);
+
+    // Close bill when fully settled (paid or paid+discount >= due)
+    Task<BillLedgerDto> CloseBillAsync(string billingId, string? serverId, CancellationToken ct);
 }

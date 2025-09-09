@@ -216,6 +216,21 @@ public sealed partial class OrderRepository : IOrderRepository
         return (price, vendor);
     }
 
+    public async Task<IReadOnlyList<(long MenuItemId, int Quantity)>> GetComboItemsAsync(long comboId, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string sql = @"SELECT menu_item_id, quantity FROM menu.combo_items WHERE combo_id = @id";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@id", comboId);
+        var list = new List<(long, int)>();
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        while (await rdr.ReadAsync(ct))
+        {
+            list.Add((rdr.GetInt64(0), rdr.GetInt32(1)));
+        }
+        return list;
+    }
+
     public async Task<(bool isAvailable, bool isDiscountable)> GetMenuItemFlagsAsync(long menuItemId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);

@@ -44,6 +44,24 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
+    public async Task<BillLedgerDto> CloseBillAsync(string billingId, string? serverId, CancellationToken ct)
+    {
+        // Mark closed if ledger is settled (paid)
+        BillLedgerDto? ledger = null;
+        await _repo.ExecuteInTransactionAsync(async (conn, tx, token) =>
+        {
+            var old = await _repo.GetLedgerAsync(billingId, token);
+            if (old is null) throw new InvalidOperationException("LEDGER_NOT_FOUND");
+            if (!(old.TotalPaid + old.TotalDiscount >= old.TotalDue))
+                throw new InvalidOperationException("LEDGER_NOT_SETTLED");
+
+            // Log close action; actual bill close state is managed by TablesApi bill status
+            await _repo.AppendLogAsync(conn, tx, billingId, old.SessionId, "close_bill", old, new { status = "closed" }, serverId, token);
+            ledger = old with { };
+        }, ct);
+        return ledger!;
+    }
+
     public async Task<BillLedgerDto> ApplyDiscountAsync(string billingId, string sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct)
     {
         if (discountAmount <= 0) throw new InvalidOperationException("INVALID_DISCOUNT");

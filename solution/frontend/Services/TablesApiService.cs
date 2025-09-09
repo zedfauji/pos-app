@@ -51,6 +51,12 @@ namespace MagiDesk.Frontend.Services
         public Task<HttpResponseMessage> StopSessionAsync(string label, CancellationToken ct = default)
             => _http.PostAsync($"tables/{Uri.EscapeDataString(label)}/stop", content: null, ct);
 
+        public Task<HttpResponseMessage> CloseBillAsync(Guid billId, CancellationToken ct = default)
+            => _http.PostAsync($"bills/{billId:D}/close", content: null, ct);
+
+        public Task<BillResult?> GetBillAsync(Guid billId, CancellationToken ct = default)
+            => _http.GetFromJsonAsync<BillResult>($"bills/{billId:D}", ct);
+
         public Task<List<ItemLine>?> GetSessionItemsAsync(string label, CancellationToken ct = default)
             => _http.GetFromJsonAsync<List<ItemLine>>($"tables/{Uri.EscapeDataString(label)}/items", ct);
 
