@@ -4,6 +4,7 @@
 - Entry point: `Program.cs`
 - Technologies: ASP.NET Core 8, Controllers, DI, Swagger (Development), Npgsql
 - Database: PostgreSQL 17 (Cloud SQL via Unix socket in Production)
+ - Resilience: Polly HttpClient retries for InventoryApi calls
 
 ## Configuration
 
@@ -50,6 +51,9 @@ Program selects Local in Development and CloudRun socket in Production.
   - `PUT /api/orders/{orderId}/items/{orderItemId}` (Update item)
   - `DELETE /api/orders/{orderId}/items/{orderItemId}` (Delete item)
   - `POST /api/orders/{orderId}/close` (Close order)
+- Inventory Integration:
+  - Checks availability via InventoryApi `/api/inventory/availability/check-by-sku`
+  - Deducts stock via InventoryApi `/api/inventory/items/adjust-by-sku`
 - Logs & Totals:
   - `GET /api/orders/{orderId}/logs?page=&pageSize=`
   - `POST /api/orders/{orderId}/logs/recalculate`

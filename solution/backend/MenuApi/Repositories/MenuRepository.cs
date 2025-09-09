@@ -297,11 +297,21 @@ public sealed class MenuRepository : IMenuRepository
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
-        const string insert = @"INSERT INTO menu.menu_items(sku_id, name, description, category, group_name, vendor_price, selling_price, price, picture_url, is_discountable, is_part_of_combo, is_available, version, created_by, updated_by)
-                               VALUES(@sku, @name, @desc, @cat, @grp, @vprice, @sprice, @price, @pic, @disc, @combo, @avail, 1, @user, @user)
+        const string insert = @"INSERT INTO menu.menu_items(sku_id, inventory_item_id, name, description, category, group_name, vendor_price, selling_price, price, picture_url, is_discountable, is_part_of_combo, is_available, version, created_by, updated_by)
+                               VALUES(@sku, @inv_id, @name, @desc, @cat, @grp, @vprice, @sprice, @price, @pic, @disc, @combo, @avail, 1, @user, @user)
                                RETURNING menu_item_id, version";
+        // Link to inventory item by SKU if exists
+        Guid? inventoryItemId = null;
+        const string invLookup = @"select item_id from inventory.inventory_items where lower(sku)=lower(@sku) and is_active=true limit 1";
+        await using (var inv = new NpgsqlCommand(invLookup, conn, tx))
+        {
+            inv.Parameters.AddWithValue("@sku", dto.Sku);
+            var obj = await inv.ExecuteScalarAsync(ct);
+            if (obj is Guid g) inventoryItemId = g;
+        }
         await using var cmd = new NpgsqlCommand(insert, conn, tx);
         cmd.Parameters.AddWithValue("@sku", dto.Sku);
+        cmd.Parameters.AddWithValue("@inv_id", (object?)inventoryItemId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@name", dto.Name);
         cmd.Parameters.AddWithValue("@desc", (object?)dto.Description ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cat", dto.Category);
@@ -345,11 +355,21 @@ public sealed class MenuRepository : IMenuRepository
                                 is_discountable = COALESCE(@disc, is_discountable),
                                 is_part_of_combo = COALESCE(@combo, is_part_of_combo),
                                 is_available = COALESCE(@avail, is_available),
+                                inventory_item_id = COALESCE(@inv_id, inventory_item_id),
                                 version = version + 1,
                                 updated_by = @user,
                                 updated_at = now()
                                WHERE menu_item_id = @id
                                RETURNING version";
+        // Re-link inventory by SKU from existing item (Update DTO has no SKU)
+        Guid? invId = null;
+        const string invLookup2 = @"select item_id from inventory.inventory_items where lower(sku)=lower(@sku) and is_active=true limit 1";
+        await using (var inv = new NpgsqlCommand(invLookup2, conn, tx))
+        {
+            inv.Parameters.AddWithValue("@sku", existing.Item.Sku);
+            var obj = await inv.ExecuteScalarAsync(ct);
+            if (obj is Guid g) invId = g;
+        }
         await using var cmd = new NpgsqlCommand(update, conn, tx);
         cmd.Parameters.AddWithValue("@name", (object?)dto.Name ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@desc", (object?)dto.Description ?? DBNull.Value);
@@ -362,6 +382,7 @@ public sealed class MenuRepository : IMenuRepository
         cmd.Parameters.AddWithValue("@disc", (object?)dto.IsDiscountable ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@combo", (object?)dto.IsPartOfCombo ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@avail", (object?)dto.IsAvailable ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@inv_id", (object?)invId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@user", (object?)user ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
         var version = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));

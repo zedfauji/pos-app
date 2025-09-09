@@ -4,6 +4,7 @@
 - Entry point: `Program.cs`
 - Technologies: ASP.NET Core 8, Controllers, DI, Swagger (Development), Npgsql
 - Database: PostgreSQL 17 (Cloud SQL via Unix socket in Production)
+ - Integration: References `inventory.inventory_items` via nullable `inventory_item_id` and looks up by SKU
 
 ## Configuration
 
@@ -45,6 +46,7 @@ Program selects Local in Development and CloudRun socket in Production.
   - `PUT /api/menu/items/{id}`
   - `DELETE /api/menu/items/{id}`
   - `POST /api/menu/items/{id}/restore`
+  - Stores `inventory_item_id` if SKU maps to InventoryApi item
 - Combos:
   - `GET /api/menu/combos` (query: q, availableOnly, page, pageSize)
   - `GET /api/menu/combos/{id}`

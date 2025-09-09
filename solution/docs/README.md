@@ -35,22 +35,7 @@ solution/
 
 ## Backend
 
-### Configure Firestore
-
-Set your Google Cloud project ID and credentials path in `backend/MagiDesk.Backend/appsettings.json`:
-
-```json
-{
-  "Firestore": {
-    "ProjectId": "YOUR_GCP_PROJECT_ID",
-    "CredentialsPath": "config/serviceAccount.json"
-  }
-}
-```
-
-Optionally, set `GOOGLE_APPLICATION_CREDENTIALS` to override the path.
-
-Place your service account JSON at `backend/config/serviceAccount.json` (do not commit real credentials to source control).
+Inventory has been migrated to PostgreSQL (Cloud SQL). Firestore is no longer used by InventoryApi.
 
 ### Run Locally
 

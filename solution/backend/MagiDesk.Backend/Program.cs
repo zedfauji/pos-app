@@ -28,7 +28,7 @@ builder.Services.Configure<MagiDesk.Backend.Services.FirestoreOptions>(
 builder.Services.AddSingleton<MagiDesk.Backend.Services.IFirestoreService, MagiDesk.Backend.Services.FirestoreService>();
 builder.Services.AddSingleton<MagiDesk.Backend.Services.ICashFlowService, MagiDesk.Backend.Services.CashFlowService>();
 builder.Services.AddSingleton<MagiDesk.Backend.Services.IInventoryService, MagiDesk.Backend.Services.InventoryService>();
-builder.Services.AddSingleton<MagiDesk.Backend.Services.IOrdersService, MagiDesk.Backend.Services.OrdersService>();
+// Removed legacy OrdersService from core backend; orders handled by OrderApi
 builder.Services.AddHttpClient<MagiDesk.Backend.Services.IEmailService, MagiDesk.Backend.Services.EmailService>();
 builder.Services.AddSingleton<MagiDesk.Backend.Services.IUsersService, MagiDesk.Backend.Services.UsersService>();
 

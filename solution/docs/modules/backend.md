@@ -3,7 +3,7 @@
 - Project: `solution/backend/MagiDesk.Backend/`
 - Entry point: `Program.cs`
 - Technologies: ASP.NET Core 8, Controllers, Dependency Injection, Swagger (Development only)
-- Data: Google Firestore via `FirestoreService`
+- Data: Historically used Google Firestore. Core services are now PostgreSQL-only. See dedicated service docs.
 
 ## Related Modules
 
@@ -12,24 +12,11 @@
 
 ## Services Registered (DI)
 
-- `IFirestoreService` → `FirestoreService`
-- `ICashFlowService` → `CashFlowService`
-- `IInventoryService` → `InventoryService`
-- `IOrdersService` → `OrdersService`
-- `IEmailService` (HttpClient) → `EmailService`
-- `IUsersService` → `UsersService`
-- `ISettingsService` → `SettingsService`
+This app previously aggregated multiple concerns. Inventory and Orders moved to separate services. Refer to service-specific docs for current DI setups.
 
 ## Controllers
 
-- `VendorsController`: CRUD vendors; nested item CRUD; export/import; probe endpoints.
-- `ItemsController`: vendor-scoped generic item CRUD (via `vendorId` query).
-- `OrdersController`: list orders; finalize; drafts; job history; notifications.
-- `InventoryController`: list inventory; launch product-name sync job.
-- `JobsController`: get job by id; list recent jobs.
-- `CashFlowController`: list/add/update cash flow.
-- `UsersController` / `AuthController`: Users CRUD; login.
-- `SettingsController`: get/put frontend/backend settings.
+Legacy overview retained for context. Active controllers now live per microservice.
 
 ## Configuration
 

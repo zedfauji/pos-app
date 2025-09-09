@@ -43,6 +43,7 @@ create schema if not exists menu;
 create table if not exists menu.menu_items (
   menu_item_id        bigserial primary key,
   sku_id              text not null,
+  inventory_item_id   uuid null,
   name                text not null,
   description         text null,
   category            text not null,
@@ -80,6 +81,7 @@ end $$;
 create unique index if not exists ux_menu_items_sku_active
   on menu.menu_items (lower(sku_id))
   where is_deleted = false;
+create index if not exists ix_menu_items_inventory_fk on menu.menu_items(inventory_item_id);
 create index if not exists ix_menu_items_category on menu.menu_items(category);
 create index if not exists ix_menu_items_group on menu.menu_items(group_name);
 create index if not exists ix_menu_items_avail on menu.menu_items(is_available) where is_deleted = false;

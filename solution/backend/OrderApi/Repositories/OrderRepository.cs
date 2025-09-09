@@ -4,13 +4,15 @@ using OrderApi.Models;
 
 namespace OrderApi.Repositories;
 
-public sealed class OrderRepository : IOrderRepository
+public sealed partial class OrderRepository : IOrderRepository
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly IHttpClientFactory _httpFactory;
 
-    public OrderRepository(NpgsqlDataSource dataSource)
+    public OrderRepository(NpgsqlDataSource dataSource, IHttpClientFactory httpFactory)
     {
         _dataSource = dataSource;
+        _httpFactory = httpFactory;
     }
 
     public async Task ExecuteInTransactionAsync(Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task> action, CancellationToken ct)

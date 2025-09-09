@@ -1,4 +1,4 @@
-using InventoryApi.Services;
+using InventoryApi.Repositories;
 using MagiDesk.Shared.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,53 +8,48 @@ namespace InventoryApi.Controllers;
 [Route("api/[controller]")]
 public class ItemsController : ControllerBase
 {
-    private readonly IFirestoreService _firestore;
+    private readonly IInventoryRepository _repo;
 
-    public ItemsController(IFirestoreService firestore)
+    public ItemsController(IInventoryRepository repo)
     {
-        _firestore = firestore;
+        _repo = repo;
     }
 
-    // generic endpoints require vendorId query param
+    // generic endpoints; optional filters
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ItemDto>>> Get([FromQuery] string vendorId, CancellationToken ct)
+    public async Task<ActionResult<IEnumerable<ItemDto>>> Get([FromQuery] string? vendorId, [FromQuery] string? categoryId, [FromQuery] bool? isMenuAvailable, [FromQuery] string? search, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vendorId)) return BadRequest("vendorId is required");
-        var items = await _firestore.GetItemsAsync(vendorId, ct);
-        return Ok(items);
+        var items = await _repo.ListItemsAsync(vendorId, categoryId, isMenuAvailable, search, ct);
+        return Ok(items ?? new List<ItemDto>());
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<ItemDto>> GetById(string id, [FromQuery] string vendorId, CancellationToken ct)
+    public async Task<ActionResult<ItemDto>> GetById(string id, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vendorId)) return BadRequest("vendorId is required");
-        var item = await _firestore.GetItemAsync(vendorId, id, ct);
+        var item = await _repo.GetItemAsync(id, ct);
         if (item is null) return NotFound();
         return Ok(item);
     }
 
     [HttpPost]
-    public async Task<ActionResult<ItemDto>> Create([FromQuery] string vendorId, [FromBody] ItemDto dto, CancellationToken ct)
+    public async Task<ActionResult<ItemDto>> Create([FromBody] ItemDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vendorId)) return BadRequest("vendorId is required");
-        var created = await _firestore.CreateItemAsync(vendorId, dto, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id, vendorId }, created);
+        var created = await _repo.CreateItemAsync(dto, ct);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromQuery] string vendorId, [FromBody] ItemDto dto, CancellationToken ct)
+    public async Task<IActionResult> Update(string id, [FromBody] ItemDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vendorId)) return BadRequest("vendorId is required");
-        var ok = await _firestore.UpdateItemAsync(vendorId, id, dto, ct);
+        var ok = await _repo.UpdateItemAsync(id, dto, ct);
         if (!ok) return NotFound();
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id, [FromQuery] string vendorId, CancellationToken ct)
+    public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vendorId)) return BadRequest("vendorId is required");
-        var ok = await _firestore.DeleteItemAsync(vendorId, id, ct);
+        var ok = await _repo.DeleteItemAsync(id, ct);
         if (!ok) return NotFound();
         return NoContent();
     }

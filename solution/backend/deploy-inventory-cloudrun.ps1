@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$false)][string]$ProjectId,
     [Parameter(Mandatory=$false)][string]$Region = "us-central1",
-    [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-inventory"
+    [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-inventory",
+    [Parameter(Mandatory=$false)][string]$CloudSqlInstance
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,7 +58,8 @@ $EnvVars = ($envPairs -join ",")
     --platform managed `
     --allow-unauthenticated `
     --port 8080 `
-    --set-env-vars $EnvVars
+    --set-env-vars $EnvVars `
+    $(if ($CloudSqlInstance) { "--add-cloudsql-instances=$CloudSqlInstance" })
 if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Run deployment failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
 
 $Url = (& gcloud.cmd run services describe $ServiceName --region $Region --format="value(status.url)")

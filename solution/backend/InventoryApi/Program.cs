@@ -1,13 +1,32 @@
-using InventoryApi.Services;
+using InventoryApi.Repositories;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Options
-builder.Services.Configure<FirestoreOptions>(builder.Configuration.GetSection("Firestore"));
+// Data source (PostgreSQL) - prefer appsettings Postgres section; fallback to env if provided
+string? connString;
+var pgSection = builder.Configuration.GetSection("Postgres");
+if (builder.Environment.IsDevelopment())
+{
+    connString = pgSection.GetValue<string>("LocalConnectionString");
+}
+else
+{
+    connString = pgSection.GetValue<string>("CloudRunSocketConnectionString");
+}
+connString ??= builder.Configuration["INVENTORY_CONNECTION_STRING"]
+    ?? builder.Configuration["POSTGRES_CONNECTION_STRING"]
+    ?? "Host=localhost;Port=5432;Username=posapp;Password=Campus_66;Database=postgres";
+builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
+{
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connString);
+    return dataSourceBuilder.Build();
+});
 
-// Services
-builder.Services.AddSingleton<IFirestoreService, FirestoreService>();
-builder.Services.AddSingleton<IOrdersService, OrdersService>();
+// Repositories
+builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
+builder.Services.AddScoped<IVendorRepository, VendorRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 // MVC + Swagger + CORS
 builder.Services.AddControllers();

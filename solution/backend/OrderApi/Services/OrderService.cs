@@ -50,8 +50,37 @@ public sealed class OrderService : IOrderService
 
         var subtotal = pricedItems.Sum(x => x.LineTotal);
         var order = new OrderDto(0, req.SessionId, req.TableId, "open", subtotal, 0m, 0m, subtotal, pricedItems.Sum(x => x.Profit), pricedItems);
+
+        // Inventory checks by SKU derived from menu snapshots
+        var skuQty = new List<(string Sku, decimal Quantity)>();
+        foreach (var it in pricedItems)
+        {
+            if (it.MenuItemId is not null)
+            {
+                var snap = await _repo.GetMenuItemSnapshotAsync(it.MenuItemId.Value, ct);
+                skuQty.Add((snap.sku, it.Quantity));
+            }
+            else if (it.ComboId is not null)
+            {
+                // TODO: expand combo to items and aggregate SKU quantities (requires repository method). For now skip deduction.
+            }
+        }
+        if (skuQty.Count > 0)
+        {
+            var ok = await _repo.CheckInventoryAvailabilityBySkuAsync(skuQty, ct);
+            if (!ok) throw new InvalidOperationException("INSUFFICIENT_STOCK");
+        }
+
         var orderId = await _repo.CreateOrderAsync(order, pricedItems, ct);
         await _repo.AppendLogAsync(orderId, "create", null, order, req.ServerId, ct);
+
+        // Deduct inventory (best-effort; throw on failure to keep consistency)
+        if (skuQty.Count > 0)
+        {
+            var skuQtyWithCost = skuQty.Select(x => (x.Sku, x.Quantity, (decimal?)null));
+            await _repo.DeductInventoryBySkuAsync(orderId, skuQtyWithCost, ct);
+        }
+
         var created = await _repo.GetOrderAsync(orderId, ct);
         return created!;
     }
