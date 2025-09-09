@@ -2,15 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy solution and restore
-COPY ../../MagiDesk.sln ./
-COPY ../OrderApi/OrderApi.csproj ./OrderApi/OrderApi.csproj
-RUN dotnet restore ./OrderApi/OrderApi.csproj
+# The deploy script copies this Dockerfile to the solution root.
+# Copy entire solution to ensure all props/central packages are present
+COPY ./ ./
 
-# Copy the rest and publish
-COPY ../OrderApi/. ./OrderApi/
-WORKDIR /src/OrderApi
-RUN dotnet publish -c Release -o /app/publish --no-restore
+# Publish
+WORKDIR /src/backend/OrderApi
+RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final

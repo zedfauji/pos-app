@@ -1,0 +1,48 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.ReceiptPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Receipt" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Order:"/>
+            <TextBlock x:Name="OrderIdText"/>
+            <Button Content="Print" Click="Print_Click"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel x:Name="ReceiptBody" Spacing="6">
+                <TextBlock Text="Items" FontWeight="SemiBold"/>
+                <ItemsControl x:Name="ItemsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding Name}" Width="200"/>
+                                <TextBlock Text="x"/>
+                                <TextBlock Text="{Binding Quantity}" Width="40"/>
+                                <TextBlock Text="= "/>
+                                <TextBlock Text="{Binding LineTotal}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right">
+            <TextBlock x:Name="SubtotalText"/>
+            <TextBlock x:Name="DiscountText"/>
+            <TextBlock x:Name="TaxText"/>
+            <TextBlock x:Name="TotalText" FontWeight="Bold"/>
+        </StackPanel>
+    </Grid>
+</Page>

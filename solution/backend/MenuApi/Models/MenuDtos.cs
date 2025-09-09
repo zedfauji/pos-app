@@ -49,6 +49,13 @@ public sealed record ComboQueryDto(string? Q, bool? AvailableOnly, int Page = 1,
 public sealed record CreateComboDto(string Name, string? Description, decimal Price, bool IsDiscountable, bool IsAvailable, string? PictureUrl, IReadOnlyList<ComboItemLinkDto> Items);
 public sealed record UpdateComboDto(string? Name, string? Description, decimal? Price, bool? IsDiscountable, bool? IsAvailable, string? PictureUrl, IReadOnlyList<ComboItemLinkDto>? Items);
 
+// Availability toggle
+public sealed record AvailabilityUpdateDto(bool IsAvailable);
+
+// Combo price compute response
+public sealed record ComboItemPriceLineDto(long MenuItemId, int Quantity, decimal UnitPrice);
+public sealed record ComboPriceResponseDto(decimal ComputedPrice, IReadOnlyList<ComboItemPriceLineDto> Items);
+
 // History DTOs
 public sealed record HistoryDto(long Id, string EntityType, long EntityId, string Action, int? Version, DateTimeOffset ChangedAt, string? ChangedBy, object? OldValue, object? NewValue);
 public sealed record HistoryQueryDto(string EntityType, long EntityId, int Page = 1, int PageSize = 100);

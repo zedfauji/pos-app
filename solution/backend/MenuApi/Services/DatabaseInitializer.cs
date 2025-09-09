@@ -15,15 +15,22 @@ public sealed class DatabaseInitializer : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_dataSource is null)
+        try
         {
-            _logger.LogWarning("No NpgsqlDataSource configured; skipping Menu schema initialization.");
-            return;
-        }
+            if (_dataSource is null)
+            {
+                _logger.LogWarning("No NpgsqlDataSource configured; skipping Menu schema initialization.");
+                return;
+            }
 
-        await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
-        await EnsureMenuSchemaAsync(conn, cancellationToken);
-        await SeedAsync(conn, cancellationToken);
+            await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await EnsureMenuSchemaAsync(conn, cancellationToken);
+            await SeedAsync(conn, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Menu schema initialization skipped due to error. Service will continue to start.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -35,7 +42,7 @@ create schema if not exists menu;
 
 create table if not exists menu.menu_items (
   menu_item_id        bigserial primary key,
-  sku_id              text not null unique,
+  sku_id              text not null,
   name                text not null,
   description         text null,
   category            text not null,
@@ -54,6 +61,25 @@ create table if not exists menu.menu_items (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
+-- Drop any legacy unique constraint or index on sku_id to allow partial unique index
+do $$ begin
+  if exists (
+    select 1 from information_schema.table_constraints tc
+    where tc.constraint_type = 'UNIQUE'
+      and tc.table_schema = 'menu'
+      and tc.table_name = 'menu_items'
+      and tc.constraint_name = 'menu_items_sku_id_key') then
+    alter table menu.menu_items drop constraint menu_items_sku_id_key;
+  end if;
+exception when undefined_table then
+  -- ignore
+  null;
+end $$;
+
+-- Create case-insensitive partial unique index for active (not deleted) rows
+create unique index if not exists ux_menu_items_sku_active
+  on menu.menu_items (lower(sku_id))
+  where is_deleted = false;
 create index if not exists ix_menu_items_category on menu.menu_items(category);
 create index if not exists ix_menu_items_group on menu.menu_items(group_name);
 create index if not exists ix_menu_items_avail on menu.menu_items(is_available) where is_deleted = false;

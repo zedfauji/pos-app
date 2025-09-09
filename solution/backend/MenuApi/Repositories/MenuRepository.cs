@@ -338,6 +338,7 @@ public sealed class MenuRepository : IMenuRepository
                                 description = COALESCE(@desc, description),
                                 category = COALESCE(@cat, category),
                                 group_name = COALESCE(@grp, group_name),
+                                vendor_price = COALESCE(@vprice, vendor_price),
                                 selling_price = COALESCE(@sprice, selling_price),
                                 price = COALESCE(@price, price),
                                 picture_url = COALESCE(@pic, picture_url),
@@ -354,6 +355,7 @@ public sealed class MenuRepository : IMenuRepository
         cmd.Parameters.AddWithValue("@desc", (object?)dto.Description ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cat", (object?)dto.Category ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@grp", (object?)dto.GroupName ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@vprice", (object?)dto.VendorPrice ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@sprice", (object?)dto.SellingPrice ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@price", (object?)dto.Price ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@pic", (object?)dto.PictureUrl ?? DBNull.Value);
@@ -382,6 +384,161 @@ public sealed class MenuRepository : IMenuRepository
             version
         );
         return merged;
+    }
+
+    // Duplicate SKU check (case-insensitive, excluding soft-deleted)
+    public async Task<bool> ExistsSkuAsync(string sku, long? excludeId, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string sql = @"SELECT EXISTS(
+                                SELECT 1 FROM menu.menu_items
+                                WHERE lower(sku_id) = lower(@sku)
+                                  AND is_deleted = false
+                                  AND (@excl IS NULL OR menu_item_id <> @excl)
+                              )";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@sku", sku);
+        cmd.Parameters.AddWithValue("@excl", (object?)excludeId ?? DBNull.Value);
+        var exists = (bool)(await cmd.ExecuteScalarAsync(ct))!;
+        return exists;
+    }
+
+    public async Task<MenuItemDetailsDto?> GetItemBySkuAsync(string sku, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string sql = @"SELECT menu_item_id FROM menu.menu_items WHERE lower(sku_id) = lower(@sku) AND is_deleted = false";
+        await using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@sku", sku);
+        var idObj = await cmd.ExecuteScalarAsync(ct);
+        if (idObj is null || idObj is DBNull) return null;
+        var id = Convert.ToInt64(idObj);
+        return await GetItemAsync(id, ct);
+    }
+
+    public async Task SetItemAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string sql = @"UPDATE menu.menu_items SET is_available = @a, version = version + 1, updated_by = @u, updated_at = now() WHERE menu_item_id = @id";
+        await using var cmd = new NpgsqlCommand(sql, conn, tx);
+        cmd.Parameters.AddWithValue("@a", isAvailable);
+        cmd.Parameters.AddWithValue("@u", (object?)user ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync(ct);
+        await LogHistoryAsync(conn, tx, "menu_item", id, "availability", null, JsonSerializer.SerializeToElement(new { isAvailable }), null, user, ct);
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task SetComboAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string sql = @"UPDATE menu.combos SET is_available = @a, version = version + 1, updated_by = @u, updated_at = now() WHERE combo_id = @id";
+        await using var cmd = new NpgsqlCommand(sql, conn, tx);
+        cmd.Parameters.AddWithValue("@a", isAvailable);
+        cmd.Parameters.AddWithValue("@u", (object?)user ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync(ct);
+        await LogHistoryAsync(conn, tx, "combo", id, "availability", null, JsonSerializer.SerializeToElement(new { isAvailable }), null, user, ct);
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task<(decimal ComputedPrice, IReadOnlyList<(long MenuItemId, int Quantity, decimal UnitPrice)> Items)> ComputeComboPriceAsync(long id, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string itemsSql = @"SELECT ci.menu_item_id, ci.quantity, COALESCE(mi.price, mi.selling_price) AS unit_price
+                                  FROM menu.combo_items ci
+                                  JOIN menu.menu_items mi ON mi.menu_item_id = ci.menu_item_id
+                                  WHERE ci.combo_id = @id";
+        await using var cmd = new NpgsqlCommand(itemsSql, conn);
+        cmd.Parameters.AddWithValue("@id", id);
+        var list = new List<(long, int, decimal)>();
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        while (await rdr.ReadAsync(ct))
+        {
+            list.Add((rdr.GetInt64(0), rdr.GetInt32(1), rdr.GetDecimal(2)));
+        }
+        var total = list.Sum(t => t.Item2 * t.Item3);
+        return (total, list.Select(t => (t.Item1, t.Item2, t.Item3)).ToList());
+    }
+
+    public async Task RollbackItemAsync(long id, int toVersion, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string hsql = @"SELECT action, old_value, new_value FROM menu.menu_history WHERE entity_type = 'menu_item' AND entity_id = @id AND version = @v ORDER BY changed_at LIMIT 1";
+        await using var hc = new NpgsqlCommand(hsql, conn, tx);
+        hc.Parameters.AddWithValue("@id", id);
+        hc.Parameters.AddWithValue("@v", toVersion);
+        await using var hr = await hc.ExecuteReaderAsync(ct);
+        if (!await hr.ReadAsync(ct)) throw new InvalidOperationException("Target version not found for item");
+        var action = hr.GetString(0);
+        var old = hr.IsDBNull(1) ? null : hr.GetFieldValue<object>(1);
+        var nwe = hr.IsDBNull(2) ? null : hr.GetFieldValue<object>(2);
+        await hr.CloseAsync();
+        if (action != "update" || old is null)
+            throw new InvalidOperationException("Rollback supported only for versions recorded as 'update'.");
+        // old contains snapshot of previous item; extract fields
+        // We expect old JSON with keys matching CreateMenuItemDto fields
+        const string upd = @"UPDATE menu.menu_items SET
+                                name = COALESCE((@o->>'Name')::text, name),
+                                description = (@o->>'Description'),
+                                category = COALESCE((@o->>'Category')::text, category),
+                                group_name = (@o->>'GroupName'),
+                                selling_price = COALESCE((@o->>'SellingPrice')::numeric, selling_price),
+                                price = COALESCE((@o->>'Price')::numeric, price),
+                                picture_url = (@o->>'PictureUrl'),
+                                is_discountable = COALESCE((@o->>'IsDiscountable')::boolean, is_discountable),
+                                is_part_of_combo = COALESCE((@o->>'IsPartOfCombo')::boolean, is_part_of_combo),
+                                is_available = COALESCE((@o->>'IsAvailable')::boolean, is_available),
+                                version = @v,
+                                updated_by = @u,
+                                updated_at = now()
+                             WHERE menu_item_id = @id";
+        await using var uc = new NpgsqlCommand(upd, conn, tx);
+        uc.Parameters.AddWithValue("@o", old);
+        uc.Parameters.AddWithValue("@v", toVersion);
+        uc.Parameters.AddWithValue("@u", (object?)user ?? DBNull.Value);
+        uc.Parameters.AddWithValue("@id", id);
+        await uc.ExecuteNonQueryAsync(ct);
+        await LogHistoryAsync(conn, tx, "menu_item", id, "rollback", null, null, toVersion, user, ct);
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task RollbackComboAsync(long id, int toVersion, string user, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        const string hsql = @"SELECT action, old_value FROM menu.menu_history WHERE entity_type = 'combo' AND entity_id = @id AND version = @v ORDER BY changed_at LIMIT 1";
+        await using var hc = new NpgsqlCommand(hsql, conn, tx);
+        hc.Parameters.AddWithValue("@id", id);
+        hc.Parameters.AddWithValue("@v", toVersion);
+        await using var hr = await hc.ExecuteReaderAsync(ct);
+        if (!await hr.ReadAsync(ct)) throw new InvalidOperationException("Target version not found for combo");
+        var action = hr.GetString(0);
+        var old = hr.IsDBNull(1) ? null : hr.GetFieldValue<object>(1);
+        await hr.CloseAsync();
+        if (action != "update" || old is null)
+            throw new InvalidOperationException("Rollback supported only for versions recorded as 'update'.");
+        const string upd = @"UPDATE menu.combos SET
+                                name = COALESCE((@o->>'Name')::text, name),
+                                description = (@o->>'Description'),
+                                price = COALESCE((@o->>'Price')::numeric, price),
+                                is_discountable = COALESCE((@o->>'IsDiscountable')::boolean, is_discountable),
+                                is_available = COALESCE((@o->>'IsAvailable')::boolean, is_available),
+                                picture_url = (@o->>'PictureUrl'),
+                                version = @v,
+                                updated_by = @u,
+                                updated_at = now()
+                             WHERE combo_id = @id";
+        await using var uc = new NpgsqlCommand(upd, conn, tx);
+        uc.Parameters.AddWithValue("@o", old);
+        uc.Parameters.AddWithValue("@v", toVersion);
+        uc.Parameters.AddWithValue("@u", (object?)user ?? DBNull.Value);
+        uc.Parameters.AddWithValue("@id", id);
+        await uc.ExecuteNonQueryAsync(ct);
+        await LogHistoryAsync(conn, tx, "combo", id, "rollback", null, null, toVersion, user, ct);
+        await tx.CommitAsync(ct);
     }
 
     private async Task<MenuItemDetailsDto?> GetItemAsyncInternal(NpgsqlConnection conn, long id, CancellationToken ct)

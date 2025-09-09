@@ -18,7 +18,11 @@ namespace MagiDesk.Frontend
         public static I18nService I18n { get; } = new I18nService();
 
         public static Services.ApiService? Api { get; private set; }
+        public static Services.MenuApiService? Menu { get; private set; }
         public static Services.UserApiService? UsersApi { get; private set; }
+        public static Services.PaymentApiService? Payments { get; private set; }
+        public static Services.OrderApiService? OrdersApi { get; private set; }
+        public static Services.VendorOrdersApiService? VendorOrders { get; private set; }
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -126,12 +130,37 @@ namespace MagiDesk.Frontend
                 var config = builder.Build();
                 var backendBase = config["Api:BaseUrl"] ?? "https://localhost:7016";
                 var inventoryBase = config["InventoryApi:BaseUrl"] ?? backendBase;
+                var menuBase = config["MenuApi:BaseUrl"] ?? inventoryBase;
+                var paymentBase = config["PaymentApi:BaseUrl"] ?? backendBase;
+                var ordersBase = config["OrderApi:BaseUrl"] ?? backendBase;
+                var vendorOrdersBase = config["VendorOrdersApi:BaseUrl"] ?? backendBase;
                 Api = new Services.ApiService(backendBase, inventoryBase);
+
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
                 var http = new HttpClient(logging) { BaseAddress = new Uri(backendBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
+
+                var innerMenu = new HttpClientHandler();
+                innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logMenu = new Services.HttpLoggingHandler(innerMenu);
+                Menu = new Services.MenuApiService(new HttpClient(logMenu) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") });
+
+                var innerPay = new HttpClientHandler();
+                innerPay.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logPay = new Services.HttpLoggingHandler(innerPay);
+                Payments = new Services.PaymentApiService(new HttpClient(logPay) { BaseAddress = new Uri(paymentBase.TrimEnd('/') + "/") });
+
+                var innerOrders = new HttpClientHandler();
+                innerOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logOrders = new Services.HttpLoggingHandler(innerOrders);
+                OrdersApi = new Services.OrderApiService(new HttpClient(logOrders) { BaseAddress = new Uri(ordersBase.TrimEnd('/') + "/") });
+
+                var innerVendorOrders = new HttpClientHandler();
+                innerVendorOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
+                VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri(vendorOrdersBase.TrimEnd('/') + "/") });
             }
             catch
             {
@@ -140,6 +169,26 @@ namespace MagiDesk.Frontend
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
                 UsersApi = new Services.UserApiService(new HttpClient(logging) { BaseAddress = new Uri("https://localhost:7016/") });
+
+                var innerMenu = new HttpClientHandler();
+                innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logMenu = new Services.HttpLoggingHandler(innerMenu);
+                Menu = new Services.MenuApiService(new HttpClient(logMenu) { BaseAddress = new Uri("https://localhost:7016/") });
+
+                var innerPay = new HttpClientHandler();
+                innerPay.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logPay = new Services.HttpLoggingHandler(innerPay);
+                Payments = new Services.PaymentApiService(new HttpClient(logPay) { BaseAddress = new Uri("https://localhost:7016/") });
+
+                var innerOrders = new HttpClientHandler();
+                innerOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logOrders = new Services.HttpLoggingHandler(innerOrders);
+                OrdersApi = new Services.OrderApiService(new HttpClient(logOrders) { BaseAddress = new Uri("https://localhost:7016/") });
+
+                var innerVendorOrders = new HttpClientHandler();
+                innerVendorOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
+                VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri("https://localhost:7016/") });
             }
         }
 

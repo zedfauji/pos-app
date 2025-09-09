@@ -37,6 +37,38 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Health check endpoint for Cloud Run
+app.MapGet("/health", () => Results.Ok("OK"));
+
+// DB debug endpoint (no secrets)
+app.MapGet("/debug/db", async (NpgsqlDataSource? dataSource, CancellationToken ct) =>
+{
+    if (dataSource is null)
+    {
+        return Results.Ok(new { configured = false });
+    }
+    try
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        var serverVersion = conn.PostgreSqlVersion.ToString();
+        string? db = null; string? user = null;
+        await using (var cmd = new NpgsqlCommand("select current_database(), current_user", conn))
+        await using (var rdr = await cmd.ExecuteReaderAsync(ct))
+        {
+            if (await rdr.ReadAsync(ct))
+            {
+                db = rdr.IsDBNull(0) ? null : rdr.GetString(0);
+                user = rdr.IsDBNull(1) ? null : rdr.GetString(1);
+            }
+        }
+        return Results.Ok(new { configured = true, canConnect = true, serverVersion, database = db, user });
+    }
+    catch (Exception ex)
+    {
+        return Results.Ok(new { configured = true, canConnect = false, error = ex.Message });
+    }
+});
+
 app.MapControllers();
 
 app.Run();

@@ -36,11 +36,7 @@
         <Content Include="Assets\App.ico" Condition="Exists('Assets\App.ico')" />
     </ItemGroup>
 
-  <!-- Rename OrdersPage -> VendorOrdersPage: exclude old files -->
-  <ItemGroup>
-    <Page Remove="Views\OrdersPage.xaml" />
-    <Compile Remove="Views\OrdersPage.xaml.cs" />
-  </ItemGroup>
+  <!-- OrdersPage is now a dedicated page; do not remove it -->
 
     <ItemGroup>
         <ProjectReference Include="..\shared\MagiDesk.Shared.csproj" />
@@ -115,10 +111,7 @@
         <Page Include="Views\VendorOrdersPage.xaml" />
         <Compile Include="Views\VendorOrdersPage.xaml.cs" />
     </ItemGroup>
-    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrderBuilder)'=='true'">
-        <Page Include="Views\OrderBuilderPage.xaml" />
-        <Compile Include="Views\OrderBuilderPage.xaml.cs" />
-    </ItemGroup>
+    <!-- OrderBuilderPage removed -->
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeInventory)'=='true'">
         <Page Include="Views\InventoryPage.xaml" />
         <Compile Include="Views\InventoryPage.xaml.cs" />
@@ -139,10 +132,7 @@
         <Page Include="Views\DashboardPage.xaml" />
         <Compile Include="Views\DashboardPage.xaml.cs" />
     </ItemGroup>
-    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrderBuilderDialog)'=='true'">
-        <Page Include="Dialogs\OrderBuilderDialog.xaml" />
-        <Compile Include="Dialogs\OrderBuilderDialog.xaml.cs" />
-    </ItemGroup>
+    <!-- OrderBuilderDialog removed -->
 
     <PropertyGroup Condition="'$(XamlOnlyMain)'=='true'">
         <DefineConstants>$(DefineConstants);XAML_ONLY_MAIN</DefineConstants>

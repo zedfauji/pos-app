@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 using MenuApi.Models;
 using MenuApi.Services;
 
@@ -49,5 +50,30 @@ public class CombosController : ControllerBase
     {
         await _service.DeleteComboAsync(id, User.Identity?.Name ?? "system", ct);
         return NoContent();
+    }
+
+    // New: availability toggle
+    [HttpPut("{id:long}/availability")]
+    public async Task<IActionResult> SetAvailabilityAsync([FromRoute] long id, [FromBody] AvailabilityUpdateDto dto, CancellationToken ct)
+    {
+        await _service.SetComboAvailabilityAsync(id, dto.IsAvailable, User.Identity?.Name ?? "system", ct);
+        return NoContent();
+    }
+
+    // New: compute combo price from item components
+    [HttpGet("{id:long}/price")] 
+    public async Task<ActionResult<ComboPriceResponseDto>> GetComputedPriceAsync([FromRoute] long id, CancellationToken ct)
+    {
+        var (computed, lines) = await _service.ComputeComboPriceAsync(id, ct);
+        var dto = new ComboPriceResponseDto(computed, lines.Select(l => new ComboItemPriceLineDto(l.MenuItemId, l.Quantity, l.UnitPrice)).ToList());
+        return Ok(dto);
+    }
+
+    // New: rollback to version
+    [HttpPost("{id:long}/rollback")] 
+    public async Task<ActionResult<object>> RollbackAsync([FromRoute] long id, [FromQuery] int toVersion, CancellationToken ct)
+    {
+        await _service.RollbackComboAsync(id, toVersion, User.Identity?.Name ?? "system", ct);
+        return Accepted(new { success = true, id, version = toVersion });
     }
 }

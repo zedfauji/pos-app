@@ -33,6 +33,15 @@ public sealed class MenuService : IMenuService
     public Task DeleteItemAsync(long id, string user, CancellationToken ct)
         => _repo.DeleteItemAsync(id, user, ct);
 
+    public Task<bool> ExistsSkuAsync(string sku, long? excludeId, CancellationToken ct)
+        => _repo.ExistsSkuAsync(sku, excludeId, ct);
+
+    public Task<MenuItemDetailsDto?> GetItemBySkuAsync(string sku, CancellationToken ct)
+        => _repo.GetItemBySkuAsync(sku, ct);
+
+    public Task SetItemAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+        => _repo.SetItemAvailabilityAsync(id, isAvailable, user, ct);
+
     public async Task<PagedResult<ComboDto>> ListCombosAsync(ComboQueryDto query, CancellationToken ct)
     {
         var (items, total) = await _repo.ListCombosAsync(query, ct);
@@ -50,4 +59,16 @@ public sealed class MenuService : IMenuService
 
     public Task DeleteComboAsync(long id, string user, CancellationToken ct)
         => _repo.DeleteComboAsync(id, user, ct);
+
+    public Task SetComboAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+        => _repo.SetComboAvailabilityAsync(id, isAvailable, user, ct);
+
+    public Task<(decimal ComputedPrice, IReadOnlyList<(long MenuItemId, int Quantity, decimal UnitPrice)> Items)> ComputeComboPriceAsync(long id, CancellationToken ct)
+        => _repo.ComputeComboPriceAsync(id, ct);
+
+    public Task RollbackItemAsync(long id, int toVersion, string user, CancellationToken ct)
+        => _repo.RollbackItemAsync(id, toVersion, user, ct);
+
+    public Task RollbackComboAsync(long id, int toVersion, string user, CancellationToken ct)
+        => _repo.RollbackComboAsync(id, toVersion, user, ct);
 }

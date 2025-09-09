@@ -128,6 +128,12 @@ namespace MagiDesk.Frontend.Views
                     Log.Info($"NavView invoked: {tag}");
                     switch (tag)
                     {
+                        case "MenuPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(MenuPage));
+#endif
+                            break;
                         case "DashboardPage":
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation
@@ -163,6 +169,12 @@ namespace MagiDesk.Frontend.Views
 #if XAML_ONLY_MAIN
 #else
                             ContentFrame.Navigate(typeof(TablesPage));
+#endif
+                            break;
+                        case "OrdersPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(OrdersPage));
 #endif
                             break;
                         case "SessionsPage":

@@ -106,6 +106,30 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.CompletedTask;
     }
 
+    public Task<bool> ExistsSkuAsync(string sku, long? excludeId, CancellationToken ct)
+    {
+        var exists = _items.Any(i => string.Equals(i.Sku, sku, StringComparison.OrdinalIgnoreCase) && (!excludeId.HasValue || i.Id != excludeId.Value));
+        return Task.FromResult(exists);
+    }
+
+    public Task<MenuItemDetailsDto?> GetItemBySkuAsync(string sku, CancellationToken ct)
+    {
+        var item = _items.FirstOrDefault(i => string.Equals(i.Sku, sku, StringComparison.OrdinalIgnoreCase));
+        if (item is null) return Task.FromResult<MenuItemDetailsDto?>(null);
+        return Task.FromResult<MenuItemDetailsDto?>(new MenuItemDetailsDto(item, Array.Empty<ModifierDto>()));
+    }
+
+    public Task SetItemAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+    {
+        var idx = _items.FindIndex(i => i.Id == id);
+        if (idx >= 0)
+        {
+            var cur = _items[idx];
+            _items[idx] = cur with { IsAvailable = isAvailable, Version = cur.Version + 1 };
+        }
+        return Task.CompletedTask;
+    }
+
     public Task<PagedResult<ComboDto>> ListCombosAsync(ComboQueryDto query, CancellationToken ct)
     {
         var items = _combos.AsEnumerable();
@@ -173,6 +197,46 @@ public sealed class InMemoryMenuService : IMenuService
             _combos.RemoveAt(idx);
             _comboItems.Remove(id);
         }
+        return Task.CompletedTask;
+    }
+
+    public Task SetComboAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+    {
+        var idx = _combos.FindIndex(c => c.Id == id);
+        if (idx >= 0)
+        {
+            var cur = _combos[idx];
+            _combos[idx] = cur with { IsAvailable = isAvailable, Version = cur.Version + 1 };
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<(decimal ComputedPrice, IReadOnlyList<(long MenuItemId, int Quantity, decimal UnitPrice)> Items)> ComputeComboPriceAsync(long id, CancellationToken ct)
+    {
+        if (!_comboItems.TryGetValue(id, out var links))
+        {
+            return Task.FromResult<(decimal, IReadOnlyList<(long, int, decimal)>)>((0m, Array.Empty<(long, int, decimal)>()));
+        }
+        var lines = new List<(long MenuItemId, int Quantity, decimal UnitPrice)>();
+        foreach (var li in links)
+        {
+            var item = _items.FirstOrDefault(i => i.Id == li.MenuItemId);
+            var unit = item?.Price ?? item?.SellingPrice ?? 0m;
+            lines.Add((li.MenuItemId, li.Quantity, unit));
+        }
+        var total = lines.Sum(l => l.Quantity * l.UnitPrice);
+        return Task.FromResult<(decimal, IReadOnlyList<(long, int, decimal)>)>((total, lines));
+    }
+
+    public Task RollbackItemAsync(long id, int toVersion, string user, CancellationToken ct)
+    {
+        // In-memory: no history tracking; no-op
+        return Task.CompletedTask;
+    }
+
+    public Task RollbackComboAsync(long id, int toVersion, string user, CancellationToken ct)
+    {
+        // In-memory: no history tracking; no-op
         return Task.CompletedTask;
     }
 }

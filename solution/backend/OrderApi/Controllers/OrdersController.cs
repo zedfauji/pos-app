@@ -64,4 +64,11 @@ public class OrdersController : ControllerBase
         var order = await _service.CloseOrderAsync(orderId, ct);
         return Ok(order);
     }
+
+    [HttpGet("{orderId:long}/logs")]
+    public async Task<ActionResult<PagedResult<OrderLogDto>>> ListLogsAsync([FromRoute] long orderId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var result = await _service.ListLogsAsync(orderId, page, pageSize, ct);
+        return Ok(result);
+    }
 }

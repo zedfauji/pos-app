@@ -15,13 +15,20 @@ public sealed class DatabaseInitializer : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (_dataSource is null)
+        try
         {
-            _logger.LogWarning("No NpgsqlDataSource configured; skipping orders schema initialization.");
-            return;
+            if (_dataSource is null)
+            {
+                _logger.LogWarning("No NpgsqlDataSource configured; skipping orders schema initialization.");
+                return;
+            }
+            await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await EnsureOrdersSchemaAsync(conn, cancellationToken);
         }
-        await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
-        await EnsureOrdersSchemaAsync(conn, cancellationToken);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Orders schema initialization skipped due to error. Service will continue to start.");
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

@@ -16,12 +16,7 @@
         <!-- Toolbar -->
         <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock x:Name="Title" Text="Orders" FontSize="20" FontWeight="SemiBold"/>
-            <Button x:Name="BtnStart" Content="Start New Order" Click="Start_Click"/>
-            <Button x:Name="BtnSaveDraft" Content="Save Draft" Click="SaveDraft_Click"/>
-            <Button x:Name="BtnOpenDraft" Content="Open Draft" Click="OpenDraft_Click"/>
             <Button x:Name="BtnRefresh" Content="Refresh" Click="Refresh_Click"/>
-            <Button x:Name="BtnJobs" Content="Job History" Click="Jobs_Click"/>
-            <Button x:Name="BtnNotifications" Content="Notifications" Click="Notifications_Click"/>
         </StackPanel>
 
         <!-- Orders History Grid -->
