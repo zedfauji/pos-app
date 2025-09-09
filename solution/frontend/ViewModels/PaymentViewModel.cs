@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.IO;
 using MagiDesk.Frontend.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace MagiDesk.Frontend.ViewModels
 {
@@ -206,6 +208,105 @@ namespace MagiDesk.Frontend.ViewModels
                     }
                     
                     DebugLogger.LogStep("ConfirmAsync", $"Payment registered successfully: BillingId={payment.BillingId}, Status={payment.Status}");
+                    
+                    // For Cloud Run deployment, we need to ensure the bill is properly marked as settled
+                    if (payment.Status?.Equals("paid", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        try
+                        {
+                            DebugLogger.LogStep("ConfirmAsync", "Payment is fully paid, ensuring bill is marked as settled in TablesApi");
+                            
+                            // Get TablesApi configuration from app settings
+                            string? tablesApiBaseUrl = null;
+                            
+                            try
+                            {
+                                // Try to get from app configuration
+                                var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
+                                var builder = new ConfigurationBuilder()
+                                    .SetBasePath(AppContext.BaseDirectory)
+                                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                                    .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
+                                    .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true);
+                                var config = builder.Build();
+                                tablesApiBaseUrl = config["TablesApi:BaseUrl"];
+                                DebugLogger.LogStep("ConfirmAsync", $"Found TablesApi URL in config: {tablesApiBaseUrl}");
+                            }
+                            catch (Exception configEx)
+                            {
+                                DebugLogger.LogException("ConfirmAsync.GetConfig", configEx);
+                            }
+                            
+                            // If still not found, try environment variable
+                            if (string.IsNullOrWhiteSpace(tablesApiBaseUrl))
+                            {
+                                tablesApiBaseUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL");
+                                if (!string.IsNullOrWhiteSpace(tablesApiBaseUrl))
+                                {
+                                    DebugLogger.LogStep("ConfirmAsync", $"Found TablesApi URL in environment: {tablesApiBaseUrl}");
+                                }
+                            }
+                            
+                            // If still not found, try to detect if we're in development or production
+                            if (string.IsNullOrWhiteSpace(tablesApiBaseUrl))
+                            {
+                                // Check if we're running locally
+                                var isLocal = System.Diagnostics.Debugger.IsAttached || 
+                                              Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+                                
+                                if (isLocal)
+                                {
+                                    tablesApiBaseUrl = "https://localhost:7023";
+                                    DebugLogger.LogStep("ConfirmAsync", "Using local development URL for TablesApi");
+                                }
+                                else
+                                {
+                                    // Use the Cloud Run URL pattern
+                                    tablesApiBaseUrl = "https://magidesk-tables-904541739138.northamerica-south1.run.app";
+                                    DebugLogger.LogStep("ConfirmAsync", "Using Cloud Run URL for TablesApi");
+                                }
+                            }
+                            
+                            DebugLogger.LogStep("ConfirmAsync", $"Using TablesApi URL: {tablesApiBaseUrl}");
+                            
+                            using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator });
+                            var settleUrl = $"{tablesApiBaseUrl.TrimEnd('/')}/bills/by-billing/{Uri.EscapeDataString(payment.BillingId)}/settle";
+                            
+                            DebugLogger.LogStep("ConfirmAsync", $"Calling TablesApi settle endpoint: {settleUrl}");
+                            var response = await http.PostAsync(settleUrl, new StringContent(string.Empty), ct);
+                            
+                            if (response.IsSuccessStatusCode)
+                            {
+                                DebugLogger.LogStep("ConfirmAsync", "Successfully marked bill as settled in TablesApi");
+                            }
+                            else
+                            {
+                                var errorContent = await response.Content.ReadAsStringAsync(ct);
+                                DebugLogger.LogStep("ConfirmAsync", $"Failed to mark bill as settled: {errorContent}");
+                                
+                                // Try alternative endpoint format as fallback
+                                var alternativeUrl = $"{tablesApiBaseUrl.TrimEnd('/')}/api/bills/by-billing/{Uri.EscapeDataString(payment.BillingId)}/settle";
+                                DebugLogger.LogStep("ConfirmAsync", $"Trying alternative endpoint: {alternativeUrl}");
+                                var alternativeResponse = await http.PostAsync(alternativeUrl, new StringContent(string.Empty), ct);
+                                
+                                if (alternativeResponse.IsSuccessStatusCode)
+                                {
+                                    DebugLogger.LogStep("ConfirmAsync", "Successfully marked bill as settled using alternative endpoint");
+                                }
+                                else
+                                {
+                                    var altErrorContent = await alternativeResponse.Content.ReadAsStringAsync(ct);
+                                    DebugLogger.LogStep("ConfirmAsync", $"Alternative endpoint also failed: {altErrorContent}");
+                                }
+                            }
+                        }
+                        catch (Exception settleEx)
+                        {
+                            DebugLogger.LogException("ConfirmAsync.SettleBill", settleEx);
+                            // Don't fail the payment process if settlement marking fails
+                        }
+                    }
+                    
                     DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Success");
                     return true;
                 }

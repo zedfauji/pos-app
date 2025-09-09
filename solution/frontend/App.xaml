@@ -16,6 +16,9 @@
             </ResourceDictionary.MergedDictionaries>
             <!-- Other app resources here -->
             <Color x:Key="Primary">#512BD4</Color>
+            
+            <!-- API Base URLs -->
+            <x:String x:Key="TablesApiBaseUrl">http://localhost:5002</x:String>
 
             <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
             <SolidColorBrush x:Key="WhiteBrush" Color="White" />

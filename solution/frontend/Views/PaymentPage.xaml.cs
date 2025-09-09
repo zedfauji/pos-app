@@ -4,6 +4,7 @@ using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.Dialogs;
 using MagiDesk.Shared.DTOs.Tables;
+using System.Threading.Tasks;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -83,13 +84,49 @@ public sealed partial class PaymentPage : Page
                             DebugLogger.LogStep("ProcessPayment_Click", "Success dialog created, showing it");
                             await successDialog.ShowAsync();
                             DebugLogger.LogStep("ProcessPayment_Click", "Success dialog shown");
-
+                            
                             try
                             {
-                                // Try to refresh the list
+                                // Try to refresh the list with multiple attempts to ensure consistency
                                 DebugLogger.LogStep("ProcessPayment_Click", "Attempting to refresh unsettled bills");
+                                
+                                // First refresh attempt
                                 await ViewModel.LoadUnsettledBillsAsync();
-                                DebugLogger.LogStep("ProcessPayment_Click", "Unsettled bills refreshed successfully");
+                                DebugLogger.LogStep("ProcessPayment_Click", "First refresh completed");
+                                
+                                // Short delay to allow backend systems to synchronize
+                                await Task.Delay(1000);
+                                
+                                // Second refresh attempt to ensure consistency
+                                await ViewModel.LoadUnsettledBillsAsync();
+                                DebugLogger.LogStep("ProcessPayment_Click", "Second refresh completed");
+                                
+                                // Check if the paid bill is still in the list
+                                var paidBillStillInList = ViewModel.UnsettledBills.Any(b => b.BillId == bill.BillId);
+                                if (paidBillStillInList)
+                                {
+                                    DebugLogger.LogStep("ProcessPayment_Click", "WARNING: Paid bill still in unsettled list after refresh");
+                                    
+                                    // Try one more time with a longer delay
+                                    await Task.Delay(2000);
+                                    await ViewModel.LoadUnsettledBillsAsync();
+                                    DebugLogger.LogStep("ProcessPayment_Click", "Third refresh completed");
+                                    
+                                    // Check again
+                                    paidBillStillInList = ViewModel.UnsettledBills.Any(b => b.BillId == bill.BillId);
+                                    if (paidBillStillInList)
+                                    {
+                                        DebugLogger.LogStep("ProcessPayment_Click", "WARNING: Paid bill still in unsettled list after multiple refreshes");
+                                    }
+                                    else
+                                    {
+                                        DebugLogger.LogStep("ProcessPayment_Click", "Paid bill successfully removed from unsettled list after additional refresh");
+                                    }
+                                }
+                                else
+                                {
+                                    DebugLogger.LogStep("ProcessPayment_Click", "Paid bill successfully removed from unsettled list");
+                                }
                                 
                                 var finalDialog = new ContentDialog
                                 {
