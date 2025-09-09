@@ -41,6 +41,21 @@ public class TableRepository
         _http = new HttpClient(logging);
     }
 
+    public async Task<(string? sessionId, string? billingId)> GetActiveSessionForTableAsync(string tableLabel, CancellationToken ct = default)
+    {
+        try
+        {
+            var list = await GetActiveSessionsAsync(ct);
+            var match = list.FirstOrDefault(s => string.Equals(s.TableId, tableLabel, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                return (match.SessionId.ToString(), match.BillingId?.ToString());
+            }
+        }
+        catch { }
+        return (null, null);
+    }
+
     public async Task<BillResult?> GetBillByIdAsync(Guid billId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return null;
@@ -275,25 +290,40 @@ public class TableRepository
 
     // --- Sessions & Billing --- (using shared DTOs)
 
-    public async Task<(bool ok, string message)> StartSessionAsync(string label, string serverId, string serverName, CancellationToken ct = default)
+    public async Task<(bool ok, string? sessionId, string? billingId, string message)> StartSessionAsync(string label, string serverId, string serverName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_apiBaseUrl))
         {
             // Fallback: just mark occupied in local/DB
             await UpsertAsync(new TableStatusDto { Label = label, Type = "billiard", Occupied = true, StartTime = DateTimeOffset.UtcNow, Server = serverName });
-            return (true, "offline-mode");
+            return (true, null, null, "offline-mode");
         }
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), $"/tables/{Uri.EscapeDataString(label)}/start");
             var res = await _http.PostAsJsonAsync(url, new StartSessionRequest(serverId, serverName), ct);
-            if (res.IsSuccessStatusCode) { SourceLabel = "API"; return (true, ""); }
+            if (res.IsSuccessStatusCode)
+            {
+                SourceLabel = "API";
+                string? sessionId = null; string? billingId = null;
+                try
+                {
+                    var doc = await res.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(cancellationToken: ct);
+                    if (doc != null)
+                    {
+                        if (doc.TryGetPropertyValue("session_id", out var sid) && sid != null) sessionId = sid.ToString();
+                        if (doc.TryGetPropertyValue("billing_id", out var bid) && bid != null) billingId = bid.ToString();
+                    }
+                }
+                catch { }
+                return (true, sessionId, billingId, "");
+            }
             var body = await res.Content.ReadAsStringAsync(ct);
-            return (false, body);
+            return (false, null, null, body);
         }
         catch (Exception ex)
         {
-            return (false, ex.Message);
+            return (false, null, null, ex.Message);
         }
     }
 
@@ -447,6 +477,28 @@ public class TableRepository
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), "/sessions/active");
+            var res = await _http.GetAsync(url, ct);
+            if (!res.IsSuccessStatusCode) return list;
+            var data = await res.Content.ReadFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>(cancellationToken: ct) ?? new();
+            return data;
+        }
+        catch { return list; }
+    }
+
+    public async Task<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>> GetSessionsAsync(int limit = 100, DateTimeOffset? from = null, DateTimeOffset? to = null, string? table = null, string? server = null, CancellationToken ct = default)
+    {
+        var list = new List<MagiDesk.Shared.DTOs.Tables.SessionOverview>();
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
+        try
+        {
+            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/sessions");
+            var qp = new List<string>();
+            qp.Add($"limit={limit}");
+            if (from.HasValue) qp.Add($"from={Uri.EscapeDataString(from.Value.UtcDateTime.ToString("o"))}");
+            if (to.HasValue) qp.Add($"to={Uri.EscapeDataString(to.Value.UtcDateTime.ToString("o"))}");
+            if (!string.IsNullOrWhiteSpace(table)) qp.Add($"table={Uri.EscapeDataString(table)}");
+            if (!string.IsNullOrWhiteSpace(server)) qp.Add($"server={Uri.EscapeDataString(server)}");
+            var url = new Uri(baseUri + (qp.Count > 0 ? ("?" + string.Join("&", qp)) : string.Empty));
             var res = await _http.GetAsync(url, ct);
             if (!res.IsSuccessStatusCode) return list;
             var data = await res.Content.ReadFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>(cancellationToken: ct) ?? new();

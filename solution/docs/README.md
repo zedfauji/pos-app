@@ -112,17 +112,22 @@ The WinUI 3 app is set up with:
 - Dark/Light mode toggle
 - Vendors/Items pages with context menus and dialogs
 
-Set the backend URL in `frontend/appsettings.json`:
+Set the backend URLs in `frontend/appsettings.json`:
 
 ```json
 {
-  "Backend": {
-    "BaseUrl": "https://localhost:5001"
-  }
+  "Api": { "BaseUrl": "https://<backend-base>" },
+  "MenuApi": { "BaseUrl": "https://<menu-api-base>" },
+  "TablesApi": { "BaseUrl": "https://<tables-api-base>" }
 }
 ```
 
-After you deploy the backend, replace the URL with your Cloud Run URL.
+After you deploy services, replace the URLs with your Cloud Run URLs.
+
+### Deployed URLs (Cloud Run)
+
+- MenuApi: https://magidesk-menu-904541739138.northamerica-south1.run.app
+- PaymentApi: https://magidesk-payment-904541739138.northamerica-south1.run.app
 
 ### Run Frontend
 
@@ -161,3 +166,4 @@ Do not commit real credentials. Use environment variables and Google Secret Mana
   - Frontend: [modules/frontend.md](./modules/frontend.md)
   - Shared DTOs: [modules/shared.md](./modules/shared.md)
   - Settings API: [modules/settings-api.md](./modules/settings-api.md)
+  - Payment API: [modules/payment-api.md](./modules/payment-api.md)

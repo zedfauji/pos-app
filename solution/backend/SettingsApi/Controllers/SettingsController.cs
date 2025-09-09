@@ -16,6 +16,10 @@ public class SettingsController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("frontend/defaults")]
+    public ActionResult<FrontendSettings> GetFrontendDefaults()
+        => Ok(SettingsService.DefaultFrontend());
+
     [HttpGet("frontend")]
     public async Task<ActionResult<FrontendSettings>> GetFrontend([FromQuery] string? host = null, CancellationToken ct = default)
     {
@@ -31,6 +35,10 @@ public class SettingsController : ControllerBase
         await _settings.SaveFrontendAsync(body, host, ct);
         return NoContent();
     }
+
+    [HttpGet("backend/defaults")]
+    public ActionResult<BackendSettings> GetBackendDefaults()
+        => Ok(SettingsService.DefaultBackend());
 
     [HttpGet("backend")]
     public async Task<ActionResult<BackendSettings>> GetBackend([FromQuery] string? host = null, CancellationToken ct = default)
@@ -49,6 +57,10 @@ public class SettingsController : ControllerBase
     }
 
     // GET api/settings/app?host=HOSTNAME
+    [HttpGet("app/defaults")]
+    public ActionResult<AppSettings> GetAppDefaults()
+        => Ok(SettingsService.DefaultApp());
+
     [HttpGet("app")]
     public async Task<ActionResult<AppSettings>> GetApp([FromQuery] string? host = null, CancellationToken ct = default)
     {
@@ -64,5 +76,12 @@ public class SettingsController : ControllerBase
         if (body == null) return BadRequest();
         await _settings.SaveAppAsync(body, host, ct);
         return NoContent();
+    }
+
+    [HttpGet("audit")]
+    public async Task<ActionResult<List<Dictionary<string, object?>>>> GetAudit([FromQuery] string? host = null, [FromQuery] int limit = 50, CancellationToken ct = default)
+    {
+        var list = await _settings.GetAuditAsync(host, limit, ct);
+        return Ok(list);
     }
 }

@@ -1,6 +1,9 @@
 using System.Text.Json;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using NpgsqlTypes;
 using MagiDesk.Shared.DTOs.Tables;
@@ -46,6 +49,149 @@ app.MapGet("/health", async () =>
         await conn.OpenAsync();
         await EnsureSchemaAsync(conn);
         return Results.Ok(new { status = "ok" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message, statusCode: 500);
+    }
+});
+
+// Settings: rate per minute for table sessions
+app.MapGet("/settings/rate", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = "SELECT value FROM public.app_settings WHERE key = 'Tables.RatePerMinute'";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    var obj = await cmd.ExecuteScalarAsync();
+    decimal rate = 0m;
+    if (obj is string s && decimal.TryParse(s, out var r)) rate = r;
+    return Results.Ok(new { ratePerMinute = rate });
+});
+
+app.MapPut("/settings/rate", async (HttpContext ctx) =>
+{
+    try
+    {
+        decimal? bodyRate = await ctx.Request.ReadFromJsonAsync<decimal?>();
+        if (!bodyRate.HasValue) return Results.BadRequest(new { message = "Invalid body; expected number" });
+        var rate = bodyRate.Value;
+        await using var conn = new NpgsqlConnection(connString);
+        await conn.OpenAsync();
+        await EnsureSchemaAsync(conn);
+        const string up = @"INSERT INTO public.app_settings(key, value) VALUES('Tables.RatePerMinute', @v)
+                           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value";
+        await using var cmd = new NpgsqlCommand(up, conn);
+        cmd.Parameters.AddWithValue("@v", rate.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        await cmd.ExecuteNonQueryAsync();
+        return Results.Ok(new { ratePerMinute = rate });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message, statusCode: 500);
+    }
+});
+
+// Enforce session timers (auto-stop) based on SettingsApi app settings
+// Env var SETTINGSAPI_BASEURL must point to SettingsApi base URL
+app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
+{
+    string? settingsUrl = Environment.GetEnvironmentVariable("SETTINGSAPI_BASEURL");
+    if (string.IsNullOrWhiteSpace(settingsUrl))
+        return Results.Problem("SETTINGSAPI_BASEURL not configured", statusCode: 500);
+
+    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+    { BaseAddress = new Uri(settingsUrl.TrimEnd('/') + "/") };
+    var appEndpoint = string.IsNullOrWhiteSpace(host) ? "api/settings/app" : $"api/settings/app?host={Uri.EscapeDataString(host)}";
+    var appSettings = await http.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>(appEndpoint);
+    int autoStop = 0;
+    try
+    {
+        if (appSettings != null && appSettings.TryGetPropertyValue("extras", out var extras) && extras is System.Text.Json.Nodes.JsonObject obj)
+        {
+            if (obj.TryGetPropertyValue("tables.session.autoStopMinutes", out var val) && val != null)
+            {
+                int.TryParse(val.ToString(), out autoStop);
+            }
+        }
+    }
+    catch { }
+    if (autoStop <= 0) return Results.Ok(new { enforced = 0, autoStop });
+
+    int enforced = 0;
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    // Get active sessions
+    const string findActives = @"SELECT session_id, table_label, server_id, server_name, start_time FROM public.table_sessions WHERE status='active'";
+    var sessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start)>();
+    await using (var cmd = new NpgsqlCommand(findActives, conn))
+    await using (var rdr = await cmd.ExecuteReaderAsync())
+    {
+        while (await rdr.ReadAsync())
+        {
+            sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4)));
+        }
+    }
+    foreach (var s in sessions)
+    {
+        var minutes = (int)Math.Max(0, (DateTime.UtcNow - s.start).TotalMinutes);
+        if (minutes < autoStop) continue;
+        // close session and create bill (reuse logic similar to /tables/{label}/stop)
+        const string closeSql = "UPDATE public.table_sessions SET end_time = @end, status = 'closed' WHERE session_id = @sid";
+        await using (var close = new NpgsqlCommand(closeSql, conn))
+        {
+            close.Parameters.AddWithValue("@end", DateTime.UtcNow);
+            close.Parameters.AddWithValue("@sid", s.sid);
+            await close.ExecuteNonQueryAsync();
+        }
+        // items
+        var items = new List<ItemLine>();
+        const string itemsSql = @"SELECT items FROM public.table_sessions WHERE session_id = @sid";
+        await using (var gi = new NpgsqlCommand(itemsSql, conn))
+        {
+            gi.Parameters.AddWithValue("@sid", s.sid);
+            await using var rdr2 = await gi.ExecuteReaderAsync();
+            if (await rdr2.ReadAsync() && !rdr2.IsDBNull(0))
+            {
+                var json = rdr2.GetString(0);
+                try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { items = new(); }
+            }
+        }
+        decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+        decimal itemsCost = items.Sum(i => i.price * i.quantity);
+        decimal timeCost = ratePerMinute * minutes;
+        decimal total = timeCost + itemsCost;
+        var billId = Guid.NewGuid();
+        const string billSql = @"INSERT INTO public.bills(bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount)
+                                VALUES(@bid, @label, @srvId, @srvName, @start, @end, @mins, @items, @timeCost, @itemsCost, @total)";
+        await using (var bill = new NpgsqlCommand(billSql, conn))
+        {
+            bill.Parameters.AddWithValue("@bid", billId);
+            bill.Parameters.AddWithValue("@label", s.table);
+            bill.Parameters.AddWithValue("@srvId", s.serverId);
+            bill.Parameters.AddWithValue("@srvName", s.serverName);
+            bill.Parameters.AddWithValue("@start", s.start);
+            bill.Parameters.AddWithValue("@end", DateTime.UtcNow);
+            bill.Parameters.AddWithValue("@mins", minutes);
+            bill.Parameters.Add("@items", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(items);
+            bill.Parameters.AddWithValue("@timeCost", timeCost);
+            bill.Parameters.AddWithValue("@itemsCost", itemsCost);
+            bill.Parameters.AddWithValue("@total", total);
+            await bill.ExecuteNonQueryAsync();
+        }
+        // free table
+        const string freeSql = @"UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL, updated_at = now() WHERE label = @l";
+        await using (var free = new NpgsqlCommand(freeSql, conn))
+        {
+            free.Parameters.AddWithValue("@l", s.table);
+            await free.ExecuteNonQueryAsync();
+        }
+        enforced++;
+    }
+    return Results.Ok(new { enforced, autoStop });
+});
 
 // Move an active session from one table to another
 app.MapPost("/tables/{fromLabel}/move", async (string fromLabel, string to, HttpContext ctx) =>
@@ -129,14 +275,18 @@ app.MapGet("/sessions/active", async () =>
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
     const string sql = @"SELECT s.session_id, s.billing_id, s.table_label, s.server_name, s.start_time, s.status, s.items
-                         FROM public.table_sessions s WHERE s.status = 'active' ORDER BY s.start_time";
+                         FROM public.table_sessions s
+                         WHERE (s.status ILIKE 'active' OR (s.status IS NULL AND s.end_time IS NULL))
+                         ORDER BY s.start_time";
     var list = new List<object>();
-    await using var cmd = new NpgsqlCommand(sql, conn);
-    await using var rdr = await cmd.ExecuteReaderAsync();
     var sessions = new List<(Guid sid, Guid? bid, string table, string server, DateTime start, string status, string itemsJson)>();
-    while (await rdr.ReadAsync())
+    await using (var cmd = new NpgsqlCommand(sql, conn))
+    await using (var rdr = await cmd.ExecuteReaderAsync())
     {
-        sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.IsDBNull(1) ? null : rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4), rdr.GetString(5), rdr.IsDBNull(6) ? "[]" : rdr.GetString(6)));
+        while (await rdr.ReadAsync())
+        {
+            sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.IsDBNull(1) ? null : rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4), rdr.GetString(5), rdr.IsDBNull(6) ? "[]" : rdr.GetString(6)));
+        }
     }
     decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
     foreach (var s in sessions)
@@ -161,11 +311,97 @@ app.MapGet("/sessions/active", async () =>
     }
     return Results.Ok(list);
 });
-    }
-    catch (Exception ex)
+
+// List recent sessions (active and closed) with computed totals
+app.MapGet("/sessions", async ([FromQuery] string? from, [FromQuery] string? to, [FromQuery] string? table, [FromQuery] string? server, [FromQuery] int limit) =>
+{
+    if (limit <= 0 || limit > 500) limit = 100;
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    var where = new List<string>();
+    var cmd = new NpgsqlCommand();
+    cmd.Connection = conn;
+    if (!string.IsNullOrWhiteSpace(table)) { where.Add("s.table_label = @table"); cmd.Parameters.AddWithValue("@table", table); }
+    if (!string.IsNullOrWhiteSpace(server)) { where.Add("s.server_name ILIKE @server"); cmd.Parameters.AddWithValue("@server", "%" + server + "%"); }
+    if (DateTime.TryParse(from, out var fromDt)) { where.Add("(s.end_time IS NULL OR s.end_time >= @from)"); cmd.Parameters.AddWithValue("@from", fromDt.ToUniversalTime()); }
+    if (DateTime.TryParse(to, out var toDt)) { where.Add("s.start_time <= @to"); cmd.Parameters.AddWithValue("@to", toDt.ToUniversalTime()); }
+    var whereSql = where.Count > 0 ? (" WHERE " + string.Join(" AND ", where)) : string.Empty;
+    cmd.CommandText = $@"SELECT s.session_id, s.billing_id, s.table_label, s.server_name, s.start_time, s.end_time, s.status, s.items
+                         FROM public.table_sessions s{whereSql}
+                         ORDER BY s.start_time DESC
+                         LIMIT @limit";
+    cmd.Parameters.AddWithValue("@limit", limit);
+    var list = new List<object>();
+    var rows = new List<(Guid sid, Guid? bid, string table, string server, DateTime start, DateTime? end, string? status, string itemsJson)>();
+    await using (var rdr = await cmd.ExecuteReaderAsync())
     {
-        return Results.Problem(ex.Message, statusCode: 500);
+        while (await rdr.ReadAsync())
+        {
+            rows.Add((
+                rdr.GetFieldValue<Guid>(0),
+                rdr.IsDBNull(1) ? null : rdr.GetFieldValue<Guid>(1),
+                rdr.GetString(2),
+                rdr.IsDBNull(3) ? string.Empty : rdr.GetString(3),
+                rdr.GetFieldValue<DateTime>(4),
+                rdr.IsDBNull(5) ? (DateTime?)null : rdr.GetFieldValue<DateTime>(5),
+                rdr.IsDBNull(6) ? null : rdr.GetString(6),
+                rdr.IsDBNull(7) ? "[]" : rdr.GetString(7)
+            ));
+        }
     }
+    decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+    foreach (var s in rows)
+    {
+        List<ItemLine> items;
+        try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(s.itemsJson) ?? new(); } catch { items = new(); }
+        var end = s.end ?? DateTime.UtcNow;
+        var minutes = (int)Math.Max(0, (end - s.start).TotalMinutes);
+        var itemsCost = items.Sum(i => i.price * i.quantity);
+        var timeCost = ratePerMinute * minutes;
+        var total = timeCost + itemsCost;
+        list.Add(new
+        {
+            sessionId = s.sid,
+            billingId = s.bid,
+            tableId = s.table,
+            serverName = s.server,
+            startTime = s.start,
+            status = string.IsNullOrWhiteSpace(s.status) ? (s.end.HasValue ? "closed" : "active") : s.status,
+            itemsCount = items.Count,
+            total
+        });
+    }
+    return Results.Ok(list);
+});
+
+// Debug: inspect most recent raw session rows
+app.MapGet("/debug/sessions", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    const string sql = @"SELECT session_id, table_label, server_name, start_time, end_time, status, billing_id
+                         FROM public.table_sessions ORDER BY start_time DESC LIMIT 20";
+    var outList = new List<object>();
+    await using (var cmd = new NpgsqlCommand(sql, conn))
+    await using (var rdr = await cmd.ExecuteReaderAsync())
+    {
+        while (await rdr.ReadAsync())
+        {
+            outList.Add(new
+            {
+                sessionId = rdr.GetFieldValue<Guid>(0),
+                table = rdr.GetString(1),
+                server = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+                start = rdr.GetFieldValue<DateTime>(3),
+                end = rdr.IsDBNull(4) ? (DateTime?)null : rdr.GetFieldValue<DateTime>(4),
+                status = rdr.IsDBNull(5) ? null : rdr.GetString(5),
+                billingId = rdr.IsDBNull(6) ? (Guid?)null : rdr.GetFieldValue<Guid>(6)
+            });
+        }
+    }
+    return Results.Ok(outList);
 });
 
 // Force free a table even if there is no active session (recovery path)
@@ -326,11 +562,13 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     await using (var getItems = new NpgsqlCommand(itemsSql, conn))
     {
         getItems.Parameters.AddWithValue("@sid", sessionId);
-        await using var rdr = await getItems.ExecuteReaderAsync();
-        if (await rdr.ReadAsync() && !rdr.IsDBNull(0))
+        await using (var rdr = await getItems.ExecuteReaderAsync())
         {
-            var json = rdr.GetString(0);
-            try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { items = new(); }
+            if (await rdr.ReadAsync() && !rdr.IsDBNull(0))
+            {
+                var json = rdr.GetString(0);
+                try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { items = new(); }
+            }
         }
     }
 

@@ -74,3 +74,45 @@ This document summarizes the implemented features in the MagiDesk solution, grou
 - Add validation attributes and problem-details responses.
 - Add integration/unit tests for services.
 - Expand telemetry and structured logs.
+
+---
+
+## Recent Progress (Settings, Tables, UX)
+
+- __Settings Page Refactor (Frontend)__
+  - Replaced horizontal tabs with vertical category list (General, Connections, Billing & Printing, Tables).
+  - Added loading spinner and bottom action bar alignment.
+  - Added a lightweight toast via `InfoBar` for Save, Print, Defaults actions.
+
+- __Tables Section Enhancements (Frontend)__
+  - Added Session Timers inputs (Warn minutes, Auto-stop minutes). Values persisted to `SettingsApi` App settings `Extras` keys:
+    - `tables.session.warnMinutes`
+    - `tables.session.autoStopMinutes`
+  - Added "Rate Per Minute" UI with `NumberBox` and buttons to Load/Save.
+  - Load/Save integrates to `TablesApi` endpoints: `GET/PUT /settings/rate`.
+
+- __SettingsApi (Backend)__
+  - Added defaults endpoints:
+    - `GET /api/settings/frontend/defaults`
+    - `GET /api/settings/backend/defaults`
+    - `GET /api/settings/app/defaults`
+  - Added audit logging on Save for frontend/backend/app sections.
+  - Added audit reader endpoint: `GET /api/settings/audit?host=&limit=`.
+
+- __TablesApi (Backend)__
+  - Fixed route registration bug that nested endpoints under `/health` (moved braces to root register all routes correctly).
+  - Added session move endpoint: `POST /tables/{fromLabel}/move?to=...` with move audit.
+  - Added sessions overview: `GET /sessions/active`.
+  - Added enforcement: `POST /sessions/enforce` that reads defaults from `SettingsApi` using env `SETTINGSAPI_BASEURL` and auto-stops sessions beyond configured minutes.
+  - Added Settings endpoints for rate:
+    - `GET /settings/rate` returns `{ ratePerMinute }` from `public.app_settings` key `Tables.RatePerMinute`.
+    - `PUT /settings/rate` body is a number; upserts the same key.
+
+- __Deployments__
+  - Deployed `SettingsApi` to Cloud Run: `https://magidesk-settings-904541739138.northamerica-south1.run.app`.
+  - Deployed `TablesApi` to Cloud Run: `https://magidesk-tables-904541739138.northamerica-south1.run.app`.
+  - Cloud SQL instance attached for `TablesApi`; connection via `/cloudsql` socket.
+
+- __Docs__
+  - Updated `docs/api-routes.md` to include new `SettingsApi` defaults/audit and all `TablesApi` routes.
+

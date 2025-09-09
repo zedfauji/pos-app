@@ -1,0 +1,90 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.PaymentDialog"
+    x:Name="DialogRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d"
+    Title="Payment"
+    PrimaryButtonText="Confirm"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnConfirm">
+    <ScrollViewer>
+        <StackPanel Padding="12" Spacing="12">
+            <TextBlock Text="Payment" FontSize="20" FontWeight="SemiBold"/>
+
+            <!-- Bill Summary -->
+            <StackPanel>
+                <TextBlock Text="Bill Summary" FontWeight="SemiBold"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Billing:"/>
+                    <TextBlock Text="{Binding BillingId}"/>
+                    <TextBlock Text="Due:" Margin="12,0,0,0"/>
+                    <TextBlock Text="{Binding TotalDue}"/>
+                </StackPanel>
+                <ListView ItemsSource="{Binding Items}" MinHeight="120">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <TextBlock Text="{Binding Name}" Width="200"/>
+                                <TextBlock Text="x"/>
+                                <TextBlock Text="{Binding Quantity}" Width="40"/>
+                                <TextBlock Text="= " />
+                                <TextBlock Text="{Binding LineTotal}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                    <TextBlock Text="{Binding LedgerDiscountText}"/>
+                    <TextBlock Text="{Binding LedgerTipText}"/>
+                    <TextBlock Text="{Binding LedgerPaidText}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Direct Payment Line -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox Header="Method" ItemsSource="{Binding Methods}" SelectedItem="{Binding SelectedMethod}" Width="180"/>
+                <TextBox Header="Amount" Text="{Binding Amount, Mode=TwoWay}" Width="120"/>
+                <TextBox Header="Tip" Text="{Binding Tip, Mode=TwoWay}" Width="120"/>
+            </StackPanel>
+
+            <!-- Split Payments -->
+            <Expander Header="Split Payments">
+                <StackPanel Spacing="8">
+                    <ListView ItemsSource="{Binding SplitLines}" MinHeight="80">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox ItemsSource="{Binding ElementName=DialogRoot, Path=DataContext.Methods}" SelectedItem="{Binding PaymentMethod, Mode=TwoWay}" Width="160"/>
+                                    <TextBox Text="{Binding AmountPaid, Mode=TwoWay}" Width="120"/>
+                                    <Button Content="Remove" Click="OnRemoveSplit"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <Button Content="Add Split" Click="OnAddSplit"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- Discount -->
+            <Expander Header="Discount">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding DiscountTypes}" SelectedItem="{Binding SelectedDiscountType}" Width="160"/>
+                    <TextBox Text="{Binding DiscountValue, Mode=TwoWay}" Width="120"/>
+                    <TextBox PlaceholderText="Reason" Text="{Binding DiscountReason, Mode=TwoWay}" Width="220"/>
+                    <Button Content="Apply" Click="OnApplyDiscount"/>
+                </StackPanel>
+            </Expander>
+
+            <InfoBar IsOpen="{Binding HasError}" Severity="Error" Message="{Binding Error}"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding PaidText}"/>
+                <TextBlock Text="{Binding BalanceText}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

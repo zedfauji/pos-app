@@ -2,6 +2,35 @@
 trigger: always_on
 ---
 
-Run build successfully everytime you make code changes. 
+DO NOT RUN dotnet build MagiDesk.sln -c Debug -nologo
+Build Blocking Rule
 
-Do not finish the task until build finishes succesfully withouth any error.
+Every time code is generated, edited, or refactored, immediately run a build for the affected module(s).
+
+The model must not mark the task complete or proceed to other features until:
+
+The build finishes with no errors (dotnet build, or solution-level build for WinUI/frontend/backend modules).
+
+All warnings are resolved if they cause runtime or XAML issues.
+
+The output binaries are generated successfully.
+
+Error Recovery Rule
+
+If build fails, the model must:
+
+Analyze the error output in detail.
+
+Suggest and apply specific fixes.
+
+Re-run the build.
+
+This loop must continue until build passes.
+
+Do not continue development or move to other tasks while errors exist.
+
+🚀 Deployment Rule
+
+After a successful build, if deployment is configured , run the deployment pipeline for that module.
+
+Deployment must also pass without errors before proceeding

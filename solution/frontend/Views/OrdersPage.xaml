@@ -1,9 +1,10 @@
 <Page
     x:Class="MagiDesk.Frontend.Views.OrdersPage"
+    x:Name="Root"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Padding="12">
@@ -13,34 +14,75 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar -->
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock x:Name="Title" Text="Orders" FontSize="20" FontWeight="SemiBold"/>
-            <Button x:Name="BtnStart" Content="Start New Order" Click="Start_Click"/>
-            <Button x:Name="BtnSaveDraft" Content="Save Draft" Click="SaveDraft_Click"/>
-            <Button x:Name="BtnOpenDraft" Content="Open Draft" Click="OpenDraft_Click"/>
-            <Button x:Name="BtnRefresh" Content="Refresh" Click="Refresh_Click"/>
-            <Button x:Name="BtnJobs" Content="Job History" Click="Jobs_Click"/>
-            <Button x:Name="BtnNotifications" Content="Notifications" Click="Notifications_Click"/>
+            <TextBlock Text="Order" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="ID:"/>
+            <TextBlock Text="{Binding OrderId}"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <Button Content="Load Logs" Click="LoadLogs_Click"/>
+            <Button Content="Checkout" Click="Checkout_Click"/>
+            <NumberBox x:Name="OrderIdBox" Width="140" Minimum="1" SmallChange="1" PlaceholderText="Enter OrderId"/>
+            <Button Content="Load" Click="LoadOrderId_Click"/>
         </StackPanel>
 
-        <!-- Orders History Grid -->
-        <ct:DataGrid Grid.Row="1"
-                     x:Name="OrdersGrid"
-                     AutoGenerateColumns="False"
-                     IsReadOnly="True"
-                     ItemsSource="{Binding Orders}">
-            <ct:DataGrid.Columns>
-                <ct:DataGridTextColumn Header="orderId" Binding="{Binding OrderId}" Width="2*"/>
-                <ct:DataGridTextColumn Header="vendorName" Binding="{Binding VendorName}" Width="2*"/>
-                <ct:DataGridTextColumn Header="itemsCount" Binding="{Binding Items.Count}" Width="*"/>
-                <ct:DataGridTextColumn Header="totalAmount" Binding="{Binding TotalAmount}" Width="*"/>
-                <ct:DataGridTextColumn Header="status" Binding="{Binding Status}" Width="*"/>
-                <ct:DataGridTextColumn Header="createdAt" Binding="{Binding CreatedAt}" Width="2*"/>
-            </ct:DataGrid.Columns>
-        </ct:DataGrid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Notifications Panel (on demand via button) -->
-        <InfoBar Grid.Row="2" x:Name="Info" IsOpen="False"/>
+            <ct:DataGrid Grid.Column="0"
+                         x:Name="ItemsGrid"
+                         ItemsSource="{Binding Items}"
+                         AutoGenerateColumns="False"
+                         IsReadOnly="True">
+                <ct:DataGrid.Columns>
+                    <ct:DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="3*"/>
+                    <ct:DataGridTextColumn Header="Modifiers" Binding="{Binding ModifiersText}" Width="2*"/>
+                    <ct:DataGridTemplateColumn Header="Qty" Width="*">
+                        <ct:DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Button Content="-" Click="QtyMinus_Click"/>
+                                    <TextBlock Text="{Binding Quantity}" Width="32" TextAlignment="Center"/>
+                                    <Button Content="+" Click="QtyPlus_Click"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ct:DataGridTemplateColumn.CellTemplate>
+                    </ct:DataGridTemplateColumn>
+                    <ct:DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="*"/>
+                    <ct:DataGridTextColumn Header="Total" Binding="{Binding LineTotal}" Width="*"/>
+                    <ct:DataGridTemplateColumn Header="Actions" Width="*">
+                        <ct:DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Cancel" Click="Cancel_Click"/>
+                            </DataTemplate>
+                        </ct:DataGridTemplateColumn.CellTemplate>
+                    </ct:DataGridTemplateColumn>
+                </ct:DataGrid.Columns>
+            </ct:DataGrid>
+
+            <StackPanel Grid.Column="1" Spacing="8">
+                <TextBlock Text="Audit Logs" FontWeight="SemiBold"/>
+                <ListView ItemsSource="{Binding Logs}" Height="260">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Action}"/>
+                                <TextBlock Text="{Binding CreatedAt}" FontSize="12" Foreground="Gray"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right">
+            <TextBlock Text="{Binding Subtotal}"/>
+            <TextBlock Text="{Binding DiscountTotal}"/>
+            <TextBlock Text="{Binding TaxTotal}"/>
+            <TextBlock FontWeight="Bold" Text="{Binding Total}"/>
+            <TextBlock Foreground="ForestGreen" Text="{Binding ProfitMargin}"/>
+        </StackPanel>
     </Grid>
 </Page>

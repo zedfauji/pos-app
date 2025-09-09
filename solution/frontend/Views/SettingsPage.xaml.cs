@@ -25,11 +25,38 @@ public sealed partial class SettingsPage : Page
         // Rate controls removed in minimal layout
         // Prefer dedicated SettingsApi base URL from config if available
         var settingsBase = _config?["SettingsApi:BaseUrl"]
-            ?? App.Api?.BaseAddress?.ToString()
+            ?? App.Api?.BackendBase?.ToString()
             ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
         _settingsApi = new SettingsApiService(settingsBase);
+        // Default to first category
+        try { CategoryList.SelectedIndex = 0; } catch { }
         _ = LoadFromBackendAsync();
         _ = UpdateAppSummaryAsync();
+    }
+
+    private async Task LoadAuditAsync()
+    {
+        try
+        {
+            var list = await _settingsApi.GetAuditAsync(GetSettingsHost(), 50);
+            // Display a simplified projection for readability
+            var view = list.Select(x => new
+            {
+                section = x.ContainsKey("section") ? x["section"] : null,
+                timestamp = x.ContainsKey("timestamp") ? x["timestamp"] : null,
+                changes = x.ContainsKey("changes") ? System.Text.Json.JsonSerializer.Serialize(x["changes"]) : null
+            }).ToList();
+            AuditList.ItemsSource = view;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Audit error: {ex.Message}";
+        }
+    }
+
+    private async void AuditRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadAuditAsync();
     }
 
     private void LoadConfig()
@@ -45,6 +72,7 @@ public sealed partial class SettingsPage : Page
 
             var baseUrl = _config["Api:BaseUrl"] ?? string.Empty;
             BaseUrlText.Text = baseUrl;
+            InventoryApiUrlText.Text = _config["InventoryApi:BaseUrl"] ?? InventoryApiUrlText.Text;
             // Prepopulate Settings/Tables API URLs when available
             SettingsApiUrlText.Text = _config["SettingsApi:BaseUrl"] ?? SettingsApiUrlText.Text;
             SettingsHostText.Text = _config["SettingsApi:Host"] ?? SettingsHostText.Text;
@@ -112,7 +140,20 @@ public sealed partial class SettingsPage : Page
 
             // Save to backend as the source of truth
             _ = SaveToBackendAsync(BaseUrlText.Text, theme);
+            // Also persist session timers via App settings Extras
+            try
+            {
+                var extras = new System.Collections.Generic.Dictionary<string, object?>
+                {
+                    ["tables.session.warnMinutes"] = (int)(WarnMinutesBox.Value <= 0 ? 0 : WarnMinutesBox.Value),
+                    ["tables.session.autoStopMinutes"] = (int)(AutoStopMinutesBox.Value <= 0 ? 0 : AutoStopMinutesBox.Value)
+                };
+                var appSet = new SettingsApiService.AppSettings { Extras = extras };
+                _ = _settingsApi.SaveAppAsync(appSet, GetSettingsHost());
+            }
+            catch { }
             StatusText.Text = App.I18n.T("saved");
+            Toast("Saved");
         }
         catch (Exception ex)
         {
@@ -124,7 +165,9 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            var fe = await _settingsApi.GetFrontendAsync();
+            LoadingRing.IsActive = true; LoadingRing.Visibility = Visibility.Visible;
+            var host = GetSettingsHost();
+            var fe = await _settingsApi.GetFrontendAsync(host);
             if (fe != null)
             {
                 if (!string.IsNullOrWhiteSpace(fe.ApiBaseUrl)) BaseUrlText.Text = fe.ApiBaseUrl;
@@ -137,8 +180,24 @@ public sealed partial class SettingsPage : Page
                     CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
                 }
             }
+
+            // Load backend connection settings
+            var be = await _settingsApi.GetBackendAsync(host);
+            if (be != null)
+            {
+                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            LoadingRing.IsActive = false; LoadingRing.Visibility = Visibility.Collapsed;
+        }
     }
 
     private async Task SaveToBackendAsync(string apiBaseUrl, string theme)
@@ -147,7 +206,7 @@ public sealed partial class SettingsPage : Page
         {
             // Do not include rate here; edited via dialog and saved immediately
             var fe = new SettingsApiService.FrontendSettings { ApiBaseUrl = apiBaseUrl, Theme = theme };
-            await _settingsApi.SaveFrontendAsync(fe);
+            await _settingsApi.SaveFrontendAsync(fe, GetSettingsHost());
             BackendSummaryText.Text = $"Backend: {BaseUrlText.Text}";
             ThemeSummaryText.Text = $"Theme: {theme}";
         }
@@ -167,6 +226,22 @@ public sealed partial class SettingsPage : Page
             var locale = string.IsNullOrWhiteSpace(app.Locale) ? "(default)" : app.Locale;
             var notif = app.EnableNotifications == true ? "On" : "Off";
             AppSummaryText.Text = $"App Settings: Locale={locale}; Notifications={notif}";
+            // Load session timers if present
+            try
+            {
+                if (app.Extras != null)
+                {
+                    if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null)
+                    {
+                        if (int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
+                    }
+                    if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null)
+                    {
+                        if (int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+                    }
+                }
+            }
+            catch { }
         }
         catch
         {
@@ -340,9 +415,16 @@ public sealed partial class SettingsPage : Page
             CopyOthers(baseDoc.RootElement);
             CopyOthers(userDoc.RootElement);
 
+            // Validate inputs
+            var paperTag = ((PrinterWidthCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "58";
+            if (paperTag != "58" && paperTag != "80") { StatusText.Text = "Paper width must be 58 or 80"; return; }
+            var taxText = string.IsNullOrWhiteSpace(TaxPercentText.Text) ? "0" : TaxPercentText.Text.Trim();
+            if (!decimal.TryParse(taxText, NumberStyles.Number, CultureInfo.InvariantCulture, out var _)) { StatusText.Text = "Tax % must be a decimal"; return; }
+
             root["Api"] = new { BaseUrl = BaseUrlText.Text };
             var theme = ThemeSelector.SelectedIndex == 1 ? "Dark" : ThemeSelector.SelectedIndex == 2 ? "Light" : "System";
             root["UI"] = new { Theme = theme };
+            root["InventoryApi"] = new { BaseUrl = InventoryApiUrlText.Text };
             root["SettingsApi"] = new { BaseUrl = SettingsApiUrlText.Text };
             if (!string.IsNullOrWhiteSpace(SettingsHostText.Text))
             {
@@ -350,8 +432,6 @@ public sealed partial class SettingsPage : Page
             }
             root["TablesApi"] = new { BaseUrl = TablesApiUrlText.Text };
             // Printer settings
-            var paperTag = ((PrinterWidthCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()) ?? "58";
-            var taxText = string.IsNullOrWhiteSpace(TaxPercentText.Text) ? "0" : TaxPercentText.Text.Trim();
             root["Printer"] = new { PaperWidthMm = paperTag, TaxPercent = taxText };
 
             var json = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
@@ -362,6 +442,16 @@ public sealed partial class SettingsPage : Page
             StatusText.Text = App.I18n.T("saved");
             // Re-init services using the new URLs immediately
             ReinitServicesFromUI();
+
+            // Persist to backend settings (source of truth)
+            var be = new SettingsApiService.BackendSettings
+            {
+                BackendApiUrl = BaseUrlText.Text?.Trim(),
+                SettingsApiUrl = SettingsApiUrlText.Text?.Trim(),
+                TablesApiUrl = TablesApiUrlText.Text?.Trim()
+            };
+            await _settingsApi.SaveBackendAsync(be, GetSettingsHost());
+            Toast("Saved");
         }
         catch (Exception ex)
         {
@@ -377,6 +467,13 @@ public sealed partial class SettingsPage : Page
             if (!string.IsNullOrWhiteSpace(settingsUrl))
             {
                 _settingsApi = new SettingsApiService(settingsUrl!);
+            }
+            // Recreate core ApiService with backend + inventory URLs
+            var backendUrl = BaseUrlText.Text?.Trim();
+            var inventoryUrl = string.IsNullOrWhiteSpace(InventoryApiUrlText.Text) ? backendUrl : InventoryApiUrlText.Text.Trim();
+            if (!string.IsNullOrWhiteSpace(backendUrl))
+            {
+                MagiDesk.Frontend.App.ReinitializeApi(backendUrl!, inventoryUrl ?? backendUrl!);
             }
         }
         catch { }
@@ -413,6 +510,7 @@ public sealed partial class SettingsPage : Page
 
             var view = Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
             await Services.PrintService.PrintVisualAsync(view);
+            Toast("Printed test receipt");
         }
         catch (Exception ex)
         {
@@ -451,6 +549,18 @@ public sealed partial class SettingsPage : Page
                 catch { return ("Err", false); }
             }
 
+            async Task<(string status, bool ok)> PingInventoryAsync(string? baseUrl)
+            {
+                if (string.IsNullOrWhiteSpace(baseUrl)) return ("-", false);
+                try
+                {
+                    var u = baseUrl.TrimEnd('/') + "/health";
+                    using var res = await http.GetAsync(u);
+                    return res.IsSuccessStatusCode ? ("Online", true) : ($"HTTP {(int)res.StatusCode}", true);
+                }
+                catch { return ("Err", false); }
+            }
+
             async Task<(string status, bool ok)> PingBackendAsync(string? baseUrl)
             {
                 if (string.IsNullOrWhiteSpace(baseUrl)) return ("-", false);
@@ -468,16 +578,163 @@ public sealed partial class SettingsPage : Page
             }
 
             var (settingsStatus, settingsOk) = await PingSettingsAsync(SettingsApiUrlText.Text);
+            var (inventoryStatus, inventoryOk) = await PingInventoryAsync(InventoryApiUrlText.Text);
             var (tablesStatus, tablesOk) = await PingTablesAsync(TablesApiUrlText.Text);
             var (backendStatus, backendOk) = await PingBackendAsync(BaseUrlText.Text);
 
             SettingsStatusText.Text = $"Settings API: {settingsStatus}";
+            InventoryStatusText.Text = $"Inventory API: {inventoryStatus}";
             TablesStatusText.Text = $"Tables API: {tablesStatus}";
             BackendSummaryText.Text = $"Backend: {BaseUrlText.Text} ({backendStatus})";
 
             SettingsStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(settingsOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
+            InventoryStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(inventoryOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
             TablesStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(tablesOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
             BackendStatusDot.Fill = new Microsoft.UI.Xaml.Media.SolidColorBrush(backendOk ? Microsoft.UI.Colors.SeaGreen : Microsoft.UI.Colors.Firebrick);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+    }
+
+    // Category switching: show only selected panel
+    private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            var idx = CategoryList.SelectedIndex;
+            GeneralPanel.Visibility = idx == 0 ? Visibility.Visible : Visibility.Collapsed;
+            ConnectionsPanel.Visibility = idx == 1 ? Visibility.Visible : Visibility.Collapsed;
+            BillingPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
+            TablesPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
+            AuditPanel.Visibility = idx == 4 ? Visibility.Visible : Visibility.Collapsed;
+            if (idx == 3)
+            {
+                // Prefill rate from Tables API
+                _ = DispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        var repo = new Services.TableRepository();
+                        var rate = await repo.GetRatePerMinuteAsync();
+                        if (rate.HasValue)
+                        {
+                            RatePerMinuteBox.Value = (double)rate.Value;
+                            CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                        }
+                    }
+                    catch { }
+                });
+            }
+            else if (idx == 4)
+            {
+                // Auto-load audit on first show
+                _ = DispatcherQueue.TryEnqueue(async () =>
+                {
+                    try { await LoadAuditAsync(); } catch { }
+                });
+            }
+        }
+        catch { }
+    }
+
+    private async void ResetDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            LoadingRing.IsActive = true; LoadingRing.Visibility = Visibility.Visible;
+            var fe = await _settingsApi.GetFrontendDefaultsAsync();
+            var be = await _settingsApi.GetBackendDefaultsAsync();
+            var app = await _settingsApi.GetAppDefaultsAsync();
+            if (fe != null)
+            {
+                BaseUrlText.Text = fe.ApiBaseUrl ?? BaseUrlText.Text;
+                var theme = string.IsNullOrWhiteSpace(fe.Theme) ? "System" : fe.Theme!;
+                ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+                if (fe.RatePerMinute.HasValue)
+                {
+                    CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                }
+            }
+            if (be != null)
+            {
+                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
+                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+            }
+            if (app != null && app.Extras != null)
+            {
+                if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null && int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
+                if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null && int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+            }
+            Toast("Defaults loaded");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            LoadingRing.IsActive = false; LoadingRing.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void Toast(string message)
+    {
+        try
+        {
+            ToastBar.Message = message;
+            ToastBar.IsOpen = true;
+            var _ = Task.Delay(2500).ContinueWith(_ => DispatcherQueue.TryEnqueue(() => ToastBar.IsOpen = false));
+        }
+        catch { }
+    }
+
+    private async void RateLoad_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var repo = new Services.TableRepository();
+            var rate = await repo.GetRatePerMinuteAsync();
+            if (rate.HasValue)
+            {
+                RatePerMinuteBox.Value = (double)rate.Value;
+                CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                Toast("Rate loaded");
+            }
+            else
+            {
+                StatusText.Text = "Rate not configured";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Error: {ex.Message}";
+        }
+    }
+
+    private async void RateSave_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var val = RatePerMinuteBox.Value;
+            if (val < 0)
+            {
+                StatusText.Text = "Rate must be >= 0";
+                return;
+            }
+            var repo = new Services.TableRepository();
+            var ok = await repo.SetRatePerMinuteAsync(Convert.ToDecimal(val));
+            if (ok)
+            {
+                CurrentRateText.Text = $"Current Rate: {Convert.ToDecimal(val).ToString("0.##", CultureInfo.InvariantCulture)}";
+                Toast("Rate saved");
+            }
+            else
+            {
+                StatusText.Text = "Failed to save rate (check Tables API URL)";
+            }
         }
         catch (Exception ex)
         {

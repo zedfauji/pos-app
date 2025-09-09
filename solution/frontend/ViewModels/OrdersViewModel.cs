@@ -1,63 +1,74 @@
 using System.Collections.ObjectModel;
 using MagiDesk.Frontend.Services;
-using MagiDesk.Shared.DTOs;
 
 namespace MagiDesk.Frontend.ViewModels;
 
+// General Orders VM (non vendor-specific), backed by OrderApiService
 public class OrdersViewModel
 {
-    private readonly ApiService _api;
+    private readonly OrderApiService _orders;
 
-    public ObservableCollection<OrderDto> Orders { get; } = new();
-    public ObservableCollection<OrdersJobDto> Jobs { get; } = new();
-    public ObservableCollection<OrderNotificationDto> Notifications { get; } = new();
+    public ObservableCollection<OrderApiService.OrderDto> Orders { get; } = new();
+    public ObservableCollection<OrderApiService.OrderLogDto> Logs { get; } = new();
 
-    public OrdersViewModel(ApiService api)
+    private string? _sessionId;
+    public void SetSession(string sessionId) => _sessionId = sessionId;
+
+    public OrdersViewModel()
     {
-        _api = api;
+        _orders = App.OrdersApi ?? throw new InvalidOperationException("OrdersApi not initialized");
     }
 
-    public async Task LoadAsync(CancellationToken ct = default)
+    public async Task LoadAsync(bool includeHistory = false, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId)) { Orders.Clear(); return; }
+        await LoadBySessionAsync(_sessionId!, includeHistory, ct);
+    }
+
+    public async Task LoadBySessionAsync(string sessionId, bool includeHistory = false, CancellationToken ct = default)
     {
         Orders.Clear();
-        var list = await _api.GetOrdersAsync(ct);
+        var list = await _orders.GetOrdersBySessionAsync(sessionId, includeHistory, ct);
         foreach (var o in list) Orders.Add(o);
     }
 
-    public async Task RefreshJobsAsync(CancellationToken ct = default)
+    public async Task AddItemsAsync(long orderId, IReadOnlyList<OrderApiService.CreateOrderItemDto> items, CancellationToken ct = default)
     {
-        Jobs.Clear();
-        var list = await _api.GetOrdersJobsAsync(10, ct);
-        foreach (var j in list) Jobs.Add(j);
+        var updated = await _orders.AddItemsAsync(orderId, items, ct);
+        await ReplaceOrderAsync(updated);
     }
 
-    public async Task RefreshNotificationsAsync(CancellationToken ct = default)
+    public async Task UpdateItemAsync(long orderId, OrderApiService.UpdateOrderItemDto item, CancellationToken ct = default)
     {
-        Notifications.Clear();
-        var list = await _api.GetOrderNotificationsAsync(50, ct);
-        foreach (var n in list) Notifications.Add(n);
+        var updated = await _orders.UpdateItemAsync(orderId, item, ct);
+        await ReplaceOrderAsync(updated);
     }
 
-    public async Task<string?> FinalizeOrderAsync(OrderDto order, CancellationToken ct = default)
+    public async Task DeleteItemAsync(long orderId, long orderItemId, CancellationToken ct = default)
     {
-        var (success, jobId, orderId) = await _api.FinalizeOrderAsync(order, ct);
-        if (success)
-        {
-            await LoadAsync(ct);
-            await RefreshJobsAsync(ct);
-            await RefreshNotificationsAsync(ct);
-            return orderId;
-        }
-        return null;
+        var updated = await _orders.DeleteItemAsync(orderId, orderItemId, ct);
+        await ReplaceOrderAsync(updated);
     }
 
-    public async Task<CartDraftDto?> SaveDraftAsync(CartDraftDto draft, CancellationToken ct = default)
+    public async Task CloseOrderAsync(long orderId, CancellationToken ct = default)
     {
-        var saved = await _api.SaveCartDraftAsync(draft, ct);
-        await RefreshJobsAsync(ct);
-        return saved;
+        var updated = await _orders.CloseOrderAsync(orderId, ct);
+        await ReplaceOrderAsync(updated);
     }
 
-    public async Task<CartDraftDto?> GetDraftAsync(string id, CancellationToken ct = default)
-        => await _api.GetCartDraftAsync(id, ct);
+    public async Task LoadLogsAsync(long orderId, int page = 1, int pageSize = 50, CancellationToken ct = default)
+    {
+        Logs.Clear();
+        var pr = await _orders.ListLogsAsync(orderId, page, pageSize, ct);
+        foreach (var l in pr.Items) Logs.Add(l);
+    }
+
+    private async Task ReplaceOrderAsync(OrderApiService.OrderDto? updated)
+    {
+        if (updated is null) return;
+        var idx = Orders.ToList().FindIndex(o => o.Id == updated.Id);
+        if (idx >= 0) Orders[idx] = updated;
+        else Orders.Insert(0, updated);
+        await Task.CompletedTask;
+    }
 }

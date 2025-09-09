@@ -1,0 +1,63 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.MenuPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0" Spacing="8">
+            <TextBlock Text="Categories" FontWeight="SemiBold"/>
+            <ListView ItemsSource="{Binding Categories}"
+                      SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
+
+            <TextBlock Text="Groups" FontWeight="SemiBold" Margin="0,12,0,0"/>
+            <ListView ItemsSource="{Binding Groups}"
+                      SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <Grid Grid.Column="1" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <AutoSuggestBox Grid.Row="0"
+                            PlaceholderText="Search by name or SKU"
+                            Text="{Binding SearchText, Mode=TwoWay}"/>
+
+            <GridView Grid.Row="1"
+                      x:Name="ItemsGrid"
+                      IsItemClickEnabled="True"
+                      ItemClick="ItemsGrid_ItemClick"
+                      ItemsSource="{Binding Items}">
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Width="180" Height="220">
+                            <Border CornerRadius="8" Padding="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <StackPanel Spacing="6">
+                                    <Image Source="{Binding PictureUrl}" Height="100" Stretch="UniformToFill" />
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding Price}"/>
+                                        <TextBlock Text="DISC" Visibility="Collapsed"/>
+                                        <TextBlock Text="COMBO" Visibility="Collapsed"/>
+                                    </StackPanel>
+                                    <Button Content="Add"
+                                            HorizontalAlignment="Stretch"
+                                            Click="AddButton_Click"
+                                            Tag="{Binding}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+        </Grid>
+    </Grid>
+</Page>

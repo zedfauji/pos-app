@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Text.Json;
 using MagiDesk.Frontend.Services;
 using Microsoft.Extensions.Configuration;
 using MagiDesk.Shared.DTOs.Auth;
@@ -26,6 +27,8 @@ public sealed partial class TablesPage : Page
     public ObservableCollection<TableItem> FilteredBarTables { get; } = new();
     private TableRepository _repo = new TableRepository();
     private DispatcherTimer _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+    private readonly string _timerCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "timers.json");
+    private readonly string _thresholdsCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "thresholds.json");
 
     public TablesPage()
     {
@@ -33,6 +36,69 @@ public sealed partial class TablesPage : Page
         this.DataContext = this;
         Loaded += TablesPage_Loaded;
         _pollTimer.Tick += PollTimer_Tick;
+    }
+
+    private Dictionary<string, int> LoadThresholdsCache()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_thresholdsCachePath)!;
+            Directory.CreateDirectory(dir);
+            if (!File.Exists(_thresholdsCachePath)) return new();
+            var json = File.ReadAllText(_thresholdsCachePath);
+            var map = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            return map ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private void SaveThresholdsCache(Dictionary<string, int> map)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_thresholdsCachePath)!;
+            Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_thresholdsCachePath, json);
+        }
+        catch { }
+    }
+
+    private async void SetThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        // Prompt for minutes
+        var panel = new StackPanel { Spacing = 8 };
+        var nb = new NumberBox { SmallChange = 5, Minimum = 1, Maximum = 720, Value = item.ThresholdMinutes.HasValue ? item.ThresholdMinutes.Value : 30 };
+        panel.Children.Add(new TextBlock { Text = $"Set threshold for {item.Label} (minutes):" });
+        panel.Children.Add(nb);
+        var dlg = new ContentDialog
+        {
+            Title = "Set Threshold",
+            Content = panel,
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+        var res = await dlg.ShowAsync();
+        if (res != ContentDialogResult.Primary) return;
+        item.ThresholdMinutes = (int)Math.Round(nb.Value);
+        // Persist immediately
+        var thresholds = LoadThresholdsCache();
+        thresholds[item.Label] = item.ThresholdMinutes.Value;
+        SaveThresholdsCache(thresholds);
+        // Refresh visuals
+        item.Tick();
+    }
+
+    private void ClearThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        item.ThresholdMinutes = null;
+        var thresholds = LoadThresholdsCache();
+        if (thresholds.ContainsKey(item.Label)) { thresholds.Remove(item.Label); SaveThresholdsCache(thresholds); }
+        item.Tick();
     }
 
     private async void MoveMenu_Click(object sender, RoutedEventArgs e)
@@ -123,8 +189,34 @@ public class AddItemRow : INotifyPropertyChanged
     {
         FilterCombo.SelectedIndex = 0; // All
         await LoadFromDatabaseAsync();
-        ApplyFilter();
-        UpdateStatus();
+        // Leverage the unified refresh to load caches, rehydrate, and persist
+        await RefreshFromStoreAsync();
+    }
+
+    private Dictionary<string, DateTimeOffset> LoadTimersCache()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_timerCachePath)!;
+            Directory.CreateDirectory(dir);
+            if (!File.Exists(_timerCachePath)) return new();
+            var json = File.ReadAllText(_timerCachePath);
+            var map = JsonSerializer.Deserialize<Dictionary<string, DateTimeOffset>>(json);
+            return map ?? new();
+        }
+        catch { return new(); }
+    }
+
+    private void SaveTimersCache(Dictionary<string, DateTimeOffset> map)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_timerCachePath)!;
+            Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_timerCachePath, json);
+        }
+        catch { }
     }
 
     private async Task LoadFromDatabaseAsync()
@@ -188,12 +280,24 @@ public class AddItemRow : INotifyPropertyChanged
     private async void PollTimer_Tick(object sender, object e)
     {
         await RefreshFromStoreAsync();
+        try
+        {
+            foreach (var t in FilteredBilliardTables)
+            {
+                t.Tick();
+            }
+        }
+        catch { }
     }
 
     private async Task RefreshFromStoreAsync()
     {
+        // Load latest tables
         var rows = await _repo.GetAllAsync();
         var dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        // Load local timers cache for offline resiliency
+        var timers = LoadTimersCache();
+        var thresholds = LoadThresholdsCache();
         void reconcile(ObservableCollection<TableItem> list, string type)
         {
             foreach (var item in list)
@@ -202,11 +306,47 @@ public class AddItemRow : INotifyPropertyChanged
                 {
                     item.Occupied = rec.Occupied;
                     item.OrderId = rec.OrderId; item.StartTime = rec.StartTime; item.Server = rec.Server;
+                    // If occupied but start time missing, try local cache
+                    if (item.Occupied && !item.StartTime.HasValue && timers.TryGetValue(item.Label, out var cached))
+                    {
+                        item.StartTime = cached;
+                    }
+                    // Load threshold if present for this table
+                    if (thresholds.TryGetValue(item.Label, out var thVal))
+                    {
+                        item.ThresholdMinutes = thVal;
+                    }
+                    else
+                    {
+                        item.ThresholdMinutes = null; // default: no threshold
+                    }
                 }
             }
         }
         reconcile(BilliardTables, "billiard");
         reconcile(BarTables, "bar");
+        // Recovery: if any occupied billiard table has null StartTime, try to rehydrate from active sessions API
+        try
+        {
+            var needsStart = BilliardTables.Where(t => t.Occupied && !t.StartTime.HasValue).Select(t => t.Label).ToList();
+            if (needsStart.Count > 0)
+            {
+                var actives = await _repo.GetActiveSessionsAsync();
+                if (actives != null && actives.Count > 0)
+                {
+                    var map = actives.Where(a => !string.IsNullOrWhiteSpace(a.TableId))
+                                     .ToDictionary(a => a.TableId, a => a, StringComparer.OrdinalIgnoreCase);
+                    foreach (var t in BilliardTables)
+                    {
+                        if (t.Occupied && !t.StartTime.HasValue && map.TryGetValue(t.Label, out var s))
+                        {
+                            t.StartTime = new DateTimeOffset(s.StartTime, TimeSpan.Zero);
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
         ApplyFilter();
         UpdateStatus();
     }
@@ -246,6 +386,32 @@ public class AddItemRow : INotifyPropertyChanged
             }.ShowAsync();
             return;
         }
+        // Set context and auto-create/find order
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(startResult.sessionId)) OrderContext.CurrentSessionId = startResult.sessionId;
+            if (!string.IsNullOrWhiteSpace(startResult.billingId)) OrderContext.CurrentBillingId = startResult.billingId;
+            // Find existing order by session
+            var ordersSvc = App.OrdersApi;
+            if (ordersSvc != null && !string.IsNullOrWhiteSpace(startResult.sessionId))
+            {
+                var list = await ordersSvc.GetOrdersBySessionAsync(startResult.sessionId!);
+                var current = list.FirstOrDefault(o => string.Equals(o.SessionId, startResult.sessionId, StringComparison.OrdinalIgnoreCase));
+                if (current == null)
+                {
+                    // Create empty order
+                    var req = new Services.OrderApiService.CreateOrderRequestDto(startResult.sessionId!, startResult.billingId, item.Label, user.UserId ?? string.Empty, user.Username ?? string.Empty, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
+                    var created = await ordersSvc.CreateOrderAsync(req);
+                    if (created != null) current = created;
+                }
+                if (current != null)
+                {
+                    OrderContext.CurrentOrderId = current.Id;
+                }
+            }
+        }
+        catch { }
+
         await RefreshFromStoreAsync();
     }
 
@@ -337,19 +503,19 @@ public class AddItemRow : INotifyPropertyChanged
     private async void AddItemsMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
-        // Load inventory
-        var inventory = await FetchInventoryAsync();
+        // Load menu items from MenuApi (instead of Inventory)
+        var menuItems = await FetchMenuItemsAsync();
         // Load existing session items
         var existing = await _repo.GetSessionItemsAsync(item.Label);
 
         // Build UI
         var stack = new StackPanel { Spacing = 8 };
         var listView = new ListView { SelectionMode = ListViewSelectionMode.None, Height = 320 };
-        var data = inventory.Select(inv => new AddItemRow
+        var data = menuItems.Select(mi => new AddItemRow
         {
-            ItemId = inv.Id ?? inv.clave ?? inv.productname ?? Guid.NewGuid().ToString(),
-            Name = inv.productname ?? inv.clave ?? "(Unnamed)",
-            Price = 0m,
+            ItemId = mi.Id.ToString(),
+            Name = mi.Name,
+            Price = mi.SellingPrice,
             Quantity = 0
         }).ToList();
         // prefill existing
@@ -383,8 +549,99 @@ public class AddItemRow : INotifyPropertyChanged
         var ok = await _repo.ReplaceSessionItemsAsync(item.Label, lines);
         if (!ok)
         {
-            await new ContentDialog { Title = "Failed", Content = "Could not save items.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+            await new ContentDialog { Title = "Save failed", Content = "Unable to save items to session", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
             return;
+        }
+        // Also mirror items into OrderApi so OrdersPage reflects them
+        try
+        {
+            var ordersSvc = App.OrdersApi;
+            if (ordersSvc != null)
+            {
+                string? resolvedSid = null; string? resolvedBid = null; string resolutionHint = "";
+                // If no current order, attempt to infer from context/active session/recent sessions for this table and create/find order
+                if (!OrderContext.CurrentOrderId.HasValue)
+                {
+                    // 1) Prefer any existing context
+                    var sid = OrderContext.CurrentSessionId; var bid = OrderContext.CurrentBillingId;
+                    if (!string.IsNullOrWhiteSpace(sid) || !string.IsNullOrWhiteSpace(bid)) resolutionHint = "from OrderContext";
+                    // 2) Ask active sessions endpoint by table label if missing
+                    if (string.IsNullOrWhiteSpace(sid))
+                    {
+                        var tuple = await _repo.GetActiveSessionForTableAsync(item.Label);
+                        sid = tuple.sessionId ?? sid;
+                        bid = tuple.billingId ?? bid;
+                        if (!string.IsNullOrWhiteSpace(tuple.sessionId) || !string.IsNullOrWhiteSpace(tuple.billingId)) resolutionHint = "from /sessions/active";
+                    }
+                    // 3) Fallback: look at recent sessions filtered by table and pick the most recent active one
+                    if (string.IsNullOrWhiteSpace(sid))
+                    {
+                        var recent = await _repo.GetSessionsAsync(limit: 10, table: item.Label);
+                        var candidate = recent.FirstOrDefault(r => string.Equals(r.Status, "active", StringComparison.OrdinalIgnoreCase));
+                        if (candidate != null)
+                        {
+                            sid = candidate.SessionId.ToString();
+                            bid = candidate.BillingId?.ToString() ?? bid;
+                            resolutionHint = "from /sessions (recent)";
+                        }
+                    }
+                    if (!string.IsNullOrWhiteSpace(sid)) OrderContext.CurrentSessionId = sid;
+                    if (!string.IsNullOrWhiteSpace(bid)) OrderContext.CurrentBillingId = bid;
+                    resolvedSid = sid; resolvedBid = bid;
+                    if (!string.IsNullOrWhiteSpace(sid))
+                    {
+                        var orderList = await ordersSvc.GetOrdersBySessionAsync(sid);
+                        var currentOrder = orderList.FirstOrDefault(o => string.Equals(o.SessionId, sid, StringComparison.OrdinalIgnoreCase));
+                        if (currentOrder == null)
+                        {
+                            // Create order with minimal metadata
+                            string serverId = string.Empty; string? serverName = null;
+                            var req = new Services.OrderApiService.CreateOrderRequestDto(sid, bid, item.Label, serverId, serverName, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
+                            var created = await ordersSvc.CreateOrderAsync(req);
+                            if (created != null) currentOrder = created;
+                        }
+                        if (currentOrder != null) OrderContext.CurrentOrderId = currentOrder.Id;
+                    }
+                }
+
+                if (OrderContext.CurrentOrderId.HasValue)
+                {
+                    var orderId = OrderContext.CurrentOrderId.Value;
+                    var toAdd = new List<Services.OrderApiService.CreateOrderItemDto>();
+                    foreach (var l in lines)
+                    {
+                        if (long.TryParse(l.itemId, out var menuItemId))
+                        {
+                            toAdd.Add(new Services.OrderApiService.CreateOrderItemDto(menuItemId, null, l.quantity, Array.Empty<Services.OrderApiService.ModifierSelectionDto>()));
+                        }
+                    }
+                    if (toAdd.Count > 0)
+                    {
+                        var updated = await ordersSvc.AddItemsAsync(orderId, toAdd);
+                        // Notify for verification
+                        await new ContentDialog
+                        {
+                            Title = "Order updated",
+                            Content = $"Added {toAdd.Count} item(s) to Order #{orderId}.",
+                            CloseButtonText = "OK",
+                            XamlRoot = this.XamlRoot
+                        }.ShowAsync();
+                    }
+                    else
+                    {
+                        await new ContentDialog { Title = "Nothing to add", Content = "No menu items with numeric IDs were selected to mirror to the order.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+                    }
+                }
+                else
+                {
+                    var details = $"Table: {item.Label}\nSessionId: {resolvedSid ?? "<none>"}\nBillingId: {resolvedBid ?? "<none>"}\nResolution: {resolutionHint}";
+                    await new ContentDialog { Title = "No active order", Content = "Could not determine or create an Order for this session, so items were not mirrored to OrdersApi.\n\n" + details, CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await new ContentDialog { Title = "Order update failed", Content = ex.Message, CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
         }
 
         // update ItemsSummary
@@ -408,27 +665,16 @@ public class AddItemRow : INotifyPropertyChanged
         return (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(xaml);
     }
 
-    private async Task<List<InventoryItem>> FetchInventoryAsync()
+    private async Task<List<MagiDesk.Frontend.Services.MenuApiService.MenuItemDto>> FetchMenuItemsAsync()
     {
         try
         {
-            var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
-            var cfg = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true)
-                .Build();
-            var apiBase = cfg["Api:BaseUrl"] ?? string.Empty;
-            var inner = new HttpClientHandler();
-            inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-            var logging = new HttpLoggingHandler(inner);
-            using var http = new HttpClient(logging) { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") };
-            var res = await http.GetAsync("api/inventory");
-            res.EnsureSuccessStatusCode();
-            var list = await res.Content.ReadFromJsonAsync<List<InventoryItem>>() ?? new();
-            return list;
+            var svc = App.Menu;
+            if (svc == null) return new();
+            var items = await svc.ListItemsAsync(new MagiDesk.Frontend.Services.MenuApiService.ItemsQuery(null, null, null, true));
+            return items.ToList();
         }
-        catch { return new List<InventoryItem>(); }
+        catch { return new List<MagiDesk.Frontend.Services.MenuApiService.MenuItemDto>(); }
     }
 
     private string BuildItemsSummary(List<ItemLine> lines)
@@ -534,6 +780,46 @@ public class TableItem : INotifyPropertyChanged
         }
     }
 
+    // Shows only for billiard tables when a session is running
+    public bool HasTimer => Occupied && StartTime.HasValue;
+
+    public string ElapsedMinutesText
+    {
+        get
+        {
+            if (!HasTimer) return string.Empty;
+            var mins = (int)Math.Floor((DateTimeOffset.Now - StartTime!.Value).TotalMinutes);
+            if (mins < 0) mins = 0;
+            return $"{Label}: {mins} min elapsed";
+        }
+    }
+
+    public Brush ChipBackground
+    {
+        get
+        {
+            // Default: semi-transparent black
+            var dark = global::Windows.UI.Color.FromArgb(0xB3, 0x00, 0x00, 0x00);
+            if (!HasTimer) return new SolidColorBrush(dark);
+            var mins = (int)Math.Floor((DateTimeOffset.Now - StartTime!.Value).TotalMinutes);
+            // If a per-table threshold is set, use it; otherwise no threshold highlighting
+            if (ThresholdMinutes.HasValue && mins >= ThresholdMinutes.Value)
+            {
+                var amber = global::Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xB3, 0x00);
+                return new SolidColorBrush(amber);
+            }
+            return new SolidColorBrush(dark);
+        }
+    }
+
+    // Optional per-table threshold in minutes; when null, feature is off
+    private int? _thresholdMinutes;
+    public int? ThresholdMinutes
+    {
+        get => _thresholdMinutes;
+        set { _thresholdMinutes = value; OnPropertyChanged(); OnPropertyChanged(nameof(ChipBackground)); }
+    }
+
     private string _itemsSummary = string.Empty;
     public string ItemsSummary
     {
@@ -544,6 +830,12 @@ public class TableItem : INotifyPropertyChanged
     private void UpdateBrush()
     {
         BackgroundBrush = new SolidColorBrush(_occupied ? Microsoft.UI.Colors.Firebrick : Microsoft.UI.Colors.SeaGreen);
+    }
+
+    public void Tick()
+    {
+        OnPropertyChanged(nameof(ElapsedMinutesText));
+        OnPropertyChanged(nameof(ChipBackground));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

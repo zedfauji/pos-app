@@ -87,7 +87,7 @@ namespace MagiDesk.Frontend.Views
                         case "CashFlowPage": item.Content = App.I18n.T("cash_flow"); break;
                         case "InventoryPage": item.Content = App.I18n.T("inventory"); break;
                         case "BillingPage": item.Content = "Billing"; break;
-                        case "OrdersPage": item.Content = App.I18n.T("orders"); break;
+                        case "VendorOrdersPage": item.Content = App.I18n.T("orders"); break;
                         case "TablesPage": item.Content = App.I18n.T("tables"); break;
                         case "SettingsPage": item.Content = App.I18n.T("settings"); break;
                         case "UsersPage": item.Content = App.I18n.T("users"); break;
@@ -128,6 +128,12 @@ namespace MagiDesk.Frontend.Views
                     Log.Info($"NavView invoked: {tag}");
                     switch (tag)
                     {
+                        case "MenuPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(MenuPage));
+#endif
+                            break;
                         case "DashboardPage":
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation
@@ -153,16 +159,22 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(InventoryPage));
 #endif
                             break;
-                        case "OrdersPage":
+                        case "VendorOrdersPage":
 #if XAML_ONLY_MAIN
 #else
-                            ContentFrame.Navigate(typeof(OrdersPage));
+                            ContentFrame.Navigate(typeof(VendorOrdersPage));
 #endif
                             break;
                         case "TablesPage":
 #if XAML_ONLY_MAIN
 #else
                             ContentFrame.Navigate(typeof(TablesPage));
+#endif
+                            break;
+                        case "OrdersPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(OrdersPage));
 #endif
                             break;
                         case "SessionsPage":

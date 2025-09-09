@@ -31,19 +31,39 @@
 
         <NavigationView Grid.Row="1" x:Name="NavView"
                         ItemInvoked="NavView_ItemInvoked"
-                        IsSettingsVisible="True"
+                        IsSettingsVisible="False"
                         IsBackButtonVisible="Auto"
                         PaneDisplayMode="Left">
             <NavigationView.MenuItems>
+                <!-- Always on top -->
                 <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
-                <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People"/>
-                <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
-                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
-                <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
-                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
-                <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="List"/>
+                <NavigationViewItemSeparator/>
+
+                <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
+                <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="Link"/>
+                <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
+                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
                 <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
+
+                <NavigationViewItemSeparator/>
+
+                <!-- Management Group -->
+                <NavigationViewItemHeader Content="Management"/>
+                <NavigationViewItem Content="Menu" Tag="MenuPage" Icon="Shop"/>
+                <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="Vendor-Orders" Tag="VendorOrdersPage" Icon="List"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
+                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
+
+                <NavigationViewItemSeparator/>
+
+                <!-- Administration Group -->
+                <NavigationViewItemHeader Content="Administration"/>
+                <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
                 <NavigationViewItem Content="Settings" Tag="SettingsPage" Icon="Setting"/>
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>

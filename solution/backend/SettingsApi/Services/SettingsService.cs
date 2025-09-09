@@ -22,6 +22,10 @@ public class BackendSettings
 {
     public string? ConnectionString { get; set; }
     public string? Notes { get; set; }
+    // Optional URL fields to centralize client configuration
+    public string? BackendApiUrl { get; set; }
+    public string? SettingsApiUrl { get; set; }
+    public string? TablesApiUrl { get; set; }
 }
 
 public class AppSettings
@@ -39,6 +43,7 @@ public interface ISettingsService
     Task<bool> SaveBackendAsync(BackendSettings settings, string? hostOverride = null, CancellationToken ct = default);
     Task<AppSettings?> GetAppAsync(string? hostOverride = null, CancellationToken ct = default);
     Task<bool> SaveAppAsync(AppSettings settings, string? hostOverride = null, CancellationToken ct = default);
+    Task<List<Dictionary<string, object?>>> GetAuditAsync(string? hostOverride = null, int limit = 50, CancellationToken ct = default);
 }
 
 public class SettingsService : ISettingsService
@@ -100,6 +105,7 @@ public class SettingsService : ISettingsService
             ["ratePerMinute"] = settings.RatePerMinute.HasValue ? Convert.ToDouble(settings.RatePerMinute.Value) : null
         };
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "frontend", data, ct);
         return true;
     }
 
@@ -113,6 +119,9 @@ public class SettingsService : ISettingsService
         var res = new BackendSettings();
         if (dict.TryGetValue("connectionString", out var c)) res.ConnectionString = c?.ToString();
         if (dict.TryGetValue("notes", out var n)) res.Notes = n?.ToString();
+        if (dict.TryGetValue("backendApiUrl", out var b)) res.BackendApiUrl = b?.ToString();
+        if (dict.TryGetValue("settingsApiUrl", out var s)) res.SettingsApiUrl = s?.ToString();
+        if (dict.TryGetValue("tablesApiUrl", out var t)) res.TablesApiUrl = t?.ToString();
         return res;
     }
 
@@ -123,9 +132,13 @@ public class SettingsService : ISettingsService
         var data = new Dictionary<string, object?>
         {
             ["connectionString"] = settings.ConnectionString,
-            ["notes"] = settings.Notes
+            ["notes"] = settings.Notes,
+            ["backendApiUrl"] = settings.BackendApiUrl,
+            ["settingsApiUrl"] = settings.SettingsApiUrl,
+            ["tablesApiUrl"] = settings.TablesApiUrl
         };
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "backend", data, ct);
         return true;
     }
 
@@ -161,6 +174,63 @@ public class SettingsService : ISettingsService
             }
         }
         await doc.SetAsync(data, SetOptions.MergeAll, ct);
+        await WriteAuditAsync(host, "app", data, ct);
         return true;
     }
+
+    private async Task WriteAuditAsync(string host, string section, Dictionary<string, object?> data, CancellationToken ct)
+    {
+        try
+        {
+            var audit = _db.Collection(RootCollection).Document(host).Collection("audit").Document();
+            var payload = new Dictionary<string, object?>
+            {
+                ["section"] = section,
+                ["timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["changes"] = data
+            };
+            await audit.SetAsync(payload, cancellationToken: ct);
+        }
+        catch { }
+    }
+
+    public async Task<List<Dictionary<string, object?>>> GetAuditAsync(string? hostOverride = null, int limit = 50, CancellationToken ct = default)
+    {
+        var host = HostKey(hostOverride);
+        var col = _db.Collection(RootCollection).Document(host).Collection("audit");
+        var query = col.OrderByDescending("timestamp").Limit(limit);
+        var snaps = await query.GetSnapshotAsync(ct);
+        var list = new List<Dictionary<string, object?>>();
+        foreach (var doc in snaps.Documents)
+        {
+            list.Add(doc.ToDictionary());
+        }
+        return list;
+    }
+
+    // Defaults providers
+    public static FrontendSettings DefaultFrontend() => new FrontendSettings
+    {
+        ApiBaseUrl = "https://localhost:5001",
+        Theme = "System",
+        RatePerMinute = 0m
+    };
+
+    public static BackendSettings DefaultBackend() => new BackendSettings
+    {
+        BackendApiUrl = "https://localhost:5001",
+        SettingsApiUrl = "https://localhost:5003",
+        TablesApiUrl = "https://localhost:5005"
+    };
+
+    public static AppSettings DefaultApp() => new AppSettings
+    {
+        Locale = "en-US",
+        EnableNotifications = false,
+        Extras = new Dictionary<string, object?>
+        {
+            ["tables.session.warnMinutes"] = 0,
+            ["tables.session.autoStopMinutes"] = 0
+        }
+    };
 }

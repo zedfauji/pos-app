@@ -5,6 +5,11 @@
 - Technologies: ASP.NET Core 8, Controllers, Dependency Injection, Swagger (Development only)
 - Data: Google Firestore via `FirestoreService`
 
+## Related Modules
+
+- [MenuApi](./menu-api.md): PostgreSQL-backed menu module (items, modifiers, combos, history), with Cloud Run deployment details.
+- [OrderApi](./order-api.md): PostgreSQL-backed ordering module (pricing, validation, logs, totals), with Cloud Run deployment details.
+
 ## Services Registered (DI)
 
 - `IFirestoreService` → `FirestoreService`

@@ -11,9 +11,24 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal" Spacing="12">
-            <TextBlock Text="Active Sessions" FontSize="20" FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <TextBlock Text="Sessions" FontSize="20" FontWeight="SemiBold"/>
             <TextBlock Text="(auto-refreshing)" Opacity="0.6"/>
+            <ToggleSwitch x:Name="ActiveOnlyToggle" Header="Show active only" Toggled="ActiveOnlyToggle_Toggled"/>
+            <ComboBox x:Name="StatusFilterCombo" Width="160" SelectionChanged="StatusFilterCombo_SelectionChanged">
+                <ComboBoxItem Content="All"/>
+                <ComboBoxItem Content="Active"/>
+                <ComboBoxItem Content="Closed"/>
+            </ComboBox>
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock Text="From:" VerticalAlignment="Center"/>
+                <DatePicker x:Name="FromDatePicker" DateChanged="FromDatePicker_DateChanged"/>
+                <TextBlock Text="To:" VerticalAlignment="Center"/>
+                <DatePicker x:Name="ToDatePicker" DateChanged="ToDatePicker_DateChanged"/>
+                <TextBox x:Name="TableFilterText" PlaceholderText="Table filter" Width="140" TextChanged="TextFilter_Changed"/>
+                <TextBox x:Name="ServerFilterText" PlaceholderText="Server filter" Width="140" TextChanged="TextFilter_Changed"/>
+                <Button x:Name="RefreshNowButton" Content="Refresh Now" Click="RefreshNowButton_Click"/>
+            </StackPanel>
         </StackPanel>
         <controls:DataGrid Grid.Row="1"
                            x:Name="SessionsGrid"

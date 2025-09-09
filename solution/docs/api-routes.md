@@ -74,3 +74,31 @@ All routes below are relative to the base path.
   - PUT    `/api/settings/backend?host={host?}`
   - GET    `/api/settings/app?host={host?}`
   - PUT    `/api/settings/app?host={host?}`
+  - GET    `/api/settings/frontend/defaults`
+  - GET    `/api/settings/backend/defaults`
+  - GET    `/api/settings/app/defaults`
+  - GET    `/api/settings/audit?host={host?}&limit={n}`
+
+## TablesApi (separate project)
+
+- Health
+  - GET    `/health`
+
+- Tables
+  - GET    `/tables`
+  - GET    `/tables/{label}`
+  - GET    `/tables/counts`
+  - POST   `/tables/{label}/start`
+  - POST   `/tables/{label}/stop`
+  - POST   `/tables/{label}/items`
+  - GET    `/tables/{label}/items`
+  - POST   `/tables/{label}/force-free`
+  - POST   `/tables/{fromLabel}/move?to={toLabel}`
+
+- Sessions
+  - GET    `/sessions/active`
+  - POST   `/sessions/enforce` (uses env `SETTINGSAPI_BASEURL` to read app defaults)
+
+- Settings (rate)
+  - GET    `/settings/rate` → `{ ratePerMinute }`
+  - PUT    `/settings/rate` (body is a number)

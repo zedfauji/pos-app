@@ -69,6 +69,9 @@
                                     <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
                                     <MenuFlyoutItem Text="Stop" Click="StopMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutItem Text="Set Threshold (minutes)" Click="SetThreshold_Click"/>
+                                    <MenuFlyoutItem Text="Clear Threshold" Click="ClearThreshold_Click"/>
                                 </MenuFlyout>
                             </StackPanel.ContextFlyout>
                             <Grid Width="200" Height="110">
@@ -80,6 +83,11 @@
                                 <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
                                 <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Top"/>
                                 <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                                <!-- Timer Chip (only when occupied with start time) -->
+                                <Border CornerRadius="10" Padding="6,2" Background="{Binding ChipBackground}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                                        Visibility="{Binding HasTimer, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{Binding ElapsedMinutesText}" Foreground="White" FontSize="12"/>
+                                </Border>
                             </Grid>
                             <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                             <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" Opacity="0.8"/>
