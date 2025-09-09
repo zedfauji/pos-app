@@ -8,12 +8,12 @@ namespace InventoryApi.Controllers;
 [Route("api/[controller]")]
 public class VendorsController : ControllerBase
 {
-    private readonly IFirestoreService _firestore;
+    private readonly IDatabaseService _database;
     private readonly ILogger<VendorsController> _logger;
 
-    public VendorsController(IFirestoreService firestore, ILogger<VendorsController> logger)
+    public VendorsController(IDatabaseService database, ILogger<VendorsController> logger)
     {
-        _firestore = firestore;
+        _database = database;
         _logger = logger;
     }
 
@@ -22,7 +22,7 @@ public class VendorsController : ControllerBase
     {
         try
         {
-            var vendors = await _firestore.GetVendorsAsync(ct);
+            var vendors = await _database.GetVendorsAsync(ct);
             return Ok(vendors);
         }
         catch (Exception ex)
@@ -35,7 +35,7 @@ public class VendorsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<VendorDto>> GetById(string id, CancellationToken ct)
     {
-        var vendor = await _firestore.GetVendorAsync(id, ct);
+        var vendor = await _database.GetVendorAsync(id, ct);
         if (vendor is null) return NotFound();
         return Ok(vendor);
     }
@@ -44,14 +44,14 @@ public class VendorsController : ControllerBase
     public async Task<ActionResult<VendorDto>> Create([FromBody] VendorDto dto, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-        var created = await _firestore.CreateVendorAsync(dto, ct);
+        var created = await _database.CreateVendorAsync(dto, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] VendorDto dto, CancellationToken ct)
     {
-        var ok = await _firestore.UpdateVendorAsync(id, dto, ct);
+        var ok = await _database.UpdateVendorAsync(id, dto, ct);
         if (!ok) return NotFound();
         return NoContent();
     }
@@ -59,7 +59,7 @@ public class VendorsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
-        var ok = await _firestore.DeleteVendorAsync(id, ct);
+        var ok = await _database.DeleteVendorAsync(id, ct);
         if (!ok) return NotFound();
         return NoContent();
     }
@@ -69,7 +69,7 @@ public class VendorsController : ControllerBase
     {
         try
         {
-            var content = await _firestore.ExportVendorItemsAsync(vendorId, format, ct);
+            var content = await _database.ExportVendorItemsAsync(vendorId, format, ct);
             var fileName = $"{vendorId}-items.{(format.ToLowerInvariant() == "yaml" ? "yml" : format.ToLowerInvariant())}";
             var mime = format.ToLowerInvariant() switch
             {
@@ -95,7 +95,7 @@ public class VendorsController : ControllerBase
             using var ms = new MemoryStream();
             await Request.Body.CopyToAsync(ms, ct);
             ms.Position = 0;
-            await _firestore.ImportVendorItemsAsync(vendorId, format, ms, ct);
+            await _database.ImportVendorItemsAsync(vendorId, format, ms, ct);
             return NoContent();
         }
         catch (Exception ex)
@@ -109,14 +109,14 @@ public class VendorsController : ControllerBase
     [HttpGet("{vendorId}/items")]
     public async Task<ActionResult<IEnumerable<ItemDto>>> GetItems(string vendorId, CancellationToken ct)
     {
-        var items = await _firestore.GetItemsAsync(vendorId, ct);
+        var items = await _database.GetItemsAsync(vendorId, ct);
         return Ok(items);
     }
 
     [HttpGet("{vendorId}/items/{itemId}")]
     public async Task<ActionResult<ItemDto>> GetItem(string vendorId, string itemId, CancellationToken ct)
     {
-        var item = await _firestore.GetItemAsync(vendorId, itemId, ct);
+        var item = await _database.GetItemAsync(vendorId, itemId, ct);
         if (item is null) return NotFound();
         return Ok(item);
     }
@@ -124,14 +124,14 @@ public class VendorsController : ControllerBase
     [HttpPost("{vendorId}/items")]
     public async Task<ActionResult<ItemDto>> CreateItem(string vendorId, [FromBody] ItemDto dto, CancellationToken ct)
     {
-        var created = await _firestore.CreateItemAsync(vendorId, dto, ct);
+        var created = await _database.CreateItemAsync(vendorId, dto, ct);
         return CreatedAtAction(nameof(GetItem), new { vendorId, itemId = created.Id }, created);
     }
 
     [HttpPut("{vendorId}/items/{itemId}")]
     public async Task<IActionResult> UpdateItem(string vendorId, string itemId, [FromBody] ItemDto dto, CancellationToken ct)
     {
-        var ok = await _firestore.UpdateItemAsync(vendorId, itemId, dto, ct);
+        var ok = await _database.UpdateItemAsync(vendorId, itemId, dto, ct);
         if (!ok) return NotFound();
         return NoContent();
     }
@@ -139,7 +139,7 @@ public class VendorsController : ControllerBase
     [HttpDelete("{vendorId}/items/{itemId}")]
     public async Task<IActionResult> DeleteItem(string vendorId, string itemId, CancellationToken ct)
     {
-        var ok = await _firestore.DeleteItemAsync(vendorId, itemId, ct);
+        var ok = await _database.DeleteItemAsync(vendorId, itemId, ct);
         if (!ok) return NotFound();
         return NoContent();
     }

@@ -3,11 +3,11 @@ using InventoryApi.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Options
-builder.Services.Configure<FirestoreOptions>(builder.Configuration.GetSection("Firestore"));
+builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection("Database"));
 
 // Services
-builder.Services.AddSingleton<IFirestoreService, FirestoreService>();
-builder.Services.AddSingleton<IOrdersService, OrdersService>();
+builder.Services.AddSingleton<IDatabaseService, DatabaseService>();
+// Removed IOrdersService registration due to migration
 
 // MVC + Swagger + CORS
 builder.Services.AddControllers();
