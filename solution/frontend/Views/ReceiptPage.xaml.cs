@@ -16,6 +16,7 @@ namespace MagiDesk.Frontend.Views
         protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+            // CRITICAL FIX: Handle both old ReceiptData and new Services.ReceiptService.ReceiptData
             if (e.Parameter is ReceiptData data)
             {
                 OrderIdText.Text = data.OrderId.ToString();
@@ -24,6 +25,15 @@ namespace MagiDesk.Frontend.Views
                 DiscountText.Text = $"Discounts: -{data.DiscountTotal:C}";
                 TaxText.Text = $"Taxes: {data.TaxTotal:C}";
                 TotalText.Text = $"Total: {data.Total:C}";
+            }
+            else if (e.Parameter is Services.ReceiptService.ReceiptData receiptData)
+            {
+                OrderIdText.Text = receiptData.BillId ?? "N/A";
+                ItemsList.ItemsSource = receiptData.Items;
+                SubtotalText.Text = $"Subtotal: {receiptData.Subtotal:C}";
+                DiscountText.Text = $"Discounts: -{receiptData.DiscountAmount:C}";
+                TaxText.Text = $"Taxes: {receiptData.TaxAmount:C}";
+                TotalText.Text = $"Total: {receiptData.TotalAmount:C}";
             }
         }
 

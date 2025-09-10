@@ -80,7 +80,23 @@ namespace MagiDesk.Frontend.Services
                 var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk");
                 Directory.CreateDirectory(dir);
                 var path = Path.Combine(dir, $"receipt_{DateTime.Now:yyyyMMdd_HHmmss}.bmp");
-                await File.WriteAllBytesAsync(path, mem.ToArray());
+                
+                // CRITICAL FIX: Ensure File.WriteAllBytesAsync() is called from UI thread
+                // This prevents potential thread context issues
+                var fileWriteTcs = new TaskCompletionSource<bool>();
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        await File.WriteAllBytesAsync(path, mem.ToArray());
+                        fileWriteTcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        fileWriteTcs.SetException(ex);
+                    }
+                });
+                await fileWriteTcs.Task;
 
                 // CRITICAL FIX: Ensure Process.Start() is called from UI thread
                 // This prevents potential thread context issues
