@@ -10,23 +10,41 @@ namespace MagiDesk.Frontend.Views;
 
 public sealed partial class ItemsPage : Page, IToolbarConsumer
 {
-    private readonly ItemsViewModel _vm;
+    private ItemsViewModel? _vm;
 
     public ItemsPage()
     {
         this.InitializeComponent();
         
-        // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
-        if (App.Api == null)
-        {
-            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
-        }
-        _vm = new ItemsViewModel(App.Api);
+        // CRITICAL FIX: Wait for App initialization to prevent race conditions
+        // This prevents COM exceptions from accessing uninitialized services
+        _ = InitializeAsync();
         
-        DataContext = _vm;
+        DataContext = this;
         Loaded += ItemsPage_Loaded;
         App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
         ApplyLanguage();
+    }
+
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            // Wait for App initialization to complete
+            await App.WaitForInitializationAsync();
+            
+            if (App.Api == null)
+            {
+                throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            }
+            _vm = new ItemsViewModel(App.Api);
+            DataContext = _vm;
+        }
+        catch (Exception ex)
+        {
+            // Log error and show user-friendly message
+            System.Diagnostics.Debug.WriteLine($"ItemsPage initialization failed: {ex.Message}");
+        }
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)

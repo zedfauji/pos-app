@@ -3,6 +3,9 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Shared.DTOs.Tables;
+using Microsoft.UI.Dispatching;
+using System.Collections.Generic;
+using MagiDesk.Frontend.Collections;
 
 namespace MagiDesk.Frontend.ViewModels
 {
@@ -12,8 +15,9 @@ namespace MagiDesk.Frontend.ViewModels
         private bool _isLoading;
         private bool _hasError;
         private string? _errorMessage;
-
-        public ObservableCollection<BillResult> UnsettledBills { get; } = new();
+        // CRITICAL FIX: Use SafeObservableCollection to avoid COM interop issues
+        // SafeObservableCollection suppresses COM exceptions that cause Marshal.ThrowExceptionForHR errors
+        public SafeObservableCollection<BillResult> UnsettledBills { get; } = new();
 
         public bool IsLoading
         {
@@ -76,6 +80,8 @@ namespace MagiDesk.Frontend.ViewModels
                 var bills = await _tableRepository.GetBillsAsync();
                 System.Diagnostics.Debug.WriteLine($"UnsettledBillsViewModel: Received {bills.Count} bills from TableRepository");
                 
+                // CRITICAL FIX: Use SafeObservableCollection to avoid COM interop issues
+                // SafeObservableCollection suppresses COM exceptions that cause Marshal.ThrowExceptionForHR errors
                 UnsettledBills.Clear();
                 foreach (var bill in bills)
                 {

@@ -23,6 +23,41 @@ namespace MagiDesk.Frontend.Views
             ContentFrame.Navigated += ContentFrame_Navigated;
             _ = StartBackendMonitorAsync();
             App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
+            
+            // Initialize PaneManager and register panes
+            _ = InitializePaneManagerAsync();
+        }
+
+        private async Task InitializePaneManagerAsync()
+        {
+            try
+            {
+                // CRITICAL FIX: Wait for App initialization to prevent race conditions
+                await App.WaitForInitializationAsync();
+                
+                if (App.PaneManager != null && App.MainWindow != null)
+                {
+                    // Initialize PaneManager with main window
+                    App.PaneManager.Initialize(App.MainWindow);
+                    
+                    // Create and register panes
+                    var paymentPane = new MagiDesk.Frontend.Panes.PaymentPane();
+                    var receiptPrinterPane = new MagiDesk.Frontend.Panes.ReceiptPrinterPane();
+                    
+                    App.PaneManager.RegisterPane("PaymentPane", paymentPane);
+                    App.PaneManager.RegisterPane("ReceiptPrinterPane", receiptPrinterPane);
+                    
+                    Log.Info("PaneManager initialized and panes registered");
+                }
+                else
+                {
+                    Log.Warning("PaneManager or MainWindow not available for initialization");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to initialize PaneManager", ex);
+            }
         }
 
         private async Task InitializeReceiptServiceAsync()
@@ -34,9 +69,9 @@ namespace MagiDesk.Frontend.Views
                     var printingPanel = this.FindName("PrintingContainer") as Panel;
                     if (printingPanel != null)
                     {
-                        // Use App.MainWindow instead of Window.Current to avoid race condition
+                        // CRITICAL FIX: Use App.MainWindow instead of Window.Current to avoid race condition
                         // Window.Current might be null during MainPage constructor
-                        var window = App.MainWindow ?? Window.Current;
+                        var window = App.MainWindow;
                         
                         // Get DispatcherQueue with fallback
                         var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();

@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -19,21 +18,45 @@
             <Button x:Name="BtnRefresh" Content="Refresh" Click="Refresh_Click"/>
         </StackPanel>
 
-        <!-- Orders History Grid -->
-        <ct:DataGrid Grid.Row="1"
-                     x:Name="OrdersGrid"
-                     AutoGenerateColumns="False"
-                     IsReadOnly="True"
-                     ItemsSource="{Binding Orders}">
-            <ct:DataGrid.Columns>
-                <ct:DataGridTextColumn Header="orderId" Binding="{Binding OrderId}" Width="2*"/>
-                <ct:DataGridTextColumn Header="vendorName" Binding="{Binding VendorName}" Width="2*"/>
-                <ct:DataGridTextColumn Header="itemsCount" Binding="{Binding Items.Count}" Width="*"/>
-                <ct:DataGridTextColumn Header="totalAmount" Binding="{Binding TotalAmount}" Width="*"/>
-                <ct:DataGridTextColumn Header="status" Binding="{Binding Status}" Width="*"/>
-                <ct:DataGridTextColumn Header="createdAt" Binding="{Binding CreatedAt}" Width="2*"/>
-            </ct:DataGrid.Columns>
-        </ct:DataGrid>
+        <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
+        <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
+        <ListView Grid.Row="1"
+                  x:Name="OrdersGrid"
+                  ItemsSource="{Binding Orders}"
+                  SelectionMode="None">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="2*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Order ID -->
+                        <TextBlock Grid.Column="0" Text="{Binding OrderId}" VerticalAlignment="Center"/>
+                        
+                        <!-- Vendor Name -->
+                        <TextBlock Grid.Column="1" Text="{Binding VendorName}" VerticalAlignment="Center"/>
+                        
+                        <!-- Items Count -->
+                        <TextBlock Grid.Column="2" Text="{Binding Items.Count}" VerticalAlignment="Center"/>
+                        
+                        <!-- Total Amount -->
+                        <TextBlock Grid.Column="3" Text="{Binding TotalAmount}" VerticalAlignment="Center"/>
+                        
+                        <!-- Status -->
+                        <TextBlock Grid.Column="4" Text="{Binding Status}" VerticalAlignment="Center"/>
+                        
+                        <!-- Created At -->
+                        <TextBlock Grid.Column="5" Text="{Binding CreatedAt}" VerticalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
 
         <!-- Notifications Panel (on demand via button) -->
         <InfoBar Grid.Row="2" x:Name="Info" IsOpen="False"/>

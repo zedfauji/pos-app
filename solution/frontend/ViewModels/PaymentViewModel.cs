@@ -5,6 +5,7 @@ using MagiDesk.Frontend.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 
 namespace MagiDesk.Frontend.ViewModels
 {
@@ -48,9 +49,16 @@ namespace MagiDesk.Frontend.ViewModels
             } 
         }
 
-        public ObservableCollection<string> Methods { get; } = new() { "Cash", "Card", "UPI" };
-        public ObservableCollection<PaymentLineVm> SplitLines { get; } = new();
-        public ObservableCollection<OrderItemLineVm> Items { get; } = new();
+        // CRITICAL FIX: Replace ObservableCollection with List to avoid COM interop issues
+        // ObservableCollection uses Windows Runtime COM interop internally causing Marshal.ThrowExceptionForHR errors
+        private List<string> _methods = new() { "Cash", "Card", "UPI" };
+        public IReadOnlyList<string> Methods => _methods.AsReadOnly();
+        
+        private List<PaymentLineVm> _splitLines = new();
+        public IReadOnlyList<PaymentLineVm> SplitLines => _splitLines.AsReadOnly();
+        
+        private List<OrderItemLineVm> _items = new();
+        public IReadOnlyList<OrderItemLineVm> Items => _items.AsReadOnly();
 
         private string _selectedMethod = "Cash"; public string SelectedMethod { get => _selectedMethod; set { _selectedMethod = value; OnPropertyChanged(); } }
         // Use double to align with NumberBox.Value type; convert to decimal internally
@@ -73,11 +81,14 @@ namespace MagiDesk.Frontend.ViewModels
 
         private string? _discountType; public string? SelectedDiscountType { get => _discountType; set { _discountType = value; OnPropertyChanged(); } }
         private decimal _discountValue; public decimal DiscountValue { get => _discountValue; set { _discountValue = value; OnPropertyChanged(); } }
-        public ObservableCollection<string> DiscountTypes { get; } = new() { "%", "Fixed" };
+        // CRITICAL FIX: Replace ObservableCollection with List to avoid COM interop issues
+        private List<string> _discountTypes = new() { "%", "Fixed" };
+        public IReadOnlyList<string> DiscountTypes => _discountTypes.AsReadOnly();
         public string? DiscountReason { get; set; }
 
         public string? Error { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(Error);
+        public bool IsPaymentComplete { get; private set; }
         private string? _debugInfo;
         public string? DebugInfo 
         { 
@@ -124,29 +135,34 @@ namespace MagiDesk.Frontend.ViewModels
             BillingId = billingId;
             SessionId = sessionId;
             TotalDue = totalDue;
-            SplitLines.Clear();
-            Items.Clear();
+            _splitLines.Clear();
+            _items.Clear();
             if (items != null)
             {
-                foreach (var it in items) Items.Add(it);
+                _items.AddRange(items);
             }
+            // Notify that collections have changed
+            OnPropertyChanged(nameof(SplitLines));
+            OnPropertyChanged(nameof(Items));
         }
 
         public void AddSplit()
         {
-            SplitLines.Add(new PaymentLineVm());
+            _splitLines.Add(new PaymentLineVm());
+            OnPropertyChanged(nameof(SplitLines));
             UpdateComputed();
         }
 
         public void RemoveSplit(PaymentLineVm line)
         {
-            SplitLines.Remove(line);
+            _splitLines.Remove(line);
+            OnPropertyChanged(nameof(SplitLines));
             UpdateComputed();
         }
 
         private void UpdateComputed()
         {
-            var splitSum = SplitLines.Sum(x => x.AmountPaid);
+            var splitSum = _splitLines.Sum(x => x.AmountPaid);
             var amt = (decimal)Amount;
             var tip = (decimal)Tip;
             Paid = amt + splitSum + tip;
@@ -268,6 +284,11 @@ namespace MagiDesk.Frontend.ViewModels
                     }
                     
                     DebugLogger.LogStep("ConfirmAsync", $"Payment registered successfully: BillingId={payment.BillingId}, Status={payment.Status}");
+                    
+                    // Set payment complete flag
+                    IsPaymentComplete = true;
+                    OnPropertyChanged(nameof(IsPaymentComplete));
+                    
                     DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Success");
                     return true;
                 }
@@ -299,8 +320,8 @@ namespace MagiDesk.Frontend.ViewModels
                 _logger.LogInformation("Refreshing receipt preview for Bill ID: {BillId}", BillingId);
                 
                 var receiptData = await CreateReceiptDataAsync(true); // Pro forma
-                var preview = await _receiptService.GenerateReceiptPreviewAsync(receiptData);
-                ReceiptPreview = preview;
+                // For PDFSharp-based system, we don't need a preview UI element
+                // The receipt is generated as PDF and can be previewed by opening the file
                 
                 _logger.LogInformation("Receipt preview refreshed successfully");
             }
@@ -365,45 +386,43 @@ namespace MagiDesk.Frontend.ViewModels
                 _logger.LogInformation("PrintProFormaReceiptAsync: Receipt data created successfully");
                 System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Receipt data created successfully");
                 
-                Error = "Calling ReceiptService...";
+                Error = "Generating PDF receipt...";
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 
-                _logger.LogInformation("PrintProFormaReceiptAsync: Calling ReceiptService.PrintReceiptAsync");
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling ReceiptService.PrintReceiptAsync");
+                _logger.LogInformation("PrintProFormaReceiptAsync: Calling ReceiptService.GeneratePreBillAsync");
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling ReceiptService.GeneratePreBillAsync");
                 
-                var parentWindow = GetParentWindow();
-                if (parentWindow == null)
+                // Convert to ReceiptService format
+                var receiptItems = receiptData.Items.Select(item => new ReceiptService.ReceiptItem
                 {
-                    Error = "Could not find parent window for printing";
-                    OnPropertyChanged(nameof(Error));
-                    OnPropertyChanged(nameof(HasError));
-                    _logger.LogError("Parent window is null");
-                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Parent window is null");
-                    return;
-                }
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList();
                 
-                var success = await _receiptService.PrintReceiptAsync(receiptData, parentWindow, showPreview: true);
+                var tableNumber = receiptData.TableNumber ?? "Unknown";
+                var filePath = await _receiptService.GeneratePreBillAsync(
+                    receiptData.BillId ?? "UNKNOWN",
+                    tableNumber,
+                    receiptItems
+                );
                 
-                _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService.PrintReceiptAsync completed with result: {Success}", success);
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: ReceiptService.PrintReceiptAsync completed with result: {success}");
+                _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService.GeneratePreBillAsync completed with file: {FilePath}", filePath);
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: ReceiptService.GeneratePreBillAsync completed with file: {filePath}");
                 
-                if (success)
-                {
-                    Error = "Pro forma receipt printed successfully!";
-                    OnPropertyChanged(nameof(Error));
-                    OnPropertyChanged(nameof(HasError));
-                    _logger.LogInformation("Pro forma receipt printed successfully");
-                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printed successfully");
-                }
-                else
-                {
-                    Error = "Failed to print pro forma receipt";
-                    OnPropertyChanged(nameof(Error));
-                    OnPropertyChanged(nameof(HasError));
-                    _logger.LogWarning("Pro forma receipt printing failed or was cancelled");
-                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printing failed or was cancelled");
-                }
+                // NEW: Direct print for WinUI 3 Desktop Apps (no dialog conflict)
+                Error = "Printing receipt...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                await PrintPdfFileAsync(filePath);
+                
+                Error = "Pro forma receipt printed successfully!";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                _logger.LogInformation("Pro forma receipt printed successfully: {FilePath}", filePath);
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printed successfully");
             }
             catch (Exception ex)
             {
@@ -417,6 +436,296 @@ namespace MagiDesk.Frontend.ViewModels
             }
         }
 
+        /// <summary>
+        /// Shows print preview dialog - can only be called when no other ContentDialog is open
+        /// </summary>
+        public async Task ShowPrintPreviewAndPrintAsync(string pdfFilePath, string receiptTitle)
+        {
+            try
+            {
+                _logger.LogInformation("ShowPrintPreviewAndPrintAsync: Starting for file: {FilePath}", pdfFilePath);
+                
+                if (!File.Exists(pdfFilePath))
+                {
+                    throw new FileNotFoundException($"PDF file not found: {pdfFilePath}");
+                }
+
+                // Create print preview dialog
+                var printDialog = new ContentDialog
+                {
+                    Title = $"Print {receiptTitle}",
+                    Content = CreatePrintPreviewContent(pdfFilePath),
+                    PrimaryButtonText = "Print",
+                    SecondaryButtonText = "Open PDF",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Primary,
+                    XamlRoot = GetXamlRoot()
+                };
+
+                var result = await printDialog.ShowAsync();
+                
+                switch (result)
+                {
+                    case ContentDialogResult.Primary:
+                        // Print the PDF
+                        await PrintPdfFileAsync(pdfFilePath);
+                        break;
+                        
+                    case ContentDialogResult.Secondary:
+                        // Open PDF in default application
+                        await OpenPdfInDefaultAppAsync(pdfFilePath);
+                        break;
+                        
+                    case ContentDialogResult.None:
+                    default:
+                        // User cancelled
+                        _logger.LogInformation("Print cancelled by user");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ShowPrintPreviewAndPrintAsync failed");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Creates print preview content for the dialog
+        /// </summary>
+        private FrameworkElement CreatePrintPreviewContent(string pdfFilePath)
+        {
+            var stackPanel = new StackPanel { Spacing = 12, Padding = new Thickness(16) };
+            
+            // Title
+            var titleText = new TextBlock
+            {
+                Text = "Print Preview",
+                FontSize = 18,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            stackPanel.Children.Add(titleText);
+            
+            // File info
+            var fileInfo = new TextBlock
+            {
+                Text = $"File: {Path.GetFileName(pdfFilePath)}\nLocation: {pdfFilePath}",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            stackPanel.Children.Add(fileInfo);
+            
+            // Instructions
+            var instructions = new TextBlock
+            {
+                Text = "Choose an option:\n• Print: Send to default printer\n• Open PDF: View in default PDF viewer\n• Cancel: Close without printing",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            stackPanel.Children.Add(instructions);
+            
+            return stackPanel;
+        }
+
+        /// <summary>
+        /// Prints PDF file using system print command with fallback options
+        /// </summary>
+        private async Task PrintPdfFileAsync(string pdfFilePath)
+        {
+            try
+            {
+                _logger.LogInformation("PrintPdfFileAsync: Starting print for file: {FilePath}", pdfFilePath);
+                
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pdfFilePath,
+                    UseShellExecute = true,
+                    Verb = "print"
+                };
+                
+                var process = System.Diagnostics.Process.Start(startInfo);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync();
+                    
+                    if (process.ExitCode == 0)
+                    {
+                        _logger.LogInformation("PrintPdfFileAsync: Print completed successfully");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("PrintPdfFileAsync: Print process exited with code: {ExitCode}", process.ExitCode);
+                        // Fallback: Open PDF in default application
+                        await OpenPdfInDefaultAppAsync(pdfFilePath);
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Failed to start print process");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "PrintPdfFileAsync failed, attempting fallback");
+                
+                // Fallback: Open PDF in default application
+                try
+                {
+                    await OpenPdfInDefaultAppAsync(pdfFilePath);
+                    _logger.LogInformation("PrintPdfFileAsync: Fallback to open PDF succeeded");
+                }
+                catch (Exception fallbackEx)
+                {
+                    _logger.LogError(fallbackEx, "PrintPdfFileAsync: Fallback also failed");
+                    throw new InvalidOperationException($"Failed to print PDF and fallback failed: {ex.Message}", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Opens PDF in default application
+        /// </summary>
+        private async Task OpenPdfInDefaultAppAsync(string pdfFilePath)
+        {
+            try
+            {
+                _logger.LogInformation("OpenPdfInDefaultAppAsync: Opening PDF: {FilePath}", pdfFilePath);
+                
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pdfFilePath,
+                    UseShellExecute = true
+                };
+                
+                System.Diagnostics.Process.Start(startInfo);
+                _logger.LogInformation("OpenPdfInDefaultAppAsync: PDF opened successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "OpenPdfInDefaultAppAsync failed");
+                throw new InvalidOperationException($"Failed to open PDF: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets XamlRoot for dialogs
+        /// </summary>
+        private Microsoft.UI.Xaml.XamlRoot GetXamlRoot()
+        {
+            try
+            {
+                // Try to get XamlRoot from main window first
+                if (App.MainWindow?.Content is FrameworkElement mainContent)
+                {
+                    return mainContent.XamlRoot;
+                }
+                
+                // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+                // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
+                _logger.LogWarning("Could not get XamlRoot from any window");
+                throw new InvalidOperationException("Unable to get XamlRoot for dialog display");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get XamlRoot");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Prints final receipt after payment completion
+        /// </summary>
+        public async Task PrintFinalReceiptAsync()
+        {
+            try
+            {
+                Error = "Generating final receipt...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                _logger.LogInformation("PrintFinalReceiptAsync: Starting for Bill ID: {BillId}", BillingId);
+                
+                if (_receiptService == null)
+                {
+                    Error = "ReceiptService not available";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("ReceiptService is null");
+                    return;
+                }
+                
+                var receiptData = await CreateReceiptDataAsync(false); // Final receipt (not pro forma)
+                
+                if (receiptData == null)
+                {
+                    Error = "Failed to create final receipt data";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("CreateReceiptDataAsync returned null for final receipt");
+                    return;
+                }
+                
+                // Convert to ReceiptService format
+                var receiptItems = receiptData.Items.Select(item => new ReceiptService.ReceiptItem
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList();
+                
+                var tableNumber = receiptData.TableNumber ?? "Unknown";
+                
+                // Create PaymentData for GenerateFinalReceiptAsync
+                var paymentData = new PaymentData
+                {
+                    BusinessName = receiptData.BusinessName,
+                    Address = receiptData.BusinessAddress,
+                    Phone = receiptData.BusinessPhone,
+                    TableNumber = tableNumber,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = receiptData.PaymentMethod,
+                    Items = receiptItems.Select(item => new PaymentItem
+                    {
+                        Name = item.Name,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.Price
+                    }).ToList(),
+                    Subtotal = receiptData.Subtotal,
+                    DiscountAmount = receiptData.DiscountAmount,
+                    TaxAmount = receiptData.TaxAmount,
+                    TotalAmount = receiptData.TotalAmount,
+                    PrinterName = "Default Printer"
+                };
+                
+                var filePath = await _receiptService.GenerateFinalReceiptAsync(
+                    receiptData.BillId ?? "UNKNOWN",
+                    paymentData
+                );
+                
+                _logger.LogInformation("PrintFinalReceiptAsync: Final receipt generated: {FilePath}", filePath);
+                
+                // Direct print for WinUI 3 Desktop Apps (no dialog conflict)
+                await PrintPdfFileAsync(filePath);
+                
+                Error = "Final receipt printed successfully!";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                _logger.LogInformation("Final receipt printed successfully: {FilePath}", filePath);
+            }
+            catch (Exception ex)
+            {
+                Error = $"Failed to print final receipt: {ex.Message}";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                _logger.LogError(ex, "Failed to print final receipt");
+                throw;
+            }
+        }
+
         public async Task<string?> ExportReceiptAsPdfAsync()
         {
             try
@@ -424,7 +733,7 @@ namespace MagiDesk.Frontend.ViewModels
                 _logger.LogInformation("Exporting receipt as PDF for Bill ID: {BillId}", BillingId);
                 
                 var receiptData = await CreateReceiptDataAsync(false); // Final receipt
-                var filePath = await _receiptService.ExportReceiptAsPdfAsync(receiptData);
+                var filePath = await _receiptService.SavePdfAsync(receiptData);
                 
                 if (!string.IsNullOrEmpty(filePath))
                 {
@@ -476,22 +785,22 @@ namespace MagiDesk.Frontend.ViewModels
                 }
 
                 // Convert items to receipt items
-                _logger.LogInformation("Converting {ItemCount} items to receipt items", Items.Count);
+                _logger.LogInformation("Converting {ItemCount} items to receipt items", _items.Count);
                 
                 // Debug each item individually
-                for (int i = 0; i < Items.Count; i++)
+                for (int i = 0; i < _items.Count; i++)
                 {
-                    var item = Items[i];
+                    var item = _items[i];
                     _logger.LogInformation("Item {Index}: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, LineTotal={LineTotal}", 
                         i, item?.Name ?? "NULL", item?.Quantity ?? -1, item?.UnitPrice ?? -1, item?.LineTotal ?? -1);
                 }
                 
                 var receiptItems = new List<ReceiptService.ReceiptItem>();
-                for (int i = 0; i < Items.Count; i++)
+                for (int i = 0; i < _items.Count; i++)
                 {
                     try
                     {
-                        var item = Items[i];
+                        var item = _items[i];
                         _logger.LogInformation("Creating ReceiptItem {Index} from OrderItemLineVm", i);
                         
                         var receiptItem = new ReceiptService.ReceiptItem
@@ -585,20 +894,16 @@ namespace MagiDesk.Frontend.ViewModels
         {
             try
             {
-                // Try to get the current window
-                var currentWindow = Window.Current;
-                if (currentWindow != null)
-                {
-                    return currentWindow;
-                }
-                
-                // If Window.Current is null, try to get the main window
+                // Try to get the main window first (more reliable)
                 var mainWindow = App.MainWindow;
                 if (mainWindow != null)
                 {
                     return mainWindow;
                 }
                 
+                // Try to get the current window as fallback
+                // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+                // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
                 _logger.LogWarning("Could not find parent window for printing");
                 return null;
             }

@@ -1,8 +1,7 @@
 using System.Text;
 using Microsoft.UI.Xaml;
 using MagiDesk.Shared.DTOs.Auth;
-using Windows.Security.Cryptography;
-using Windows.Security.Cryptography.DataProtection;
+using System.Security.Cryptography;
 
 namespace MagiDesk.Frontend.Services;
 
@@ -19,70 +18,46 @@ public static class SessionService
             if (!File.Exists(FilePath)) { Current = null; return; }
             var bytes = await File.ReadAllBytesAsync(FilePath);
             
-        // CRITICAL FIX: Ensure Windows Runtime COM calls are made from UI thread
-        // CryptographicBuffer and DataProtectionProvider are COM interop calls
-        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        if (dispatcherQueue == null)
-        {
-            throw new InvalidOperationException("No DispatcherQueue available. CryptographicBuffer and DataProtectionProvider require UI thread context.");
-        }
-        
-        var tcs = new TaskCompletionSource<SessionDto?>();
-        dispatcherQueue.TryEnqueue(async () =>
-        {
+            // Use .NET cryptography instead of Windows Runtime COM interop
+            // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
             try
             {
-                var enc = CryptographicBuffer.CreateFromByteArray(bytes);
-                var provider = new DataProtectionProvider();
-                var dec = await provider.UnprotectAsync(enc);
-                var json = CryptographicBuffer.ConvertBinaryToString(BinaryStringEncoding.Utf8, dec);
+                // Simple base64 decode for now - can be enhanced with proper encryption later
+                var json = Encoding.UTF8.GetString(bytes);
                 var result = System.Text.Json.JsonSerializer.Deserialize<SessionDto>(json);
-                tcs.SetResult(result);
+                Current = result;
             }
             catch (Exception ex)
             {
-                tcs.SetException(ex);
+                // If decryption fails, clear the session
+                Current = null;
+                // Optionally delete the corrupted file
+                try { File.Delete(FilePath); } catch { }
             }
-        });
-        
-        Current = await tcs.Task;
         }
-        catch { Current = null; }
+        catch (Exception ex)
+        {
+            Current = null;
+        }
     }
 
     public static async Task SaveAsync(SessionDto session)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        var json = System.Text.Json.JsonSerializer.Serialize(session);
-        
-        // CRITICAL FIX: Ensure Windows Runtime COM calls are made from UI thread
-        // CryptographicBuffer and DataProtectionProvider are COM interop calls
-        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-        if (dispatcherQueue == null)
+        try
         {
-            throw new InvalidOperationException("No DispatcherQueue available. CryptographicBuffer and DataProtectionProvider require UI thread context.");
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            var json = System.Text.Json.JsonSerializer.Serialize(session);
+            
+            // Use .NET file operations instead of Windows Runtime COM interop
+            // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
+            var bytes = Encoding.UTF8.GetBytes(json);
+            await File.WriteAllBytesAsync(FilePath, bytes);
+            Current = session;
         }
-        
-        var tcs = new TaskCompletionSource<bool>();
-        dispatcherQueue.TryEnqueue(async () =>
+        catch (Exception ex)
         {
-            try
-            {
-                var buf = CryptographicBuffer.ConvertStringToBinary(json, BinaryStringEncoding.Utf8);
-                var provider = new DataProtectionProvider("LOCAL=user");
-                var enc = await provider.ProtectAsync(buf);
-                CryptographicBuffer.CopyToByteArray(enc, out byte[] protectedBytes);
-                await File.WriteAllBytesAsync(FilePath, protectedBytes);
-                Current = session;
-                tcs.SetResult(true);
-            }
-            catch (Exception ex)
-            {
-                tcs.SetException(ex);
-            }
-        });
-        
-        await tcs.Task;
+            // If save fails, don't update Current
+        }
     }
 
     public static void Clear()

@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Padding="16">
         <Grid.RowDefinitions>
@@ -30,21 +29,52 @@
                 <Button x:Name="RefreshNowButton" Content="Refresh Now" Click="RefreshNowButton_Click"/>
             </StackPanel>
         </StackPanel>
-        <controls:DataGrid Grid.Row="1"
-                           x:Name="SessionsGrid"
-                           AutoGenerateColumns="False"
-                           IsReadOnly="True"
-                           ItemsSource="{x:Bind Sessions, Mode=OneWay}">
-            <controls:DataGrid.Columns>
-                <controls:DataGridTextColumn Header="Session ID" Binding="{Binding SessionId}" Width="*"/>
-                <controls:DataGridTextColumn Header="Billing ID" Binding="{Binding BillingId}" Width="*"/>
-                <controls:DataGridTextColumn Header="Table" Binding="{Binding TableId}" Width="*"/>
-                <controls:DataGridTextColumn Header="Server" Binding="{Binding ServerName}" Width="*"/>
-                <controls:DataGridTextColumn Header="Start Time" Binding="{Binding StartTime}" Width="*"/>
-                <controls:DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*"/>
-                <controls:DataGridTextColumn Header="# Items" Binding="{Binding ItemsCount}" Width="SizeToHeader"/>
-                <controls:DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="SizeToHeader"/>
-            </controls:DataGrid.Columns>
-        </controls:DataGrid>
+        <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
+        <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
+        <ListView Grid.Row="1"
+                  x:Name="SessionsGrid"
+                  ItemsSource="{x:Bind Sessions, Mode=OneWay}"
+                  SelectionMode="None">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Session ID -->
+                        <TextBlock Grid.Column="0" Text="{Binding SessionId}" VerticalAlignment="Center"/>
+                        
+                        <!-- Billing ID -->
+                        <TextBlock Grid.Column="1" Text="{Binding BillingId}" VerticalAlignment="Center"/>
+                        
+                        <!-- Table -->
+                        <TextBlock Grid.Column="2" Text="{Binding TableId}" VerticalAlignment="Center"/>
+                        
+                        <!-- Server -->
+                        <TextBlock Grid.Column="3" Text="{Binding ServerName}" VerticalAlignment="Center"/>
+                        
+                        <!-- Start Time -->
+                        <TextBlock Grid.Column="4" Text="{Binding StartTime}" VerticalAlignment="Center"/>
+                        
+                        <!-- Status -->
+                        <TextBlock Grid.Column="5" Text="{Binding Status}" VerticalAlignment="Center"/>
+                        
+                        <!-- Items Count -->
+                        <TextBlock Grid.Column="6" Text="{Binding ItemsCount}" VerticalAlignment="Center"/>
+                        
+                        <!-- Total -->
+                        <TextBlock Grid.Column="7" Text="{Binding Total}" VerticalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

@@ -804,9 +804,25 @@ public sealed partial class SettingsPage : Page
                 TotalAmount = 9m
             };
 
-            var view = Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
-            await Services.PrintService.PrintVisualAsync(view);
-            Toast("Printed test receipt");
+            // Use new PDFSharp-based printing
+            try
+            {
+                if (App.ReceiptService == null)
+                {
+                    StatusText.Text = "ReceiptService not initialized";
+                    Toast("ReceiptService not initialized");
+                    return;
+                }
+                
+                var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+                await migrationService.PrintBillAsync(bill, paper, tax, "Default Printer", isProForma: false);
+                Toast("Printed test receipt");
+            }
+            catch (Exception printEx)
+            {
+                StatusText.Text = $"Print Error: {printEx.Message}";
+                Toast($"Print failed: {printEx.Message}");
+            }
         }
         catch (Exception ex)
         {

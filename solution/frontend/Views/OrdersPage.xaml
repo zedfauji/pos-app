@@ -5,7 +5,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -31,36 +30,49 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <ct:DataGrid Grid.Column="0"
-                         x:Name="ItemsGrid"
-                         ItemsSource="{Binding Items}"
-                         AutoGenerateColumns="False"
-                         IsReadOnly="True">
-                <ct:DataGrid.Columns>
-                    <ct:DataGridTextColumn Header="Item" Binding="{Binding Name}" Width="3*"/>
-                    <ct:DataGridTextColumn Header="Modifiers" Binding="{Binding ModifiersText}" Width="2*"/>
-                    <ct:DataGridTemplateColumn Header="Qty" Width="*">
-                        <ct:DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <Button Content="-" Click="QtyMinus_Click"/>
-                                    <TextBlock Text="{Binding Quantity}" Width="32" TextAlignment="Center"/>
-                                    <Button Content="+" Click="QtyPlus_Click"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ct:DataGridTemplateColumn.CellTemplate>
-                    </ct:DataGridTemplateColumn>
-                    <ct:DataGridTextColumn Header="Price" Binding="{Binding UnitPrice}" Width="*"/>
-                    <ct:DataGridTextColumn Header="Total" Binding="{Binding LineTotal}" Width="*"/>
-                    <ct:DataGridTemplateColumn Header="Actions" Width="*">
-                        <ct:DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="Cancel" Click="Cancel_Click"/>
-                            </DataTemplate>
-                        </ct:DataGridTemplateColumn.CellTemplate>
-                    </ct:DataGridTemplateColumn>
-                </ct:DataGrid.Columns>
-            </ct:DataGrid>
+            <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
+            <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
+            <ListView Grid.Column="0"
+                      x:Name="ItemsGrid"
+                      ItemsSource="{Binding Items}"
+                      SelectionMode="None">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Item Name -->
+                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
+                            
+                            <!-- Modifiers -->
+                            <TextBlock Grid.Column="1" Text="{Binding ModifiersText}" VerticalAlignment="Center"/>
+                            
+                            <!-- Quantity Controls -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                <Button Content="-" Click="QtyMinus_Click" Width="24" Height="24"/>
+                                <TextBlock Text="{Binding Quantity}" Width="32" TextAlignment="Center" VerticalAlignment="Center"/>
+                                <Button Content="+" Click="QtyPlus_Click" Width="24" Height="24"/>
+                            </StackPanel>
+                            
+                            <!-- Price -->
+                            <TextBlock Grid.Column="3" Text="{Binding UnitPrice}" VerticalAlignment="Center"/>
+                            
+                            <!-- Total -->
+                            <TextBlock Grid.Column="4" Text="{Binding LineTotal}" VerticalAlignment="Center"/>
+                            
+                            <!-- Actions -->
+                            <Button Grid.Column="5" Content="Cancel" Click="Cancel_Click" VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
 
             <StackPanel Grid.Column="1" Spacing="8">
                 <TextBlock Text="Audit Logs" FontWeight="SemiBold"/>

@@ -4,6 +4,7 @@ using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.Dialogs;
 using MagiDesk.Shared.DTOs.Tables;
+using System.Linq;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -38,111 +39,59 @@ public sealed partial class PaymentPage : Page
                 {
                     DebugLogger.LogStep("ProcessPayment_Click", $"Button clicked for Bill {bill.BillId}");
                     
-                    // Show debug info dialog immediately
-                    var debugDialog = new ContentDialog
-                    {
-                        Title = "Payment Debug Info",
-                        Content = $"Starting payment process for Bill {bill.BillId}\n\nStep 1: Creating payment dialog...",
-                        CloseButtonText = "OK",
-                        XamlRoot = this.XamlRoot
-                    };
-                    DebugLogger.LogStep("ProcessPayment_Click", "Debug dialog created, showing it");
-                    await debugDialog.ShowAsync();
-                    DebugLogger.LogStep("ProcessPayment_Click", "Debug dialog shown");
+                    DebugLogger.LogStep("ProcessPayment_Click", $"Starting payment process for Bill {bill.BillId}");
 
                     try
                     {
-                        // Step 1: Create payment dialog
-                        DebugLogger.LogStep("ProcessPayment_Click", "Creating PaymentDialog");
-                        var paymentDialog = new PaymentDialog();
-                        DebugLogger.LogStep("ProcessPayment_Click", "PaymentDialog created, setting XamlRoot");
-                        paymentDialog.XamlRoot = this.XamlRoot;
+                        // Step 1: Show PaymentPane using PaneManager
+                        DebugLogger.LogStep("ProcessPayment_Click", "Showing PaymentPane");
                         
-                        // Initialize printing for the payment dialog
-                        if (paymentDialog.DataContext is PaymentViewModel paymentVm)
+                        if (App.PaneManager != null)
                         {
-                            // No need to initialize printing here - App.ReceiptService is already initialized globally
-                            DebugLogger.LogStep("ProcessPayment_Click", "Using globally initialized ReceiptService");
-                        }
-                        
-                        DebugLogger.LogStep("ProcessPayment_Click", "XamlRoot set, calling SetBillData");
-                        paymentDialog.SetBillData(bill);
-                        DebugLogger.LogStep("ProcessPayment_Click", "SetBillData completed");
-
-                        // Step 2: Show payment dialog
-                        DebugLogger.LogStep("ProcessPayment_Click", "Showing payment dialog");
-                        var result = await paymentDialog.ShowAsync();
-                        DebugLogger.LogStep("ProcessPayment_Click", $"Payment dialog closed with result: {result}");
-
-                        // The PaymentDialog now processes payment and closes itself
-                        // We need to show success/error messages after it closes
-                        if (result == ContentDialogResult.Primary)
-                        {
-                            DebugLogger.LogStep("ProcessPayment_Click", "Payment dialog completed successfully");
-                            
-                            // Payment dialog completed successfully
-                            var successDialog = new ContentDialog
+                            // Check if PaymentPane is already visible
+                            if (App.PaneManager.IsPaneVisible("PaymentPane"))
                             {
-                                Title = "Payment Complete",
-                                Content = $"Payment for Bill {bill.BillId} has been processed!\n\nNow attempting to refresh the list...",
-                                CloseButtonText = "OK",
-                                XamlRoot = this.XamlRoot
-                            };
-                            DebugLogger.LogStep("ProcessPayment_Click", "Success dialog created, showing it");
-                            await successDialog.ShowAsync();
-                            DebugLogger.LogStep("ProcessPayment_Click", "Success dialog shown");
-
-                            try
-                            {
-                                // Try to refresh the list
-                                DebugLogger.LogStep("ProcessPayment_Click", "Attempting to refresh unsettled bills");
-                                await ViewModel.LoadUnsettledBillsAsync();
-                                DebugLogger.LogStep("ProcessPayment_Click", "Unsettled bills refreshed successfully");
-                                
-                                var finalDialog = new ContentDialog
-                                {
-                                    Title = "Complete",
-                                    Content = $"Payment completed successfully!\nBill {bill.BillId} has been processed and the list has been refreshed.",
-                                    CloseButtonText = "OK",
-                                    XamlRoot = this.XamlRoot
-                                };
-                                DebugLogger.LogStep("ProcessPayment_Click", "Final dialog created, showing it");
-                                await finalDialog.ShowAsync();
-                                DebugLogger.LogStep("ProcessPayment_Click", "Final dialog shown");
+                                DebugLogger.LogStep("ProcessPayment_Click", "PaymentPane already visible, hiding first");
+                                await App.PaneManager.HidePaneAsync("PaymentPane");
+                                await Task.Delay(100); // Brief delay for animation
                             }
-                            catch (Exception refreshEx)
+                            
+                            // Show PaymentPane
+                            await App.PaneManager.ShowPaneAsync("PaymentPane");
+                            DebugLogger.LogStep("ProcessPayment_Click", "PaymentPane shown");
+                            
+                            // Initialize the pane with billing data
+                            var paymentPane = App.PaneManager.GetPane<MagiDesk.Frontend.Panes.PaymentPane>("PaymentPane");
+                            
+                            if (paymentPane != null)
                             {
-                                DebugLogger.LogException("ProcessPayment_Click.Refresh", refreshEx);
-                                
-                                // Refresh failed but payment succeeded
-                                var refreshErrorDialog = new ContentDialog
-                                {
-                                    Title = "Payment Success (Refresh Failed)",
-                                    Content = $"Payment for Bill {bill.BillId} was processed successfully!\n\nHowever, refreshing the list failed:\n{refreshEx.Message}\n\nYou can manually refresh the page to see the updated list.",
-                                    CloseButtonText = "OK",
-                                    XamlRoot = this.XamlRoot
-                                };
-                                DebugLogger.LogStep("ProcessPayment_Click", "Refresh error dialog created, showing it");
-                                await refreshErrorDialog.ShowAsync();
-                                DebugLogger.LogStep("ProcessPayment_Click", "Refresh error dialog shown");
+                                DebugLogger.LogStep("ProcessPayment_Click", "Initializing PaymentPane with bill data");
+                                await paymentPane.InitializeAsync(
+                                    bill.BillId.ToString(),
+                                    bill.SessionId?.ToString() ?? bill.BillId.ToString(),
+                                    bill.TotalAmount,
+                                    bill.Items?.Cast<object>().ToList() ?? new List<object>()
+                                );
+                                DebugLogger.LogStep("ProcessPayment_Click", "PaymentPane initialized successfully");
+                            }
+                            else
+                            {
+                                DebugLogger.LogStep("ProcessPayment_Click", "ERROR: PaymentPane not found");
+                                throw new InvalidOperationException("PaymentPane not found in PaneManager");
                             }
                         }
                         else
                         {
-                            DebugLogger.LogStep("ProcessPayment_Click", "Payment was cancelled or failed");
-                            
-                            // Payment was cancelled or failed
-                            var cancelledDialog = new ContentDialog
-                            {
-                                Title = "Payment Cancelled",
-                                Content = $"Payment dialog was closed without completing the payment.\nResult: {result}",
-                                CloseButtonText = "OK",
-                                XamlRoot = this.XamlRoot
-                            };
-                            DebugLogger.LogStep("ProcessPayment_Click", "Cancelled dialog created, showing it");
-                            await cancelledDialog.ShowAsync();
-                            DebugLogger.LogStep("ProcessPayment_Click", "Cancelled dialog shown");
+                            DebugLogger.LogStep("ProcessPayment_Click", "ERROR: PaneManager not available");
+                            throw new InvalidOperationException("PaneManager not available");
                         }
+
+                        DebugLogger.LogStep("ProcessPayment_Click", "PaymentPane opened successfully");
+                        
+                        // PaymentPane is now open and will handle the payment process
+                        // The pane will close itself when payment is complete
+                        // No need to show a dialog - the pane should be visible
+                        DebugLogger.LogStep("ProcessPayment_Click", "PaymentPane opened successfully");
                         
                         DebugLogger.LogMethodExit("ProcessPayment_Click", "Success");
                     }

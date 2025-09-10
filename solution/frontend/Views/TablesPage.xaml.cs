@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Text;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -162,7 +163,15 @@ public sealed partial class TablesPage : Page
     {
         await Task.Yield();
         var (paper, tax) = ReadPrinterConfig();
-        return Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
+        // Use new PDFSharp-based preview instead of old ReceiptFormatter
+        // For now, return a simple text preview since PDFSharp generates files, not UI elements
+        var panel = new StackPanel { Spacing = 4, Padding = new Thickness(6) };
+        panel.Children.Add(new TextBlock { Text = $"Bill Preview for {bill.BillId}", FontWeight = Microsoft.UI.Text.FontWeights.Bold });
+        panel.Children.Add(new TextBlock { Text = $"Table: {bill.TableLabel}" });
+        panel.Children.Add(new TextBlock { Text = $"Server: {bill.ServerName}" });
+        panel.Children.Add(new TextBlock { Text = $"Total: {bill.TotalAmount:C}" });
+        panel.Children.Add(new TextBlock { Text = "Note: Full receipt will be generated as PDF" });
+        return panel;
     }
 
 public class AddItemRow : INotifyPropertyChanged
@@ -276,6 +285,32 @@ public class AddItemRow : INotifyPropertyChanged
     }
 
     private void FilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+
+    private async Task ShowSafeContentDialog(string title, string content, string closeButtonText)
+    {
+        try
+        {
+            // CRITICAL FIX: Use App.MainWindow instead of Window.Current to avoid COM exceptions
+            // Window.Current can be null during initialization in WinUI 3 Desktop Apps
+            var xamlRoot = App.MainWindow?.Content is FrameworkElement mainContent 
+                ? mainContent.XamlRoot 
+                : this.XamlRoot;
+
+            await new ContentDialog
+            {
+                Title = title,
+                Content = content,
+                CloseButtonText = closeButtonText,
+                XamlRoot = xamlRoot
+            }.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback: Log error instead of showing dialog to prevent COM exceptions
+            Log.Error($"Failed to show ContentDialog: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"ContentDialog Error: {title} - {content}");
+        }
+    }
 
     private async void PollTimer_Tick(object sender, object e)
     {
@@ -493,9 +528,25 @@ public class AddItemRow : INotifyPropertyChanged
             }
             else if (res == ContentDialogResult.Primary)
             {
-                var (paper, tax) = ReadPrinterConfig();
-                var view = Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
-                await Services.PrintService.PrintVisualAsync(view);
+                // Use new PDFSharp-based printing
+                try
+                {
+                    if (App.ReceiptService == null)
+                    {
+                        Log.Error("App.ReceiptService is null");
+                        await ShowSafeContentDialog("Print Error", "ReceiptService not initialized", "Close");
+                        return;
+                    }
+                    
+                    var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+                    var (paper, tax) = ReadPrinterConfig();
+                    await migrationService.PrintBillAsync(bill, paper, tax, "Default Printer", isProForma: false);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to print bill using PDFSharp", ex);
+                    await ShowSafeContentDialog("Print Error", $"Failed to print receipt: {ex.Message}", "Close");
+                }
             }
         }
     }
@@ -826,13 +877,15 @@ public class TableItem : INotifyPropertyChanged
         get
         {
             // Default: semi-transparent black
-            var dark = global::Windows.UI.Color.FromArgb(0xB3, 0x00, 0x00, 0x00);
+            var dark = Microsoft.UI.Colors.Black;
+            dark.A = 0xB3;
             if (!HasTimer) return new SolidColorBrush(dark);
             var mins = (int)Math.Floor((DateTimeOffset.Now - StartTime!.Value).TotalMinutes);
             // If a per-table threshold is set, use it; otherwise no threshold highlighting
             if (ThresholdMinutes.HasValue && mins >= ThresholdMinutes.Value)
             {
-                var amber = global::Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xB3, 0x00);
+                var amber = Microsoft.UI.Colors.Orange;
+                amber.A = 0xCC;
                 return new SolidColorBrush(amber);
             }
             return new SolidColorBrush(dark);

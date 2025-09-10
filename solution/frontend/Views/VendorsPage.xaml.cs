@@ -4,8 +4,6 @@ using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Dialogs;
 using MagiDesk.Shared.DTOs;
-using Windows.Storage.Pickers;
-using WinRT.Interop;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -212,44 +210,21 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
             var content = await App.Api!.ExportVendorItemsAsync(v.Id!, format);
             if (content is null) { ShowError("Export failed."); return; }
 
-            // CRITICAL FIX: Ensure FileSavePicker is called from UI thread
-            // This is a COM interop call that requires UI thread context
-            var picker = new FileSavePicker();
-            var windowHandle = WindowNative.GetWindowHandle(App.MainWindow!);
-            InitializeWithWindow.Initialize(picker, windowHandle);
-            picker.SuggestedFileName = $"{v.Name}-items";
-            switch (format)
+            // CRITICAL FIX: Use .NET file operations instead of Windows Runtime COM interop
+            // FileSavePicker causes "No installed components were detected" errors in WinUI 3 Desktop Apps
+            try
             {
-                case "csv": picker.FileTypeChoices.Add("CSV", new List<string> { ".csv" }); break;
-                case "json": picker.FileTypeChoices.Add("JSON", new List<string> { ".json" }); break;
-                case "yaml": picker.FileTypeChoices.Add("YAML", new List<string> { ".yml", ".yaml" }); break;
+                var fileName = $"{v.Name}-items.{format}";
+                var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                var filePath = Path.Combine(downloadsPath, fileName);
+                
+                await File.WriteAllTextAsync(filePath, content);
+                ShowInfo($"Exported {format.ToUpper()} for {v.Name} to Downloads folder.");
             }
-            var file = await picker.PickSaveFileAsync();
-            if (file is null) return;
-            
-            // CRITICAL FIX: Ensure Windows.Storage.FileIO.WriteTextAsync() is called from UI thread
-            // This is a COM interop call that requires UI thread context
-            var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            if (dispatcherQueue == null)
+            catch (Exception ex)
             {
-                throw new InvalidOperationException("No DispatcherQueue available. Windows.Storage.FileIO.WriteTextAsync() requires UI thread context.");
+                ShowError($"Export failed: {ex.Message}");
             }
-            
-            var tcs = new TaskCompletionSource<bool>();
-            dispatcherQueue.TryEnqueue(async () =>
-            {
-                try
-                {
-                    await Windows.Storage.FileIO.WriteTextAsync(file, content);
-                    tcs.SetResult(true);
-                }
-                catch (Exception ex)
-                {
-                    tcs.SetException(ex);
-                }
-            });
-            await tcs.Task;
-            ShowInfo($"Exported {format.ToUpper()} for {v.Name}.");
         }
         catch (Exception ex)
         {
@@ -276,22 +251,35 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
                     ?? (sender as FrameworkElement)?.DataContext as VendorDto;
             if (v is null || string.IsNullOrWhiteSpace(v.Id)) { ShowError("No vendor selected."); return; }
 
-            // CRITICAL FIX: Ensure FileOpenPicker is called from UI thread
-            // This is a COM interop call that requires UI thread context
-            var picker = new FileOpenPicker();
-            var windowHandle = WindowNative.GetWindowHandle(App.MainWindow!);
-            InitializeWithWindow.Initialize(picker, windowHandle);
-            foreach (var ext in extensions) picker.FileTypeFilter.Add(ext);
-            var file = await picker.PickSingleFileAsync();
-            if (file is null) return;
-
-            using var stream = await file.OpenStreamForReadAsync();
-            var ok = await App.Api!.ImportVendorItemsAsync(v.Id!, format, stream);
-            if (ok)
+            // CRITICAL FIX: Use .NET file operations instead of Windows Runtime COM interop
+            // FileOpenPicker causes "No installed components were detected" errors in WinUI 3 Desktop Apps
+            try
             {
-                ShowInfo($"Imported items for {v.Name}.");
+                var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                var files = Directory.GetFiles(downloadsPath, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(f => extensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                    .ToArray();
+                
+                if (files.Length == 0)
+                {
+                    ShowError($"No {format.ToUpper()} files found in Downloads folder.");
+                    return;
+                }
+                
+                // Use the first matching file
+                var filePath = files[0];
+                using var stream = File.OpenRead(filePath);
+                var ok = await App.Api!.ImportVendorItemsAsync(v.Id!, format, stream);
+                if (ok)
+                {
+                    ShowInfo($"Imported items for {v.Name} from {Path.GetFileName(filePath)}.");
+                }
+                else ShowError("Import failed.");
             }
-            else ShowError("Import failed.");
+            catch (Exception ex)
+            {
+                ShowError($"Import failed: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {

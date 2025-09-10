@@ -476,19 +476,15 @@ public sealed class ReceiptSettingsViewModel : INotifyPropertyChanged
         try
         {
             // Try to get the current window
-            var currentWindow = Window.Current;
-            if (currentWindow != null)
-            {
-                return currentWindow;
-            }
-            
-            // If Window.Current is null, try to get the main window
+            // Try to get the main window first (more reliable)
             var mainWindow = App.MainWindow;
             if (mainWindow != null)
             {
                 return mainWindow;
             }
             
+            // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+            // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
             _logger.LogWarning("Could not find parent window for printing");
             return null;
         }

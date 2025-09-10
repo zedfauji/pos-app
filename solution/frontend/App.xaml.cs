@@ -4,7 +4,6 @@ using System;
 using System.IO;
 using MagiDesk.Frontend.Services;
 using System.Runtime.InteropServices;
-using WinRT.Interop;
 
 namespace MagiDesk.Frontend
 {
@@ -13,6 +12,24 @@ namespace MagiDesk.Frontend
     /// </summary>
     public partial class App : Application
     {
+        private static readonly object _initializationLock = new object();
+        private static volatile bool _isInitialized = false;
+        private static volatile bool _isInitializing = false;
+
+        public static bool IsInitialized => _isInitialized;
+        public static bool IsInitializing => _isInitializing;
+
+        /// <summary>
+        /// Wait for App initialization to complete
+        /// </summary>
+        public static async Task WaitForInitializationAsync()
+        {
+            while (_isInitializing)
+            {
+                await Task.Delay(10);
+            }
+        }
+
         private Window? window;
         public static Window? MainWindow { get; private set; }
         public static I18nService I18n { get; } = new I18nService();
@@ -25,6 +42,7 @@ namespace MagiDesk.Frontend
         public static Services.VendorOrdersApiService? VendorOrders { get; private set; }
         public static Services.ReceiptService? ReceiptService { get; private set; }
         public static Services.SettingsApiService? SettingsApi { get; private set; }
+        public static Services.PaneManager? PaneManager { get; private set; }
         public static IServiceProvider? Services { get; private set; }
 
         /// <summary>
@@ -35,6 +53,17 @@ namespace MagiDesk.Frontend
         {
             this.InitializeComponent();
             this.UnhandledException += App_UnhandledException;
+            
+            // CRITICAL DEBUG: Enable first-chance exception logging
+            AppDomain.CurrentDomain.FirstChanceException += (sender, e) =>
+            {
+                if (e.Exception is System.Runtime.InteropServices.COMException comEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"FIRST-CHANCE COM EXCEPTION: {comEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"HRESULT: 0x{comEx.HResult:X8}");
+                    System.Diagnostics.Debug.WriteLine($"Stack Trace: {comEx.StackTrace}");
+                }
+            };
             
             // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
             // This prevents race conditions with InitializeApiAsync
@@ -100,12 +129,10 @@ namespace MagiDesk.Frontend
             window.Title = "MagiDesk";
             MainWindow = window;
             
-            // Ensure Window.Current is set for the application
-            if (Window.Current == null)
-            {
-                // This shouldn't happen in normal circumstances, but just in case
-                System.Diagnostics.Debug.WriteLine("Warning: Window.Current is null in OnLaunched");
-            }
+            // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+            // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
+            // We use App.MainWindow instead for thread-safe access
+            System.Diagnostics.Debug.WriteLine("MainWindow set successfully");
 
             if (window.Content is not Frame rootFrame)
             {
@@ -121,21 +148,21 @@ namespace MagiDesk.Frontend
 #endif
             window.Activate();
 
-            // Bring window to foreground to ensure visibility
-            try
-            {
-                var hwnd = WindowNative.GetWindowHandle(window);
-                if (hwnd != IntPtr.Zero)
-                {
-                    ShowWindow(hwnd, SW_SHOW);
-                    SetForegroundWindow(hwnd);
-                }
-            }
-            catch { }
+            // CRITICAL FIX: Remove WindowNative COM interop calls to prevent Marshal.ThrowExceptionForHR errors
+            // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
+            // Window activation is handled automatically by the system
+            System.Diagnostics.Debug.WriteLine("Window launched successfully");
         }
 
         private async Task InitializeApiAsync()
         {
+            lock (_initializationLock)
+            {
+                if (_isInitialized || _isInitializing)
+                    return;
+                _isInitializing = true;
+            }
+
             try
             {
                 var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
@@ -185,6 +212,9 @@ namespace MagiDesk.Frontend
                 var logSettings = new Services.HttpLoggingHandler(innerSettings);
                 SettingsApi = new Services.SettingsApiService(new HttpClient(logSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
                 
+                // Initialize PaneManager
+                PaneManager = new Services.PaneManager(new Services.NullLogger<Services.PaneManager>());
+                
                 // ReceiptService is already initialized in constructor
             }
             catch
@@ -215,7 +245,18 @@ namespace MagiDesk.Frontend
                 var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
                 VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri("https://localhost:7016/") });
                 
+                // Initialize PaneManager
+                PaneManager = new Services.PaneManager(new Services.NullLogger<Services.PaneManager>());
+                
                 // ReceiptService is already initialized in constructor
+            }
+            finally
+            {
+                lock (_initializationLock)
+                {
+                    _isInitializing = false;
+                    _isInitialized = true;
+                }
             }
         }
 
@@ -238,10 +279,5 @@ namespace MagiDesk.Frontend
             // Let it crash after logging, or set e.Handled = true to try to continue
             // e.Handled = true; // Uncomment to prevent crash during debugging
         }
-
-        // Win32 interop to bring window to front
-        private const int SW_SHOW = 5;
-        [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     }
 }

@@ -101,42 +101,38 @@ namespace MagiDesk.Frontend.Views
                 var billingId = OrderContext.CurrentBillingId;
                 var sessionId = OrderContext.CurrentSessionId;
                 var totalDue = Vm.Total;
-                var dlg = new Dialogs.PaymentDialog();
-                if (dlg.DataContext is ViewModels.PaymentViewModel pvm)
+                
+                // Use PaymentPane instead of PaymentDialog
+                if (App.PaneManager != null)
                 {
-                    // No need to initialize printing here - App.ReceiptService is already initialized globally
-                    
-                    if (!string.IsNullOrWhiteSpace(billingId) && !string.IsNullOrWhiteSpace(sessionId))
+                    // Get the registered PaymentPane
+                    // Check if PaymentPane is visible
+                    if (App.PaneManager.IsPaneVisible("PaymentPane"))
                     {
-                        pvm.Initialize(billingId!, sessionId!, totalDue, Vm.Items);
+                        Log.Warning("PaymentPane is already visible");
+                        return;
+                    }
+                    
+                    // Show PaymentPane
+                    await App.PaneManager.ShowPaneAsync("PaymentPane");
+                    
+                    // Initialize the pane with billing data
+                    var paymentPane = App.PaneManager.GetPane<MagiDesk.Frontend.Panes.PaymentPane>("PaymentPane");
+                    
+                    if (paymentPane != null && !string.IsNullOrWhiteSpace(billingId) && !string.IsNullOrWhiteSpace(sessionId))
+                    {
+                        await paymentPane.InitializeAsync(billingId!, sessionId!, totalDue, Vm.Items);
                     }
                 }
-                var result = await dlg.ShowAsync();
-                if (result == ContentDialogResult.Primary)
+                else
                 {
-                    // Navigate to receipt preview
-                    var frame = this.Parent as Frame;
-                    frame ??= App.MainWindow?.Content as Frame;
-                    // CRITICAL FIX: Remove Window.Current fallback to prevent race conditions
-                    // Window.Current can be null during navigation, causing race conditions
-                    frame ??= new Frame();
-                    var receipt = new ReceiptData
-                    {
-                        OrderId = OrderContext.CurrentOrderId ?? 0,
-                        Subtotal = Vm.Subtotal,
-                        DiscountTotal = Vm.DiscountTotal,
-                        TaxTotal = Vm.TaxTotal,
-                        Total = Vm.Total,
-                        Items = Vm.Items.ToList()
-                    };
-                    frame.Navigate(typeof(ReceiptPage), receipt);
-                    if (this.Parent == null && App.MainWindow is not null)
-                    {
-                        App.MainWindow.Content = frame;
-                    }
+                    Log.Error("PaneManager not available");
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to open PaymentPane", ex);
+            }
         }
     }
 }

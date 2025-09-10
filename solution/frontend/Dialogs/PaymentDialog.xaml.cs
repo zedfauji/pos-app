@@ -150,6 +150,20 @@ namespace MagiDesk.Frontend.Dialogs
                         {
                             DebugLogger.LogStep("OnConfirm", "Payment succeeded, allowing dialog to close");
                             
+                            // NEW: Print final receipt after successful payment
+                            try
+                            {
+                                DebugLogger.LogStep("OnConfirm", "Printing final receipt after payment");
+                                await vm.PrintFinalReceiptAsync();
+                                DebugLogger.LogStep("OnConfirm", "Final receipt printed successfully");
+                            }
+                            catch (Exception printEx)
+                            {
+                                DebugLogger.LogException("OnConfirm.FinalReceiptPrint", printEx);
+                                DebugLogger.LogStep("OnConfirm", $"Final receipt printing failed: {printEx.Message}");
+                                // Don't cancel the dialog for print failures - payment was successful
+                            }
+                            
                             // Payment succeeded - let the dialog close naturally
                             // Don't cancel the dialog, let it return Primary result
                             DebugLogger.LogMethodExit("OnConfirm", "Success");

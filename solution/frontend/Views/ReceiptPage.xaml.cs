@@ -73,7 +73,9 @@ namespace MagiDesk.Frontend.Views
                 };
 
                 // Print the receipt
-                var success = await App.ReceiptService.PrintReceiptAsync(receiptData, App.MainWindow ?? Window.Current, showPreview: true);
+                // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+                // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
+                var success = await App.ReceiptService.PrintReceiptAsync(receiptData, App.MainWindow, showPreview: true);
                 
                 if (!success)
                 {

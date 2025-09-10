@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Text;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -121,8 +122,37 @@ public sealed partial class BillingPage : Page
             };
         }
         var (paper, tax) = ReadPrinterConfig();
-        var view = Services.ReceiptFormatter.BuildReceiptView(full, paper, tax);
-        await Services.PrintService.PrintVisualAsync(view);
+        
+        // Use new PDFSharp-based printing
+        try
+        {
+            if (App.ReceiptService == null)
+            {
+                Log.Error("App.ReceiptService is null");
+                await new ContentDialog
+                {
+                    Title = "Print Error",
+                    Content = "ReceiptService not initialized",
+                    CloseButtonText = "Close",
+                    XamlRoot = this.XamlRoot
+                }.ShowAsync();
+                return;
+            }
+            
+            var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+            await migrationService.PrintBillAsync(full, paper, tax, "Default Printer", isProForma: false);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Failed to print bill using PDFSharp", ex);
+            await new ContentDialog
+            {
+                Title = "Print Error",
+                Content = $"Failed to print receipt: {ex.Message}",
+                CloseButtonText = "Close",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+        }
     }
 
     private async void ViewReceipt_Click(object sender, RoutedEventArgs e)
@@ -148,14 +178,34 @@ public sealed partial class BillingPage : Page
                 Items = new System.Collections.Generic.List<MagiDesk.Shared.DTOs.Tables.ItemLine>()
             };
             var (paper, tax) = ReadPrinterConfig();
-            var preview = Services.ReceiptFormatter.BuildReceiptView(full, paper, tax);
-            await new ContentDialog
+            
+            // Use new PDFSharp-based preview instead of old ReceiptFormatter
+            if (App.ReceiptService != null)
             {
-                Title = "Receipt Preview",
-                Content = preview,
-                CloseButtonText = "Close",
-                XamlRoot = GetXamlRoot()
-            }.ShowAsync();
+                try
+                {
+                    var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+                    var pdfPath = await migrationService.GenerateReceiptFromBillAsync(full, paper, tax, false);
+                    
+                    // Show PDF path instead of UI preview
+                    await new ContentDialog
+                    {
+                        Title = "Receipt Preview",
+                        Content = $"Receipt generated as PDF:\n{pdfPath}",
+                        CloseButtonText = "Close",
+                        XamlRoot = GetXamlRoot()
+                    }.ShowAsync();
+                }
+                catch (Exception pdfEx)
+                {
+                    Log.Error("PDF preview generation failed", pdfEx);
+                    await new ContentDialog { Title = "Error", Content = $"Failed to generate PDF preview: {pdfEx.Message}", CloseButtonText = "Close", XamlRoot = this.XamlRoot }.ShowAsync();
+                }
+            }
+            else
+            {
+                await new ContentDialog { Title = "Error", Content = "ReceiptService not available", CloseButtonText = "Close", XamlRoot = this.XamlRoot }.ShowAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -186,7 +236,15 @@ public sealed partial class BillingPage : Page
                 Items = new System.Collections.Generic.List<MagiDesk.Shared.DTOs.Tables.ItemLine>()
             };
             var (paper, tax) = ReadPrinterConfig();
-            var preview = Services.ReceiptFormatter.BuildReceiptView(full, paper, tax);
+            
+            // Use new PDFSharp-based preview instead of old ReceiptFormatter
+            var preview = new StackPanel { Spacing = 4, Padding = new Thickness(6) };
+            preview.Children.Add(new TextBlock { Text = $"Bill Preview for {bi.BillId}", FontWeight = Microsoft.UI.Text.FontWeights.Bold });
+            preview.Children.Add(new TextBlock { Text = $"Table: {bi.TableLabel}" });
+            preview.Children.Add(new TextBlock { Text = $"Server: {bi.ServerName}" });
+            preview.Children.Add(new TextBlock { Text = $"Total: {bi.Amount:C}" });
+            preview.Children.Add(new TextBlock { Text = "Note: Full receipt will be generated as PDF" });
+            
             var dlg = new ContentDialog
             {
                 Title = "Receipt Preview",
@@ -199,7 +257,36 @@ public sealed partial class BillingPage : Page
             var res = await dlg.ShowAsync();
             if (res == ContentDialogResult.Primary)
             {
-                await Services.PrintService.PrintVisualAsync(preview);
+                // Use new PDFSharp-based printing
+                try
+                {
+                    if (App.ReceiptService == null)
+                    {
+                        Log.Error("App.ReceiptService is null");
+                        await new ContentDialog
+                        {
+                            Title = "Print Error",
+                            Content = "ReceiptService not initialized",
+                            CloseButtonText = "Close",
+                            XamlRoot = this.XamlRoot
+                        }.ShowAsync();
+                        return;
+                    }
+                    
+                    var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+                    await migrationService.PrintBillAsync(full, paper, tax, "Default Printer", isProForma: false);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to print bill using PDFSharp", ex);
+                    await new ContentDialog
+                    {
+                        Title = "Print Error",
+                        Content = $"Failed to print receipt: {ex.Message}",
+                        CloseButtonText = "Close",
+                        XamlRoot = this.XamlRoot
+                    }.ShowAsync();
+                }
             }
         }
         catch (Exception ex)
@@ -258,6 +345,7 @@ public class BillItem : INotifyPropertyChanged
         TotalTimeMinutes = b.TotalTimeMinutes;
         StartTime = b.StartTime;
         EndTime = b.EndTime;
+        Amount = b.TotalAmount;
     }
 
     public Guid BillId { get; }
@@ -267,6 +355,7 @@ public class BillItem : INotifyPropertyChanged
     public int TotalTimeMinutes { get; }
     public DateTime StartTime { get; }
     public DateTime EndTime { get; }
+    public decimal Amount { get; }
     public string StartLocal => StartTime.ToLocalTime().ToString("g");
     public string EndLocal => EndTime.ToLocalTime().ToString("g");
 

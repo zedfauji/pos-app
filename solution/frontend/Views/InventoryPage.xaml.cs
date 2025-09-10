@@ -84,22 +84,18 @@ public sealed partial class InventoryPage : Page, IToolbarConsumer
     {
         await _vm.RefreshJobsAsync();
 
-        var grid = new CommunityToolkit.WinUI.UI.Controls.DataGrid
+        // CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView
+        // CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps
+        var listView = new ListView
         {
-            AutoGenerateColumns = false,
-            IsReadOnly = true,
-            ItemsSource = _vm.JobHistory
+            ItemsSource = _vm.JobHistory,
+            SelectionMode = ListViewSelectionMode.None
         };
-        grid.Columns.Add(new CommunityToolkit.WinUI.UI.Controls.DataGridTextColumn { Header = "JobId", Binding = new Microsoft.UI.Xaml.Data.Binding { Path = new PropertyPath("JobId") }, Width = new CommunityToolkit.WinUI.UI.Controls.DataGridLength(2, CommunityToolkit.WinUI.UI.Controls.DataGridLengthUnitType.Star) });
-        grid.Columns.Add(new CommunityToolkit.WinUI.UI.Controls.DataGridTextColumn { Header = "Status", Binding = new Microsoft.UI.Xaml.Data.Binding { Path = new PropertyPath("Status") } });
-        grid.Columns.Add(new CommunityToolkit.WinUI.UI.Controls.DataGridTextColumn { Header = "Updated", Binding = new Microsoft.UI.Xaml.Data.Binding { Path = new PropertyPath("UpdatedCount") } });
-        grid.Columns.Add(new CommunityToolkit.WinUI.UI.Controls.DataGridTextColumn { Header = "Started", Binding = new Microsoft.UI.Xaml.Data.Binding { Path = new PropertyPath("StartedAt") } });
-        grid.Columns.Add(new CommunityToolkit.WinUI.UI.Controls.DataGridTextColumn { Header = "Finished", Binding = new Microsoft.UI.Xaml.Data.Binding { Path = new PropertyPath("FinishedAt") } });
 
         var dlg = new ContentDialog
         {
             Title = "Job History",
-            Content = new Grid { Children = { grid } },
+            Content = listView,
             PrimaryButtonText = "Close",
             XamlRoot = this.XamlRoot,
             IsSecondaryButtonEnabled = false
