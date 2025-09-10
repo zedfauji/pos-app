@@ -42,42 +42,35 @@ namespace MagiDesk.Frontend.Services
                     try
                     {
                         // CRITICAL FIX: Ensure PrintManager.GetForCurrentView() is called from UI thread
-                        // This requires the calling thread to be in the correct WinUI 3 context
-                        if (_dispatcherQueue != null)
+                        // This is a COM interop call that requires UI thread context
+                        var dispatcherQueue = _dispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                        if (dispatcherQueue == null)
                         {
-                            // Use DispatcherQueue to ensure we're on the UI thread
-                            var tcs = new TaskCompletionSource<PrintManager?>();
-                            _dispatcherQueue.TryEnqueue(() =>
-                            {
-                                try
-                                {
-                                    _printManager = PrintManager.GetForCurrentView();
-                                    if (_printManager == null)
-                                    {
-                                        tcs.SetException(new InvalidOperationException("PrintManager.GetForCurrentView() returned null"));
-                                        return;
-                                    }
-                                    _printManager.PrintTaskRequested += OnPrintTaskRequested;
-                                    tcs.SetResult(_printManager);
-                                }
-                                catch (Exception ex)
-                                {
-                                    tcs.SetException(ex);
-                                }
-                            });
-                            
-                            _printManager = await tcs.Task;
+                            throw new InvalidOperationException("No DispatcherQueue available. PrintManager.GetForCurrentView() requires UI thread context.");
                         }
-                        else
+                        
+                        // Use DispatcherQueue to ensure we're on the UI thread
+                        var tcs = new TaskCompletionSource<PrintManager?>();
+                        dispatcherQueue.TryEnqueue(() =>
                         {
-                            // Fallback: try direct call (might fail if not on UI thread)
-                            _printManager = PrintManager.GetForCurrentView();
-                            if (_printManager == null)
+                            try
                             {
-                                throw new InvalidOperationException("PrintManager.GetForCurrentView() returned null");
+                                _printManager = PrintManager.GetForCurrentView();
+                                if (_printManager == null)
+                                {
+                                    tcs.SetException(new InvalidOperationException("PrintManager.GetForCurrentView() returned null"));
+                                    return;
+                                }
+                                _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                                tcs.SetResult(_printManager);
                             }
-                            _printManager.PrintTaskRequested += OnPrintTaskRequested;
-                        }
+                            catch (Exception ex)
+                            {
+                                tcs.SetException(ex);
+                            }
+                        });
+                        
+                        _printManager = await tcs.Task;
                     }
                     catch (Exception ex)
                     {
@@ -98,28 +91,26 @@ namespace MagiDesk.Frontend.Services
                 _printTitle = title;
 
                 // Show print UI - CRITICAL FIX: Ensure this COM interop call is on UI thread
-                if (_dispatcherQueue != null)
+                var showPrintDispatcherQueue = _dispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                if (showPrintDispatcherQueue == null)
                 {
-                    var tcs = new TaskCompletionSource<bool>();
-                    _dispatcherQueue.TryEnqueue(async () =>
+                    throw new InvalidOperationException("No DispatcherQueue available. PrintManager.ShowPrintUIAsync() requires UI thread context.");
+                }
+                
+                var showPrintTcs = new TaskCompletionSource<bool>();
+                showPrintDispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
                     {
-                        try
-                        {
-                            await PrintManager.ShowPrintUIAsync();
-                            tcs.SetResult(true);
-                        }
-                        catch (Exception ex)
-                        {
-                            tcs.SetException(ex);
-                        }
-                    });
-                    await tcs.Task;
-                }
-                else
-                {
-                    // Fallback: try direct call (might fail if not on UI thread)
-                    await PrintManager.ShowPrintUIAsync();
-                }
+                        await PrintManager.ShowPrintUIAsync();
+                        showPrintTcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        showPrintTcs.SetException(ex);
+                    }
+                });
+                await showPrintTcs.Task;
             }
             catch (Exception ex)
             {
