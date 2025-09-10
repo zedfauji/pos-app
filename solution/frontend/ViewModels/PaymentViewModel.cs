@@ -383,6 +383,41 @@ namespace MagiDesk.Frontend.ViewModels
                     return;
                 }
                 
+                // Ensure ReceiptService is initialized before printing
+                if (_receiptService != null)
+                {
+                    // Try to initialize if not already done
+                    var mainWindow = Window.Current;
+                    if (mainWindow?.Content is MainPage mainPage)
+                    {
+                        var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
+                        if (printingPanel != null)
+                        {
+                            try
+                            {
+                                _receiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                                _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService initialized successfully");
+                                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: ReceiptService initialized successfully");
+                            }
+                            catch (Exception initEx)
+                            {
+                                _logger.LogError(initEx, "PrintProFormaReceiptAsync: Failed to initialize ReceiptService");
+                                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Failed to initialize ReceiptService - {initEx.Message}");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogError("PrintProFormaReceiptAsync: PrintingContainer not found");
+                            System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: PrintingContainer not found");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("PrintProFormaReceiptAsync: MainPage not found");
+                        System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: MainPage not found");
+                    }
+                }
+
                 var success = await _receiptService.PrintReceiptAsync(receiptData, parentWindow, showPreview: true);
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService.PrintReceiptAsync completed with result: {Success}", success);
