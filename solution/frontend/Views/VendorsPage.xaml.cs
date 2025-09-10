@@ -230,28 +230,25 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
             // CRITICAL FIX: Ensure Windows.Storage.FileIO.WriteTextAsync() is called from UI thread
             // This is a COM interop call that requires UI thread context
             var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            if (dispatcherQueue != null)
+            if (dispatcherQueue == null)
             {
-                var tcs = new TaskCompletionSource<bool>();
-                dispatcherQueue.TryEnqueue(async () =>
+                throw new InvalidOperationException("No DispatcherQueue available. Windows.Storage.FileIO.WriteTextAsync() requires UI thread context.");
+            }
+            
+            var tcs = new TaskCompletionSource<bool>();
+            dispatcherQueue.TryEnqueue(async () =>
+            {
+                try
                 {
-                    try
-                    {
-                        await Windows.Storage.FileIO.WriteTextAsync(file, content);
-                        tcs.SetResult(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        tcs.SetException(ex);
-                    }
-                });
-                await tcs.Task;
-            }
-            else
-            {
-                // Fallback: try direct call (might fail if not on UI thread)
-                await Windows.Storage.FileIO.WriteTextAsync(file, content);
-            }
+                    await Windows.Storage.FileIO.WriteTextAsync(file, content);
+                    tcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            await tcs.Task;
             ShowInfo($"Exported {format.ToUpper()} for {v.Name}.");
         }
         catch (Exception ex)
