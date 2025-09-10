@@ -23,6 +23,9 @@ namespace MagiDesk.Frontend
         public static Services.PaymentApiService? Payments { get; private set; }
         public static Services.OrderApiService? OrdersApi { get; private set; }
         public static Services.VendorOrdersApiService? VendorOrders { get; private set; }
+        public static Services.ReceiptService? ReceiptService { get; private set; }
+        public static Services.SettingsApiService? SettingsApi { get; private set; }
+        public static IServiceProvider? Services { get; private set; }
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -32,7 +35,7 @@ namespace MagiDesk.Frontend
         {
             this.InitializeComponent();
             this.UnhandledException += App_UnhandledException;
-            InitializeApi();
+            _ = InitializeApiAsync();
             ApplyThemeFromConfig();
         }
 
@@ -118,7 +121,7 @@ namespace MagiDesk.Frontend
             catch { }
         }
 
-        private void InitializeApi()
+        private async Task InitializeApiAsync()
         {
             try
             {
@@ -161,6 +164,16 @@ namespace MagiDesk.Frontend
                 innerVendorOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
                 VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri(vendorOrdersBase.TrimEnd('/') + "/") });
+                
+                // Initialize ReceiptService and SettingsApi
+                var settingsBase = config["SettingsApi:BaseUrl"] ?? backendBase;
+                var innerSettings = new HttpClientHandler();
+                innerSettings.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logSettings = new Services.HttpLoggingHandler(innerSettings);
+                SettingsApi = new Services.SettingsApiService(new HttpClient(logSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
+                
+                ReceiptService = new Services.ReceiptService(null, null);
+                // ReceiptService will be initialized lazily when printing is needed
             }
             catch
             {
@@ -195,8 +208,6 @@ namespace MagiDesk.Frontend
         /// <summary>
         /// Invoked when Navigation to a certain page fails
         /// </summary>
-        /// <param name="sender">The Frame which failed navigation</param>
-        /// <param name="e">Details about the navigation failure</param>
         void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {
             Log.Error($"Navigation failed to {e.SourcePageType.FullName}", e.Exception);

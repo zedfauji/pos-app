@@ -7,11 +7,13 @@ public sealed class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _repo;
     private readonly IConfiguration _config;
+    private readonly ImmutableIdService _idService;
 
-    public PaymentService(IPaymentRepository repo, IConfiguration config)
+    public PaymentService(IPaymentRepository repo, IConfiguration config, ImmutableIdService idService)
     {
         _repo = repo;
         _config = config;
+        _idService = idService;
     }
 
     public async Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
@@ -20,6 +22,24 @@ public sealed class PaymentService : IPaymentService
             throw new InvalidOperationException("NO_PAYMENT_LINES");
         if (req.Lines.Any(l => l.AmountPaid < 0 || l.DiscountAmount < 0 || l.TipAmount < 0))
             throw new InvalidOperationException("INVALID_AMOUNTS");
+        
+        // Immutability protection: Validate billing ID format
+        if (string.IsNullOrWhiteSpace(req.BillingId))
+            throw new InvalidOperationException("INVALID_BILLING_ID: Billing ID cannot be null or empty");
+        
+        // Validate billing ID format (should be immutable format)
+        if (!_idService.IsValidBillingId(req.BillingId))
+        {
+            _idService.LogImmutableIdModificationAttempt("BillingId", req.BillingId, "InvalidFormat");
+            throw new InvalidOperationException("INVALID_BILLING_ID_FORMAT: Billing ID must follow immutable format");
+        }
+        
+        // Check if billing ID already exists in ledger (prevent reuse)
+        var existingLedger = await _repo.GetLedgerAsync(req.BillingId, ct);
+        if (existingLedger != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} already exists in ledger, allowing additional payments");
+        }
 
         // Validate that the billing ID exists in TablesApi before allowing payment
         var tablesApiBaseUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") 
@@ -32,16 +52,42 @@ public sealed class PaymentService : IPaymentService
                 using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
                 { BaseAddress = new Uri(tablesApiBaseUrl.TrimEnd('/') + "/") };
                 
-                var billUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}";
-                System.Diagnostics.Debug.WriteLine($"PaymentService: Checking if billing ID exists in TablesApi: {billUrl}");
+                var sessionsUrl = $"sessions/active";
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Checking if billing ID exists in active sessions: {sessionsUrl}");
                 
-                using var res = await http.GetAsync(billUrl, ct);
-                System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi bill check response: {(int)res.StatusCode} {res.ReasonPhrase}");
+                using var res = await http.GetAsync(sessionsUrl, ct);
+                System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi active sessions check response: {(int)res.StatusCode} {res.ReasonPhrase}");
                 
                 if (!res.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in TablesApi, rejecting payment");
-                    throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in TablesApi");
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Cannot retrieve active sessions from TablesApi, rejecting payment");
+                    throw new InvalidOperationException($"TABLESAPI_ERROR: Cannot verify billing ID {req.BillingId}");
+                }
+                
+                var sessionsJson = await res.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Active sessions response: {sessionsJson}");
+                
+                // Check if the billing ID exists in any active session
+                var sessions = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonArray>(sessionsJson);
+                bool billingIdExists = false;
+                if (sessions != null)
+                {
+                    foreach (var session in sessions)
+                    {
+                        if (session is System.Text.Json.Nodes.JsonObject sessionObj && 
+                            sessionObj.TryGetPropertyValue("billingId", out var billingIdNode) &&
+                            billingIdNode?.ToString() == req.BillingId)
+                        {
+                            billingIdExists = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!billingIdExists)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, rejecting payment");
+                    throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in active sessions");
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} exists in TablesApi, proceeding with payment");

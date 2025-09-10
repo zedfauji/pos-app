@@ -2,9 +2,22 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MagiDesk.Frontend.Services;
+using Microsoft.UI.Xaml;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace MagiDesk.Frontend.ViewModels
 {
+    /// <summary>
+    /// Null logger implementation for when DI is not available
+    /// </summary>
+    public class NullLogger<T> : ILogger<T>
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => false;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+    }
+
     public sealed class PaymentLineVm : INotifyPropertyChanged
     {
         public string PaymentMethod { get; set; } = "Cash";
@@ -16,8 +29,24 @@ namespace MagiDesk.Frontend.ViewModels
     public sealed class PaymentViewModel : INotifyPropertyChanged
     {
         private readonly PaymentApiService _payments;
+        private readonly ReceiptService _receiptService;
+        private readonly ILogger<PaymentViewModel> _logger;
+        private readonly IConfiguration _configuration;
+        
         public string? BillingId { get; private set; }
         public string? SessionId { get; private set; }
+        
+        // Receipt-related properties
+        private UIElement? _receiptPreview;
+        public UIElement? ReceiptPreview 
+        { 
+            get => _receiptPreview; 
+            private set 
+            { 
+                _receiptPreview = value; 
+                OnPropertyChanged(); 
+            } 
+        }
 
         public ObservableCollection<string> Methods { get; } = new() { "Cash", "Card", "UPI" };
         public ObservableCollection<PaymentLineVm> SplitLines { get; } = new();
@@ -49,12 +78,24 @@ namespace MagiDesk.Frontend.ViewModels
 
         public string? Error { get; private set; }
         public bool HasError => !string.IsNullOrEmpty(Error);
-        public string? DebugInfo { get; private set; }
-
-        public PaymentViewModel(PaymentApiService paymentService)
-        {
-            _payments = paymentService;
+        private string? _debugInfo;
+        public string? DebugInfo 
+        { 
+            get => _debugInfo; 
+            private set 
+            { 
+                _debugInfo = value; 
+                OnPropertyChanged(); 
+            } 
         }
+
+    public PaymentViewModel(PaymentApiService paymentService, ReceiptService receiptService, ILogger<PaymentViewModel>? logger, IConfiguration? configuration)
+    {
+        _payments = paymentService;
+        _receiptService = receiptService;
+        _logger = logger ?? new NullLogger<PaymentViewModel>();
+        _configuration = configuration ?? new ConfigurationBuilder().Build();
+    }
 
         public void Initialize(string billingId, string sessionId, decimal totalDue, IEnumerable<OrderItemLineVm>? items = null)
         {
@@ -89,7 +130,6 @@ namespace MagiDesk.Frontend.ViewModels
             Paid = amt + splitSum + tip;
             Balance = TotalDue - Paid; // Allow negative values for change
             DebugInfo = $"amt={Amount:0.##}, tip={Tip:0.##}, splits={splitSum:0.##}, paid={Paid:0.##}, due={TotalDue:0.##}";
-            OnPropertyChanged(nameof(DebugInfo));
         }
 
         public async Task LoadLedgerAsync(CancellationToken ct = default)
@@ -227,6 +267,323 @@ namespace MagiDesk.Frontend.ViewModels
                 OnPropertyChanged(nameof(HasError)); 
                 DebugLogger.LogMethodExit("PaymentViewModel.ConfirmAsync", "Critical Exception");
                 return false;
+            }
+        }
+
+        public async Task RefreshReceiptPreviewAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Refreshing receipt preview for Bill ID: {BillId}", BillingId);
+                
+                var receiptData = await CreateReceiptDataAsync(true); // Pro forma
+                var preview = await _receiptService.GenerateReceiptPreviewAsync(receiptData);
+                ReceiptPreview = preview;
+                
+                _logger.LogInformation("Receipt preview refreshed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to refresh receipt preview");
+                Error = $"Failed to refresh receipt preview: {ex.Message}";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+            }
+        }
+
+        public async Task PrintProFormaReceiptAsync()
+        {
+            try
+            {
+                // Set error message to show we're starting
+                Error = "Starting print process...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: Starting for Bill ID: {BillId}", BillingId);
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Starting for Bill ID: {BillingId}");
+                
+                // Check if ReceiptService is available
+                if (_receiptService == null)
+                {
+                    Error = "ReceiptService not available";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("ReceiptService is null");
+                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: ReceiptService is null");
+                    return;
+                }
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService is available");
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: ReceiptService is available");
+                
+                Error = "Creating receipt data...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: Calling CreateReceiptDataAsync");
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling CreateReceiptDataAsync");
+                
+                var receiptData = await CreateReceiptDataAsync(true); // Pro forma
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: CreateReceiptDataAsync completed, receiptData is {ReceiptDataStatus}", 
+                    receiptData == null ? "NULL" : "NOT NULL");
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: CreateReceiptDataAsync completed, receiptData is {(receiptData == null ? "NULL" : "NOT NULL")}");
+                
+                if (receiptData == null)
+                {
+                    Error = "Failed to create receipt data";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("CreateReceiptDataAsync returned null");
+                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: CreateReceiptDataAsync returned null");
+                    return;
+                }
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: Receipt data created successfully");
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Receipt data created successfully");
+                
+                Error = "Calling ReceiptService...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: Calling ReceiptService.PrintReceiptAsync");
+                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling ReceiptService.PrintReceiptAsync");
+                
+                var parentWindow = GetParentWindow();
+                if (parentWindow == null)
+                {
+                    Error = "Could not find parent window for printing";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("Parent window is null");
+                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Parent window is null");
+                    return;
+                }
+                
+                var success = await _receiptService.PrintReceiptAsync(receiptData, parentWindow, showPreview: true);
+                
+                _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService.PrintReceiptAsync completed with result: {Success}", success);
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: ReceiptService.PrintReceiptAsync completed with result: {success}");
+                
+                if (success)
+                {
+                    Error = "Pro forma receipt printed successfully!";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogInformation("Pro forma receipt printed successfully");
+                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printed successfully");
+                }
+                else
+                {
+                    Error = "Failed to print pro forma receipt";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogWarning("Pro forma receipt printing failed or was cancelled");
+                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printing failed or was cancelled");
+                }
+            }
+            catch (Exception ex)
+            {
+                Error = $"Failed to print pro forma receipt: {ex.Message}";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                _logger.LogError(ex, "Failed to print pro forma receipt");
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Exception - {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Stack trace - {ex.StackTrace}");
+                throw; // Re-throw to be caught by caller
+            }
+        }
+
+        public async Task<string?> ExportReceiptAsPdfAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Exporting receipt as PDF for Bill ID: {BillId}", BillingId);
+                
+                var receiptData = await CreateReceiptDataAsync(false); // Final receipt
+                var filePath = await _receiptService.ExportReceiptAsPdfAsync(receiptData);
+                
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    _logger.LogInformation("Receipt exported as PDF: {FilePath}", filePath);
+                }
+                else
+                {
+                    _logger.LogInformation("PDF export cancelled by user");
+                }
+                
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export receipt as PDF");
+                Error = $"Failed to export receipt as PDF: {ex.Message}";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                return null;
+            }
+        }
+
+        private async Task<ReceiptService.ReceiptData> CreateReceiptDataAsync(bool isProForma)
+        {
+            try
+            {
+                // Add UI feedback to show we're creating receipt data
+                Error = "Creating receipt data...";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                
+                _logger.LogInformation("Starting CreateReceiptDataAsync for isProForma: {IsProForma}", isProForma);
+                
+                // Get business settings from configuration
+                var businessName = _configuration?["ReceiptSettings:BusinessName"] ?? "MagiDesk Billiard Club";
+                var businessAddress = _configuration?["ReceiptSettings:BusinessAddress"] ?? "123 Main Street, City, State 12345";
+                var businessPhone = _configuration?["ReceiptSettings:BusinessPhone"] ?? "(555) 123-4567";
+                
+                _logger.LogInformation("Business settings loaded - Name: {BusinessName}", businessName);
+
+                // Check if Items collection is available
+                if (Items == null)
+                {
+                    Error = "Items collection is null";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    _logger.LogError("Items collection is null");
+                    return null;
+                }
+
+                // Convert items to receipt items
+                _logger.LogInformation("Converting {ItemCount} items to receipt items", Items.Count);
+                
+                // Debug each item individually
+                for (int i = 0; i < Items.Count; i++)
+                {
+                    var item = Items[i];
+                    _logger.LogInformation("Item {Index}: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, LineTotal={LineTotal}", 
+                        i, item?.Name ?? "NULL", item?.Quantity ?? -1, item?.UnitPrice ?? -1, item?.LineTotal ?? -1);
+                }
+                
+                var receiptItems = new List<ReceiptService.ReceiptItem>();
+                for (int i = 0; i < Items.Count; i++)
+                {
+                    try
+                    {
+                        var item = Items[i];
+                        _logger.LogInformation("Creating ReceiptItem {Index} from OrderItemLineVm", i);
+                        
+                        var receiptItem = new ReceiptService.ReceiptItem
+                        {
+                            Name = item?.Name ?? "Unknown",
+                            Quantity = item?.Quantity ?? 0,
+                            UnitPrice = item?.UnitPrice ?? 0,
+                            Subtotal = item?.LineTotal ?? 0
+                        };
+                        
+                        _logger.LogInformation("ReceiptItem {Index} created: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, Subtotal={Subtotal}", 
+                            i, receiptItem.Name, receiptItem.Quantity, receiptItem.UnitPrice, receiptItem.Subtotal);
+                        
+                        receiptItems.Add(receiptItem);
+                    }
+                    catch (Exception itemEx)
+                    {
+                        _logger.LogError(itemEx, "Failed to create ReceiptItem {Index}", i);
+                        Error = $"Failed to create receipt item {i}: {itemEx.Message}";
+                        OnPropertyChanged(nameof(Error));
+                        OnPropertyChanged(nameof(HasError));
+                        return null;
+                    }
+                }
+                
+                _logger.LogInformation("Receipt items created successfully - Count: {Count}", receiptItems.Count);
+
+                // Calculate totals
+                var subtotal = receiptItems.Sum(item => item.Subtotal);
+                var taxAmount = subtotal * 0.08m; // 8% tax rate
+                var totalAmount = subtotal + taxAmount - LedgerDiscount;
+                
+                _logger.LogInformation("Totals calculated - Subtotal: {Subtotal}, Tax: {Tax}, Total: {Total}", subtotal, taxAmount, totalAmount);
+
+                _logger.LogInformation("Creating ReceiptData object...");
+                _logger.LogInformation("ReceiptData properties: BusinessName='{BusinessName}', BillingId='{BillingId}', SelectedMethod='{SelectedMethod}', LedgerDiscount={LedgerDiscount}, Paid={Paid}", 
+                    businessName, BillingId ?? "NULL", SelectedMethod ?? "NULL", LedgerDiscount, Paid);
+
+                try
+                {
+                    var receiptData = new ReceiptService.ReceiptData
+                    {
+                        BusinessName = businessName,
+                        BusinessAddress = businessAddress,
+                        BusinessPhone = businessPhone,
+                        TableNumber = "Table 1", // This should come from the session data
+                        ServerName = "Server", // This should come from the session data
+                        StartTime = DateTime.Now.AddHours(-2), // This should come from the session data
+                        EndTime = DateTime.Now,
+                        Items = receiptItems,
+                        Subtotal = subtotal,
+                        DiscountAmount = LedgerDiscount,
+                        TaxAmount = taxAmount,
+                        TotalAmount = totalAmount,
+                        BillId = BillingId ?? "Unknown",
+                        PaymentMethod = SelectedMethod,
+                        AmountPaid = isProForma ? 0 : Paid,
+                        Change = isProForma ? 0 : Math.Max(0, Paid - totalAmount),
+                        IsProForma = isProForma
+                    };
+                    
+                    _logger.LogInformation("ReceiptData object created successfully");
+                    _logger.LogInformation("ReceiptData final values: BillId='{BillId}', ItemsCount={ItemsCount}, TotalAmount={TotalAmount}, IsProForma={IsProForma}", 
+                        receiptData.BillId, receiptData.Items?.Count ?? -1, receiptData.TotalAmount, receiptData.IsProForma);
+                    
+                    return receiptData;
+                }
+                catch (Exception receiptDataEx)
+                {
+                    _logger.LogError(receiptDataEx, "Failed to create ReceiptData object");
+                    Error = $"Failed to create ReceiptData: {receiptDataEx.Message}";
+                    OnPropertyChanged(nameof(Error));
+                    OnPropertyChanged(nameof(HasError));
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Error = $"Failed to create receipt data: {ex.Message}";
+                OnPropertyChanged(nameof(Error));
+                OnPropertyChanged(nameof(HasError));
+                _logger.LogError(ex, "Failed to create receipt data");
+                return null; // Return null instead of throwing
+            }
+        }
+
+        /// <summary>
+        /// Get the parent window for printing
+        /// </summary>
+        private Window? GetParentWindow()
+        {
+            try
+            {
+                // Try to get the current window
+                var currentWindow = Window.Current;
+                if (currentWindow != null)
+                {
+                    return currentWindow;
+                }
+                
+                // If Window.Current is null, try to get the main window
+                var mainWindow = App.MainWindow;
+                if (mainWindow != null)
+                {
+                    return mainWindow;
+                }
+                
+                _logger.LogWarning("Could not find parent window for printing");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting parent window");
+                return null;
             }
         }
 

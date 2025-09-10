@@ -1,0 +1,128 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.ReceiptSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:conv="using:MagiDesk.Frontend.Converters"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:ObjectToVisibilityConverter x:Key="ObjectToVisibilityConverter"/>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="16">
+            <TextBlock Text="Receipt Settings" FontSize="28" FontWeight="SemiBold"/>
+            
+            <!-- Business Information -->
+            <Expander Header="Business Information" IsExpanded="True">
+                <StackPanel Spacing="12" Margin="0,12,0,0">
+                    <TextBox Header="Business Name" 
+                             Text="{x:Bind ViewModel.BusinessName, Mode=TwoWay}"
+                             PlaceholderText="Enter business name"/>
+                    
+                    <TextBox Header="Business Address" 
+                             Text="{x:Bind ViewModel.BusinessAddress, Mode=TwoWay}"
+                             PlaceholderText="Enter business address"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"/>
+                    
+                    <TextBox Header="Business Phone" 
+                             Text="{x:Bind ViewModel.BusinessPhone, Mode=TwoWay}"
+                             PlaceholderText="Enter business phone number"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- Printer Settings -->
+            <Expander Header="Printer Settings" IsExpanded="True">
+                <StackPanel Spacing="12" Margin="0,12,0,0">
+                    <ComboBox Header="Default Printer" 
+                              ItemsSource="{x:Bind ViewModel.AvailablePrinters}"
+                              SelectedItem="{x:Bind ViewModel.SelectedPrinter, Mode=TwoWay}"
+                              PlaceholderText="Select default printer"/>
+                    
+                    <ComboBox Header="Receipt Size" 
+                              ItemsSource="{x:Bind ViewModel.ReceiptSizes}"
+                              SelectedItem="{x:Bind ViewModel.SelectedReceiptSize, Mode=TwoWay}"/>
+                    
+                    <ToggleSwitch Header="Auto Print on Payment" 
+                                  IsOn="{x:Bind ViewModel.AutoPrintOnPayment, Mode=TwoWay}"/>
+                    
+                    <ToggleSwitch Header="Preview Before Print" 
+                                  IsOn="{x:Bind ViewModel.PreviewBeforePrint, Mode=TwoWay}"/>
+                    
+                    <ToggleSwitch Header="Print Pro Forma Receipt" 
+                                  IsOn="{x:Bind ViewModel.PrintProForma, Mode=TwoWay}"/>
+                    
+                    <ToggleSwitch Header="Print Final Receipt" 
+                                  IsOn="{x:Bind ViewModel.PrintFinalReceipt, Mode=TwoWay}"/>
+                    
+                    <NumberBox Header="Copies for Final Receipt" 
+                               Value="{x:Bind ViewModel.CopiesForFinalReceipt, Mode=TwoWay}"
+                               Minimum="1" Maximum="5" SmallChange="1"/>
+                </StackPanel>
+            </Expander>
+
+            <!-- Test Receipt -->
+            <Expander Header="Test Receipt">
+                <StackPanel Spacing="12" Margin="0,12,0,0">
+                    <TextBlock Text="Test your receipt settings with a sample receipt" 
+                               Opacity="0.7"/>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Generate Test Receipt" 
+                                Click="{x:Bind ViewModel.GenerateTestReceiptAsync}"
+                                IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"/>
+                        
+                        <Button Content="Print Test Receipt" 
+                                Click="{x:Bind ViewModel.PrintTestReceiptAsync}"
+                                IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"/>
+                        
+                        <Button Content="Export Test PDF" 
+                                Click="{x:Bind ViewModel.ExportTestReceiptPdfAsync}"
+                                IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"/>
+                    </StackPanel>
+                    
+                    <!-- Test Receipt Preview -->
+                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" 
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="4"
+                            Padding="8"
+                            Visibility="{x:Bind ViewModel.TestReceiptPreview, Mode=OneWay, Converter={StaticResource ObjectToVisibilityConverter}}">
+                        <ScrollViewer MaxHeight="300" HorizontalScrollMode="Auto" VerticalScrollMode="Auto">
+                            <ContentControl Content="{x:Bind ViewModel.TestReceiptPreview}"
+                                          HorizontalAlignment="Center"/>
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- Save Button -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults" 
+                        Click="{x:Bind ViewModel.ResetToDefaultsAsync}"
+                        IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"/>
+                
+                <Button Content="Save Settings" 
+                        Click="{x:Bind ViewModel.SaveSettingsAsync}"
+                        IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"
+                        Style="{ThemeResource AccentButtonStyle}"/>
+            </StackPanel>
+
+            <!-- Status Messages -->
+            <InfoBar IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" 
+                     Severity="Error" 
+                     Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"/>
+            
+            <InfoBar IsOpen="{x:Bind ViewModel.HasSuccessMessage, Mode=OneWay}" 
+                     Severity="Success" 
+                     Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}"/>
+            
+            <ProgressBar IsIndeterminate="True" 
+                         Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

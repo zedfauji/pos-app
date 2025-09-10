@@ -4,6 +4,9 @@ using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Shared.DTOs.Tables;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace MagiDesk.Frontend.Dialogs
 {
@@ -18,7 +21,21 @@ namespace MagiDesk.Frontend.Dialogs
                 DebugLogger.LogStep("InitializeComponent", "Completed successfully");
                 
                 // Use the properly configured PaymentApiService from App instead of creating a new HttpClient
-                this.DataContext = new PaymentViewModel(App.Payments ?? throw new InvalidOperationException("PaymentApiService not initialized"));
+                var receiptService = App.ReceiptService ?? new ReceiptService(null, null);
+                
+                // Initialize the receipt service with the current window if it's not already initialized
+                if (receiptService != App.ReceiptService)
+                {
+                    // Skip initialization for now - will be done when printing is actually needed
+                    // _ = receiptService.InitializeAsync(parentWindow);
+                }
+                
+                this.DataContext = new PaymentViewModel(
+                    App.Payments ?? throw new InvalidOperationException("PaymentApiService not initialized"),
+                    receiptService,
+                    App.Services?.GetRequiredService<ILogger<PaymentViewModel>>(),
+                    App.Services?.GetRequiredService<IConfiguration>()
+                );
                 DebugLogger.LogStep("DataContext", "PaymentViewModel created and assigned");
                 
                 this.Loaded += PaymentDialog_Loaded;
@@ -248,6 +265,215 @@ namespace MagiDesk.Frontend.Dialogs
             catch (Exception ex)
             {
                 DebugLogger.LogException("OnApplyDiscount", ex);
+            }
+        }
+
+        private async void OnRefreshReceiptPreview(object sender, RoutedEventArgs e)
+        {
+            DebugLogger.LogMethodEntry("OnRefreshReceiptPreview");
+            try
+            {
+                if (DataContext is PaymentViewModel vm)
+                {
+                    DebugLogger.LogStep("OnRefreshReceiptPreview", "ViewModel found, refreshing receipt preview");
+                    await vm.RefreshReceiptPreviewAsync();
+                    DebugLogger.LogStep("OnRefreshReceiptPreview", "Receipt preview refreshed");
+                    DebugLogger.LogMethodExit("OnRefreshReceiptPreview", "Success");
+                }
+                else
+                {
+                    DebugLogger.LogStep("OnRefreshReceiptPreview", "ERROR: DataContext is not PaymentViewModel");
+                    DebugLogger.LogMethodExit("OnRefreshReceiptPreview", "Failed - No ViewModel");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogException("OnRefreshReceiptPreview", ex);
+            }
+        }
+
+    private async void OnPrintProForma(object sender, ContentDialogButtonClickEventArgs e)
+    {
+        DebugLogger.LogMethodEntry("OnPrintProForma");
+        try
+        {
+            if (DataContext is PaymentViewModel vm)
+            {
+                DebugLogger.LogStep("OnPrintProForma", "ViewModel found, printing pro forma receipt");
+                await vm.PrintProFormaReceiptAsync();
+                DebugLogger.LogStep("OnPrintProForma", "Pro forma receipt printed");
+                DebugLogger.LogMethodExit("OnPrintProForma", "Success");
+            }
+            else
+            {
+                DebugLogger.LogStep("OnPrintProForma", "ERROR: DataContext is not PaymentViewModel");
+                DebugLogger.LogMethodExit("OnPrintProForma", "Failed - No ViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLogger.LogException("OnPrintProForma", ex);
+        }
+    }
+
+    private async void OnPrintProFormaButton(object sender, RoutedEventArgs e)
+    {
+        DebugLogger.LogMethodEntry("OnPrintProFormaButton");
+        try
+        {
+            if (DataContext is PaymentViewModel vm)
+            {
+                DebugLogger.LogStep("OnPrintProFormaButton", "ViewModel found, printing pro forma receipt");
+                DebugLogger.LogStep("OnPrintProFormaButton", $"ViewModel BillingId: {vm.BillingId}");
+                DebugLogger.LogStep("OnPrintProFormaButton", $"ViewModel TotalDue: {vm.TotalDue}");
+                try
+                {
+                    await vm.PrintProFormaReceiptAsync();
+                    DebugLogger.LogStep("OnPrintProFormaButton", "Pro forma receipt printed successfully");
+                }
+                catch (Exception printEx)
+                {
+                    DebugLogger.LogException("OnPrintProFormaButton.PrintProFormaReceiptAsync", printEx);
+                    DebugLogger.LogStep("OnPrintProFormaButton", $"PrintProFormaReceiptAsync failed: {printEx.Message}");
+                    // Show error dialog to user
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "Print Error",
+                        Content = $"Failed to print receipt: {printEx.Message}",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    };
+                    await errorDialog.ShowAsync();
+                }
+                DebugLogger.LogMethodExit("OnPrintProFormaButton", "Success");
+            }
+            else
+            {
+                DebugLogger.LogStep("OnPrintProFormaButton", "ERROR: DataContext is not PaymentViewModel");
+                DebugLogger.LogMethodExit("OnPrintProFormaButton", "Failed - No ViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            DebugLogger.LogException("OnPrintProFormaButton", ex);
+            // Show error dialog to user
+            var errorDialog = new ContentDialog
+            {
+                Title = "Print Error",
+                Content = $"Failed to print receipt: {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await errorDialog.ShowAsync();
+        }
+    }
+
+        private async void OnExportReceiptPdf(object sender, RoutedEventArgs e)
+        {
+            DebugLogger.LogMethodEntry("OnExportReceiptPdf");
+            try
+            {
+                if (DataContext is PaymentViewModel vm)
+                {
+                    DebugLogger.LogStep("OnExportReceiptPdf", "ViewModel found, exporting receipt as PDF");
+                    var filePath = await vm.ExportReceiptAsPdfAsync();
+                    if (!string.IsNullOrEmpty(filePath))
+                    {
+                        DebugLogger.LogStep("OnExportReceiptPdf", $"Receipt exported to: {filePath}");
+                        
+                        // Show success message
+                        var successDialog = new ContentDialog
+                        {
+                            Title = "Receipt Exported",
+                            Content = $"Receipt has been exported to:\n{filePath}",
+                            CloseButtonText = "OK",
+                            XamlRoot = this.XamlRoot
+                        };
+                        await successDialog.ShowAsync();
+                    }
+                    else
+                    {
+                        DebugLogger.LogStep("OnExportReceiptPdf", "PDF export cancelled by user");
+                    }
+                    DebugLogger.LogMethodExit("OnExportReceiptPdf", "Success");
+                }
+                else
+                {
+                    DebugLogger.LogStep("OnExportReceiptPdf", "ERROR: DataContext is not PaymentViewModel");
+                    DebugLogger.LogMethodExit("OnExportReceiptPdf", "Failed - No ViewModel");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogException("OnExportReceiptPdf", ex);
+                
+                // Show error message
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Export Error",
+                    Content = $"Failed to export receipt: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+
+        /// <summary>
+        /// Handles quick tip button clicks (10%, 15%, 20%)
+        /// Calculates tip amount based on percentage of bill total
+        /// </summary>
+        private void OnQuickTip(object sender, RoutedEventArgs e)
+        {
+            DebugLogger.LogMethodEntry("OnQuickTip");
+            try
+            {
+                if (sender is Button button && button.Tag is string percentageStr && 
+                    DataContext is PaymentViewModel vm)
+                {
+                    // Parse percentage from button tag
+                    if (double.TryParse(percentageStr, out double percentage))
+                    {
+                        // Calculate tip amount based on bill total
+                        double tipAmount = (double)(vm.TotalDue * (decimal)percentage) / 100.0;
+                        
+                        // Set the tip amount in the ViewModel
+                        vm.Tip = tipAmount;
+                        
+                        DebugLogger.LogStep("OnQuickTip", $"Set tip to {percentage}% = ${tipAmount:F2}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogException("OnQuickTip", ex);
+            }
+        }
+
+        /// <summary>
+        /// Handles custom tip button click
+        /// Focuses the tip input field for manual entry
+        /// </summary>
+        private void OnCustomTip(object sender, RoutedEventArgs e)
+        {
+            DebugLogger.LogMethodEntry("OnCustomTip");
+            try
+            {
+                // Find the tip NumberBox and focus it
+                var tipBox = FindName("TipNumberBox") as NumberBox;
+                if (tipBox != null)
+                {
+                    tipBox.Focus(FocusState.Programmatic);
+                }
+                else
+                {
+                    // If we can't find the specific NumberBox, just log that custom tip was clicked
+                    DebugLogger.LogStep("OnCustomTip", "Custom tip button clicked - user can enter amount manually");
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogException("OnCustomTip", ex);
             }
         }
     }

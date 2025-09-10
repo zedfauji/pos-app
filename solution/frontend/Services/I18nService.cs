@@ -134,14 +134,34 @@ namespace MagiDesk.Frontend.Services
             // Load saved language
             try
             {
-                var settings = ApplicationData.Current.LocalSettings;
-                var saved = settings.Values[LangKey]?.ToString();
-                if (Enum.TryParse(saved, out AppLanguage lang))
-                    Current = lang;
+                // Check if ApplicationData is available (WinUI 3 initialization check)
+                if (ApplicationData.Current != null)
+                {
+                    var settings = ApplicationData.Current.LocalSettings;
+                    if (settings?.Values != null)
+                    {
+                        var saved = settings.Values[LangKey]?.ToString();
+                        if (Enum.TryParse(saved, out AppLanguage lang))
+                            Current = lang;
+                        else
+                            Current = AppLanguage.Eng;
+                    }
+                    else
+                    {
+                        Current = AppLanguage.Eng;
+                    }
+                }
                 else
+                {
                     Current = AppLanguage.Eng;
+                }
             }
-            catch { Current = AppLanguage.Eng; }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                System.Diagnostics.Debug.WriteLine($"I18nService initialization error: {ex.Message}");
+                Current = AppLanguage.Eng;
+            }
         }
 
         public event EventHandler? LanguageChanged;
@@ -156,9 +176,17 @@ namespace MagiDesk.Frontend.Services
                 _current = value;
                 try
                 {
-                    ApplicationData.Current.LocalSettings.Values[LangKey] = _current.ToString();
+                    // Check if ApplicationData is available before saving
+                    if (ApplicationData.Current?.LocalSettings?.Values != null)
+                    {
+                        ApplicationData.Current.LocalSettings.Values[LangKey] = _current.ToString();
+                    }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // Log the exception for debugging
+                    System.Diagnostics.Debug.WriteLine($"I18nService save error: {ex.Message}");
+                }
                 LanguageChanged?.Invoke(this, EventArgs.Empty);
             }
         }

@@ -1,0 +1,472 @@
+In WinUI 3, print preview is enabled by interacting with the Windows printing API, which includes the PrintManager and PrintDocument classes. The overall process involves handling events from the print dialog to generate and display the print pages for the user to review. 
+The official Microsoft Learn documentation provides the definitive guide for adding printing to your Windows App SDK/WinUI 3 application. 
+Overview of the print preview process
+The standard printing workflow for a WinUI 3 desktop application is as follows:
+Invoke the print UI: When a user clicks a "Print" button in your app, you use the PrintManagerInterop.ShowPrintUIForWindowAsync method to display the built-in Windows print dialog.
+Register for printing events: You must register a PrintTaskRequested event handler. This handler is called when the user confirms their print request from the dialog. You will create a PrintTask object within this handler.
+Generate print pages: After the PrintTask is created, the system begins requesting the pages to display in the preview. This is managed by the PrintDocument object, which raises the Paginate and GetPreviewPage events.
+Paginate event: Fired by the system to request the entire set of pages for the print job. Your handler should generate the list of UIElements that represent each printed page.
+GetPreviewPage event: Fired for each page to display in the print preview window. Your handler provides the specific UIElement for the requested page.
+Format the content: Within the Paginate event handler, you take the content you want to print and lay it out on pages sized for the printer. This typically involves using a Grid or other layout control to format the XAML content to fit the printable area.
+Render the final document: Once the user clicks "Print," the PrintTask uses the content you provided to send the print job to the selected printer. 
+Key concepts for implementation
+Interop for desktop apps
+In a WinUI 3 desktop application, you must use the PrintManagerInterop class to interact with the printing APIs because you are working with an Hwnd (window handle), not a UWP-style CoreWindow. The GetForWindow and ShowPrintUIForWindowAsync methods bridge your app to the underlying Windows printing functionality. 
+Customizing the preview UI
+The default Windows print dialog includes standard options for copies, orientation, and color mode. You can customize the options displayed in the preview UI by modifying the DisplayedOptions list within the PrintTaskRequested event handler. 
+Code example (C#)
+The following simplified C# example shows the core steps for generating and displaying a print preview for an image and text.
+csharp
+// XAML markup for the print button
+<Button Content="Print" Click="InvokePrintingButton_Click"/>
+Use code with caution.
+
+csharp
+// C# code-behind for the print logic
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Windows.Graphics.Printing;
+using Windows.Graphics.Printing.PrintSupport; // Required for interop
+using Microsoft.UI.Xaml.Printing;
+
+// Your MainWindow class
+public sealed partial class MainWindow : Window
+{
+    private PrintManager printManager;
+    private PrintDocument printDocument;
+    private IPrintDocumentSource printDocumentSource;
+    private List<UIElement> printPages = new List<UIElement>();
+
+    public MainWindow()
+    {
+        this.InitializeComponent();
+    }
+
+    private async void InvokePrintingButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Get the window handle for interop
+        var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+        // Register for printing
+        printManager = PrintManagerInterop.GetForWindow(windowHandle);
+        printManager.PrintTaskRequested += PrintManager_PrintTaskRequested;
+
+        // Display the print UI
+        if (PrintManager.IsSupported())
+        {
+            await PrintManagerInterop.ShowPrintUIForWindowAsync(windowHandle);
+        }
+    }
+
+    private void PrintManager_PrintTaskRequested(PrintManager sender, PrintTaskRequestedEventArgs args)
+    {
+        var printTask = args.Request.CreatePrintTask("My App Print Job", PrintTask_SourceRequested);
+
+        // Optional: Customize print options
+        // printTask.Options.DisplayedOptions.Add(StandardPrintTaskOptions.PrintQuality);
+    }
+
+    private void PrintTask_SourceRequested(PrintTaskSourceRequestedArgs args)
+    {
+        // Create the PrintDocument and register for events
+        printDocument = new PrintDocument();
+        printDocumentSource = printDocument.DocumentSource;
+
+        printDocument.Paginate += PrintDocument_Paginate;
+        printDocument.GetPreviewPage += PrintDocument_GetPreviewPage;
+        printDocument.AddPages += PrintDocument_AddPages;
+
+        args.SetSource(printDocumentSource);
+    }
+
+    private void PrintDocument_Paginate(object sender, PaginateEventArgs e)
+    {
+        printPages.Clear();
+
+        // Get the page description from the print ticket
+        var pageDescription = e.PrintTaskOptions.GetPageDescription(0);
+
+        // Create the XAML content for the page
+        var pageContent = new Grid
+        {
+            Width = pageDescription.PageSize.Width,
+            Height = pageDescription.PageSize.Height
+        };
+        // Add your content (e.g., image, text) to the Grid
+        pageContent.Children.Add(new TextBlock { Text = "Hello, Printer!", FontSize = 24 });
+        printPages.Add(pageContent);
+
+        // Notify the system that pagination is complete
+        printDocument.SetPreviewPageCount(printPages.Count, PreviewPageCountType.Intermediate);
+    }
+
+    private void PrintDocument_GetPreviewPage(object sender, GetPreviewPageEventArgs e)
+    {
+        printDocument.SetPreviewPage(e.PageNumber, printPages[e.PageNumber - 1]);
+    }
+
+    private void PrintDocument_AddPages(object sender, AddPagesEventArgs e)
+    {
+        foreach (var page in printPages)
+        {
+            printDocument.AddPage(page);
+        }
+
+        printDocument.AddPagesComplete();
+    }
+}
+Use code with caution.
+
+AI responses may include mistakes. Learn more
+
+
+
+
+undefined
+7 sites
+Print from your app - Windows apps | Microsoft Learn
+Sep 11, 2024 — After the print task is created, the PrintManager requests a collection of print pages to show in the print preview UI by raising the Paginate event. (This corr...
+favicon
+Microsoft Learn
+
+Customize the print preview UI - Windows apps - Microsoft Learn
+Sep 11, 2024 — Define the options to display. When you register your app for printing (see Print from your app), part of that registration includes defining the PrintTaskReque...
+favicon
+Microsoft Learn
+WinUI3: How to print framework element using cpp
+Dec 24, 2024 — IPrintManagerInterop::GetForWindow is called, to get an instance of Windows. Graphics. Printing. PrintManager, and we place it in the C++/WinRT projection type ...
+favicon
+Microsoft Learn
+Show all
+Generate me a documentation about Printing and Print preview for Win UI 3 Apps , so that i can train my model
+For your model training purposes, here is a comprehensive, structured documentation of printing and print preview in WinUI 3 applications. It covers the key concepts, the implementation process for desktop applications, and a detailed breakdown of the associated APIs.
+WinUI 3 printing and print preview: Developer's guide
+1. Overview of the WinUI 3 printing model
+Printing in a WinUI 3 application is an event-driven process orchestrated by the Windows printing API. Unlike a traditional "print-and-forget" model, the system works with your application to prepare, render, and display the document for the user before the print job is sent to the printer. The core components are:
+PrintManager: Manages the overall printing experience and displays the standard Windows print UI.
+PrintDocument: The object that your app uses to provide the document content. It exposes events for paginating and rendering your XAML content for the print preview and final output.
+Interoperability (PrintManagerInterop): A key feature for WinUI 3 desktop apps, which must use a window handle (Hwnd) to interact with the printing APIs.
+2. The printing workflow
+The process of handling a print request and displaying the print preview follows this sequence:
+User action: The user initiates a print job, typically by clicking a "Print" button.
+Invoke print UI: Your app calls the ShowPrintUIForWindowAsync method to display the built-in Windows print dialog.
+PrintTaskRequested: The system raises this PrintManager event when the user confirms their intent to print from the dialog. Your app must create a PrintTask within the handler.
+Paginate: The PrintDocument raises this event to request the total number of pages and their content. Your handler must perform the following:
+Determine the printable page size and margins.
+Lay out your content on virtual pages (UIElement objects).
+Update the PrintDocument with the total page count.
+GetPreviewPage: Fired for each page that the user views in the print preview window. Your app provides the specific UIElement for the requested page.
+AddPages: The final step, triggered when the user clicks "Print" in the dialog. Your app provides the full set of pages to the PrintDocument for printing.
+3. API reference
+Microsoft.UI.Xaml.Printing
+PrintDocument: The central class for preparing XAML content for printing. It exposes the key events for pagination and rendering.
+PaginateEventArgs: Provides information during the Paginate event, including the PrintTaskOptions that describe the current printer settings (e.g., page size).
+GetPreviewPageEventArgs: Contains the PageNumber requested by the print preview UI.
+AddPagesEventArgs: Used during the final page-generation phase before printing.
+Windows.Graphics.Printing
+PrintManager: Manages the overall print flow and provides the PrintTaskRequested event.
+PrintTaskRequestedEventArgs: The event payload for PrintTaskRequested. Contains the PrintTaskRequest object, which is used to create the print task.
+PrintTask: Represents a single print job. Allows for customization of print options, such as the displayed settings in the UI.
+PrintTaskOptionDetails: Provides access to the customizable options in the print dialog. Allows developers to add, remove, and modify the list of displayed options.
+Interop APIs for desktop apps
+PrintManagerInterop: A helper class required for desktop WinUI 3 applications.
+GetForWindow(Hwnd): Retrieves a PrintManager object associated with the specified window handle.
+ShowPrintUIForWindowAsync(Hwnd): Displays the print UI for the given window.
+4. Implementation details for C#
+This section details the code structure for a typical WinUI 3 print implementation.
+A. Initial setup
+Get window handle: Use WinRT.Interop.WindowNative.GetWindowHandle(this) to get the Hwnd for your Window instance.
+Register for printing: Get the PrintManager and subscribe to its PrintTaskRequested event.
+csharp
+var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+printManager = PrintManagerInterop.GetForWindow(windowHandle);
+printManager.PrintTaskRequested += PrintManager_PrintTaskRequested;
+Use code with caution.
+
+Create UI for printing: Add a button to your XAML to trigger the process.
+xml
+<Button Content="Print" Click="InvokePrintingButton_Click"/>
+Use code with caution.
+
+B. The printing flow events
+Button click:
+csharp
+private async void InvokePrintingButton_Click(object sender, RoutedEventArgs e)
+{
+    var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+    await PrintManagerInterop.ShowPrintUIForWindowAsync(windowHandle);
+}
+Use code with caution.
+
+PrintTaskRequested handler: This is where the PrintDocument and its events are set up.
+csharp
+private void PrintManager_PrintTaskRequested(PrintManager sender, PrintTaskRequestedEventArgs args)
+{
+    var deferral = args.Request.GetDeferral();
+    printDocument = new PrintDocument();
+    printDocumentSource = printDocument.DocumentSource;
+    printDocument.Paginate += PrintDocument_Paginate;
+    printDocument.GetPreviewPage += PrintDocument_GetPreviewPage;
+    printDocument.AddPages += PrintDocument_AddPages;
+
+    args.Request.CreatePrintTask("My App Print Job", printTaskSourceRequestedArgs =>
+    {
+        printTaskSourceRequestedArgs.SetSource(printDocumentSource);
+        // Optionally customize print options here.
+    });
+    deferral.Complete();
+}
+Use code with caution.
+
+Paginate handler: The core logic for content layout and pagination.
+csharp
+private void PrintDocument_Paginate(object sender, PaginateEventArgs e)
+{
+    printPages.Clear();
+    var printTicket = e.PrintTaskOptions;
+    var printPageDescription = printTicket.GetPageDescription(0);
+    // Create your XAML content for each page based on the printPageDescription.
+    // For example, create Grids with the correct dimensions.
+    // Add the created pages to the printPages list.
+    // ...
+
+    printDocument.SetPreviewPageCount(printPages.Count, PreviewPageCountType.Intermediate);
+}
+Use code with caution.
+
+GetPreviewPage handler: Supplies the specific page for preview.
+csharp
+private void PrintDocument_GetPreviewPage(object sender, GetPreviewPageEventArgs e)
+{
+    printDocument.SetPreviewPage(e.PageNumber, printPages[e.PageNumber - 1]);
+}
+Use code with caution.
+
+AddPages handler: Sends the pages to the printer.
+csharp
+private void PrintDocument_AddPages(object sender, AddPagesEventArgs e)
+{
+    foreach (var page in printPages)
+    {
+        printDocument.AddPage(page);
+    }
+    printDocument.AddPagesComplete();
+}
+
+here is a consolidated list of the key handlers, functions, and attributes from the Microsoft.UI.Xaml.Printing, Windows.Graphics.Printing, and interop namespaces.
+Key namespaces
+Microsoft.UI.Xaml.Printing: Contains the core PrintDocument class and related types for working with XAML content.
+Windows.Graphics.Printing: Contains the PrintManager, PrintTask, and options-related classes.
+Microsoft.UI.Xaml.Printing.PrintSupport: For desktop app interop.
+PrintManager (Windows.Graphics.Printing)
+Handlers	Description
+PrintTaskRequested(PrintManager sender, PrintTaskRequestedEventArgs args)	Raised when a print task is requested by the user, providing the entry point to create and configure the PrintTask.
+Functions	Description
+GetForCurrentView()	(UWP only) Gets the PrintManager for the current window.
+ShowPrintUIAsync()	(UWP only) Displays the print UI.
+PrintManagerInterop (Microsoft.UI.Xaml.Printing.PrintSupport)
+Functions	Description
+GetForWindow(Hwnd)	Gets the PrintManager object associated with the specified window handle. Crucial for WinUI 3 desktop apps.
+ShowPrintUIForWindowAsync(Hwnd)	Displays the print UI for the given window handle. Crucial for WinUI 3 desktop apps.
+PrintDocument (Microsoft.UI.Xaml.Printing)
+Handlers	Description
+Paginate(object sender, PaginateEventArgs e)	Raised by the system to prompt the app to create the content for each page of the print job.
+GetPreviewPage(object sender, GetPreviewPageEventArgs e)	Raised for each page that needs to be displayed in the print preview UI.
+AddPages(object sender, AddPagesEventArgs e)	Raised when the user finalizes the print job and the app should provide the final page content to the system.
+Functions	Description
+SetPreviewPageCount(int, PreviewPageCountType)	Sets the total number of pages to be displayed in the print preview.
+SetPreviewPage(int, UIElement)	Associates a specific UIElement with a given page number for the print preview.
+AddPage(UIElement)	Adds a final UIElement page to the print queue.
+AddPagesComplete()	Signals that all pages have been added and the print job can proceed.
+InvalidatePreview()	Causes the system to re-render the print preview, often used after updating options.
+Attributes	Description
+DocumentSource	Gets an IPrintDocumentSource object, which is used to set the source of the PrintTask.
+PrintTask (Windows.Graphics.Printing)
+Functions	Description
+CreatePrintTask(string, PrintTaskSourceRequestedHandler)	Creates a new print task with a title and a handler for requesting the print source.
+Attributes	Description
+IsPreviewEnabled	Boolean indicating whether print preview is enabled.
+Options	Gets the PrintTaskOptions object, which defines how the content is formatted.
+PrintTaskOptions (Windows.Graphics.Printing)
+Attributes	Description
+Binding	The binding option for the print task.
+Collation	The collation option for the print task.
+ColorMode	The color mode for the print task.
+Copies	The number of copies for the print task.
+Duplex	The duplex (two-sided) option for the print task.
+DisplayedOptions	A list of strings representing the options to be shown in the print UI.
+PrintTaskOptionDetails (Windows.Graphics.Printing.OptionDetails)
+Functions	Description
+GetFromPrintTaskOptions(PrintTaskOptions)	Gets an instance from a PrintTaskOptions object to access and modify advanced settings.
+CreateItemListOption(string, string)	Creates a custom list-based print option.
+PaginateEventArgs (Microsoft.UI.Xaml.Printing)
+Attributes	Description
+PrintTaskOptions	Provides access to the current print job settings, including the page size, margins, and orientation.
+PrintPageDescription	Provides a description of the printed page layout, including size.
+GetPreviewPageEventArgs (Microsoft.UI.Xaml.Printing)
+Attributes	Description
+PageNumber	The number of the page requested by the print preview UI.
+
+WinUI 3 Printing and Print Preview API Overview
+WinUI 3 (part of the Windows App SDK) uses the Microsoft.UI.Xaml.Printing namespace for printing functionality. This API is largely inherited from UWP but adapted for desktop apps. Key classes include PrintManager for orchestrating print flow, PrintTask for defining print jobs, PrintDocument for managing print content, and PrintPreviewManager (though less documented in WinUI 3 specifics; it handles preview sessions). Printing involves registering the app with PrintManager, handling events like PrintTaskRequested, and populating print content via PrintDocument.
+Print preview is integrated into the print flow, typically shown in the system print dialog. Customization occurs via StandardPrintTaskOptions for UI options (e.g., page range, orientation). For full implementation, use interop for non-UWP apps (e.g., PrintManagerInterop.GetForWindow).
+Below is a compiled list of key handlers (event handlers/delegates), functions (methods), documentation summaries, and attributes (metadata like [ContractVersion]) based on official Microsoft documentation. This is derived from the WinUI 3 and UWP printing APIs (WinUI 3 mirrors UWP for printing). Note: WinUI 3-specific docs are sparse; refer to Print from your app for examples.
+1. PrintManager Class
+
+Description: Manages the printing flow for the app. Obtain via GetForCurrentView() (UWP) or PrintManagerInterop.GetForWindow() (desktop). Registers the app for printing events.
+Properties:
+
+DefaultPrintTaskOptions: Gets the default options for print tasks (type: PrintTaskOptions). Used to customize preview UI (e.g., add/remove options like page range).
+
+
+Methods/Functions:
+
+GetForCurrentView(): Static method to get the PrintManager for the current view (async, returns PrintManager).
+ShowPrintUIAsync(): Static method to asynchronously show the print UI (returns IAsyncOperation<bool>).
+
+
+Events/Handlers:
+
+PrintTaskRequested: Event fired when print is initiated (args: PrintTaskRequestedEventArgs). Handler example: private void PrintTask_Requested(PrintManager sender, PrintTaskRequestedEventArgs args) { /* Create PrintTask */ }. Required for registering print tasks.
+
+
+Attributes:
+
+[Windows.Foundation.Metadata.ContractVersion(typeof(Microsoft.UI.Xaml.WinUIContract), 65536)]: Specifies API contract version.
+[Windows.Foundation.Metadata.MarshalingBehavior(Windows.Foundation.Metadata.MarshalingType.Agile)]: Enables agile marshaling for cross-thread access.
+[Windows.Foundation.Metadata.Threading(Windows.Foundation.Metadata.ThreadingModel.Both)]: Supports both single-threaded and multi-threaded apartments.
+
+
+Documentation Notes: Register on app activation and unregister on deactivation. Handles print flow orchestration; use for every window that supports printing.
+
+2. PrintTask Class
+
+Description: Represents a single print job. Created within the PrintTaskRequested handler. Defines title and source for the print content.
+Properties:
+
+Options: Gets the PrintTaskOptions for this task (read-only).
+Source: Gets/sets the IPrintDocumentSource (e.g., a PrintDocument instance).
+
+
+Methods/Functions:
+
+None primary; created via PrintTaskRequestedEventArgs.Request.CreatePrintTask(title, sourceRequestedHandler).
+
+
+Events/Handlers:
+
+Completed: Event fired when the print job finishes (args: PrintTaskCompletedEventArgs). Handler: printTask.Completed += OnPrintTaskCompleted;. Use to handle success/failure (e.g., show completion UI).
+Progressing: Event for print progress updates (args: PrintTaskProgressingEventArgs). Handler: printTask.Progressing += OnPrintTaskProgressing;. Reports completion percentage.
+SourceRequested: Delegate invoked to provide print content (args: PrintTaskSourceRequestedDeferral). Handler example: private void PrintTaskSourceRequested(PrintTaskSourceRequestedDeferral args) { args.SetSource(printDocument); }.
+
+
+Attributes:
+
+Inherits DependencyObject attributes: [ContractVersion(WinUIContract, 65536)], [MarshalingBehavior(Agile)], [Threading(Both)].
+
+
+Documentation Notes: Always handle Completed for error catching. Progressing is optional but useful for long jobs.
+
+3. PrintDocument Class
+
+Description: Reusable object for sending output to a printer. Implements a "print list" where pages are added dynamically. Set as the source for PrintTask.
+Properties:
+
+DocumentPaginator: Gets the paginator for the document (type: IPrintDocumentPaginatorSource).
+
+
+Methods/Functions:
+
+AddPage(pageVisual): Adds a UI element (e.g., FrameworkElement) as a page to the print list (params: UIElement pageVisual).
+AddPages(pages): Adds multiple pages at once.
+SetPage(pageNumber, pageVisual): Replaces a specific page.
+RemovePage(pageNumber): Removes a page from the list.
+GetPageCount(): Returns the number of pages (int).
+
+
+Events/Handlers:
+
+Paginate: Event fired to determine page count (args: PaginateEventArgs). Handler: printDocument.Paginate += OnPaginate;. Call args.SetPageCount(totalPages); and complete deferral.
+GetPreviewPage: Event for generating preview pages (args: GetPreviewPageEventArgs). Handler: printDocument.GetPreviewPage += OnGetPreviewPage;. Provides visuals for preview UI.
+GetPrintPage: Event for actual print pages (args: GetPrintPageEventArgs). Handler: printDocument.GetPrintPage += OnGetPrintPage;. Similar to preview but for printing.
+
+
+Attributes:
+
+[ContractVersion(Microsoft.UI.Xaml.WinUIContract, 65536)]
+[MarshalingBehavior(Agile)]
+[Threading(Both)]
+Inherits from DependencyObject.
+
+
+Documentation Notes: Use for multi-page documents; events allow dynamic content (e.g., based on print options). Implement paginator for complex layouts.
+
+4. PrintPreviewManager Class
+
+Description: Manages print preview sessions. Less commonly used directly; preview is typically handled via the system dialog triggered by PrintManager.ShowPrintUIAsync(). Integrates with PrintDocument events like GetPreviewPage.
+Properties:
+
+PreviewScale: Gets/sets the scale for preview rendering (double).
+PreviewPageCount: Gets the number of preview pages (int).
+
+
+Methods/Functions:
+
+SetPreviewDocumentSource(source): Sets the document source for preview (params: IPrintDocumentSource).
+InvalidatePreview(): Refreshes the preview (void).
+
+
+Events/Handlers:
+
+PreviewCompleted: Event when preview generation finishes (args: PreviewCompletedEventArgs). Handler for post-preview actions.
+No standard handlers for page events; relies on PrintDocument events.
+
+
+Attributes:
+
+Similar to other classes: [ContractVersion(WinUIContract, 65536)], [MarshalingBehavior(Agile)], [Threading(Both)].
+
+
+Documentation Notes: Preview is part of the print flow; customize via StandardPrintTaskOptions (e.g., modify DisplayedOptions to reorder UI elements like orientation). For advanced preview, handle GetPreviewPage in PrintDocument. Use PrintTaskOptions to control preview settings.
+
+5. Supporting Classes and Helpers
+
+PrintTaskRequestedEventArgs:
+
+Properties: Request (gets IPrintTaskRequest for creating tasks).
+Methods: None primary.
+Handlers: Use in PrintTaskRequested event.
+Attributes: Standard WinUI metadata.
+Docs: Central to initiating print tasks.
+
+
+PrintTaskOptions / StandardPrintTaskOptions:
+
+Properties: DisplayedOptions (IList<iprinttaskoptiondetails> for customizing preview UI).</iprinttaskoptiondetails>
+Methods: GetOptions(key) (gets specific option like "winui:pageRange").
+Handlers: None; modify in PrintTaskRequested handler (e.g., options.DisplayedOptions.InsertAt(0, pageRangeOption);).
+Attributes: Standard.
+Docs: Customize print preview UI by adding/removing options (e.g., copies, orientation). User can access full settings via "More settings".
+
+
+PrintTaskCompletedEventArgs:
+
+Properties: Completion (PrintTaskCompletion enum: Succeeded, Failed, Canceled, Abandoned).
+Handlers: Accessed in PrintTask.Completed event.
+Docs: Check for failures post-print.
+
+
+CommunityToolkit.WinUI.Helpers.PrintHelper (Optional Extension):
+
+Description: Simplifies printing FrameworkElements as pages.
+Methods: ShowPrintUIAsync(), PrintAsync(element, pagesPerSide).
+Docs: Based on UWP samples; useful for quick implementation.
+
+
+
+General Usage Notes
+
+Registration: In app startup: PrintManager printManager = PrintManager.GetForCurrentView(); printManager.PrintTaskRequested += PrintTask_Requested;. Unregister on shutdown.
+Preview Flow: Triggered by system UI; populate via PrintDocument events. No separate "preview only" API—preview is embedded in print dialog.
+Attributes Summary: All classes use WinUIContract v1 (65536) for versioning, Agile marshaling for performance, and Both threading for flexibility.
+Limitations in WinUI 3: Printing is desktop-optimized but requires Windows App SDK. For raw Win32 printing, use GDI/XPS interop, but stick to XAML for UI elements.

@@ -192,7 +192,7 @@ namespace MagiDesk.Frontend.Views
                         case "SettingsPage":
 #if XAML_ONLY_MAIN
 #else
-                            ContentFrame.Navigate(typeof(SettingsPage));
+                            ContentFrame.Navigate(typeof(ReceiptSettingsPage));
 #endif
                             break;
                         case "UsersPage":

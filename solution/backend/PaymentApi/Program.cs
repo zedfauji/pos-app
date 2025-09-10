@@ -27,6 +27,7 @@ builder.Services.AddHostedService<PaymentApi.Services.DatabaseInitializer>();
 
 builder.Services.AddScoped<PaymentApi.Repositories.IPaymentRepository, PaymentApi.Repositories.PaymentRepository>();
 builder.Services.AddScoped<PaymentApi.Services.IPaymentService, PaymentApi.Services.PaymentService>();
+builder.Services.AddScoped<PaymentApi.Services.ImmutableIdService>();
 
 var app = builder.Build();
 
