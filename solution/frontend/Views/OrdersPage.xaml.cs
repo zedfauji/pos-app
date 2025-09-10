@@ -117,7 +117,8 @@ namespace MagiDesk.Frontend.Views
                     // Navigate to receipt preview
                     var frame = this.Parent as Frame;
                     frame ??= App.MainWindow?.Content as Frame;
-                    frame ??= Window.Current?.Content as Frame;
+                    // CRITICAL FIX: Remove Window.Current fallback to prevent race conditions
+                    // Window.Current can be null during navigation, causing race conditions
                     frame ??= new Frame();
                     var receipt = new ReceiptData
                     {

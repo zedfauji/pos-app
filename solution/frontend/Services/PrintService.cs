@@ -22,38 +22,51 @@ namespace MagiDesk.Frontend.Services
                 RenderTargetBitmap? rtb = null;
                 var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
                 
-                if (dispatcherQueue != null)
+                // CRITICAL FIX: Always ensure we have a DispatcherQueue for COM interop calls
+                if (dispatcherQueue == null)
                 {
-                    // Use DispatcherQueue to ensure we're on the UI thread
-                    var tcs = new TaskCompletionSource<RenderTargetBitmap?>();
-                    dispatcherQueue.TryEnqueue(async () =>
+                    throw new InvalidOperationException("No DispatcherQueue available. RenderTargetBitmap.RenderAsync() requires UI thread context.");
+                }
+                
+                // Use DispatcherQueue to ensure we're on the UI thread
+                var tcs = new TaskCompletionSource<RenderTargetBitmap?>();
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
                     {
-                        try
-                        {
-                            rtb = new RenderTargetBitmap();
-                            await rtb.RenderAsync(element);
-                            tcs.SetResult(rtb);
-                        }
-                        catch (Exception ex)
-                        {
-                            tcs.SetException(ex);
-                        }
-                    });
-                    
-                    rtb = await tcs.Task;
-                }
-                else
-                {
-                    // Fallback: try direct call (might fail if not on UI thread)
-                    rtb = new RenderTargetBitmap();
-                    await rtb.RenderAsync(element);
-                }
+                        rtb = new RenderTargetBitmap();
+                        await rtb.RenderAsync(element);
+                        tcs.SetResult(rtb);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetException(ex);
+                    }
+                });
+                
+                rtb = await tcs.Task;
                 
                 if (rtb == null) return false;
                 
                 var buffer = await rtb.GetPixelsAsync();
                 var bytes = new byte[buffer.Length];
-                Windows.Storage.Streams.DataReader.FromBuffer(buffer).ReadBytes(bytes);
+                
+                // CRITICAL FIX: Ensure DataReader.FromBuffer() is called from UI thread
+                // This is a Windows Runtime COM call that requires UI thread context
+                var dataReaderTcs = new TaskCompletionSource<bool>();
+                dispatcherQueue.TryEnqueue(() =>
+                {
+                    try
+                    {
+                        Windows.Storage.Streams.DataReader.FromBuffer(buffer).ReadBytes(bytes);
+                        dataReaderTcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        dataReaderTcs.SetException(ex);
+                    }
+                });
+                await dataReaderTcs.Task;
                 int width = rtb.PixelWidth;
                 int height = rtb.PixelHeight;
                 if (width <= 0 || height <= 0) return false;
