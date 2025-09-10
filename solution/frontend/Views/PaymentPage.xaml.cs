@@ -57,6 +57,22 @@ public sealed partial class PaymentPage : Page
                         var paymentDialog = new PaymentDialog();
                         DebugLogger.LogStep("ProcessPayment_Click", "PaymentDialog created, setting XamlRoot");
                         paymentDialog.XamlRoot = this.XamlRoot;
+                        
+                        // Initialize printing for the payment dialog
+                        if (paymentDialog.DataContext is PaymentViewModel paymentVm)
+                        {
+                            var mainWindow = Window.Current;
+                            if (mainWindow?.Content is MainPage mainPage)
+                            {
+                                var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
+                                if (printingPanel != null)
+                                {
+                                    paymentVm.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                                    DebugLogger.LogStep("ProcessPayment_Click", "Printing initialized for PaymentDialog");
+                                }
+                            }
+                        }
+                        
                         DebugLogger.LogStep("ProcessPayment_Click", "XamlRoot set, calling SetBillData");
                         paymentDialog.SetBillData(bill);
                         DebugLogger.LogStep("ProcessPayment_Click", "SetBillData completed");

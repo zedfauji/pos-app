@@ -104,6 +104,17 @@ namespace MagiDesk.Frontend.Views
                 var dlg = new Dialogs.PaymentDialog();
                 if (dlg.DataContext is ViewModels.PaymentViewModel pvm)
                 {
+                    // Initialize printing for the payment dialog
+                    var mainWindow = Window.Current;
+                    if (mainWindow?.Content is MainPage mainPage)
+                    {
+                        var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
+                        if (printingPanel != null)
+                        {
+                            pvm.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                        }
+                    }
+                    
                     if (!string.IsNullOrWhiteSpace(billingId) && !string.IsNullOrWhiteSpace(sessionId))
                     {
                         pvm.Initialize(billingId!, sessionId!, totalDue, Vm.Items);

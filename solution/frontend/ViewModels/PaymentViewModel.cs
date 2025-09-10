@@ -97,6 +97,28 @@ namespace MagiDesk.Frontend.ViewModels
         _configuration = configuration ?? new ConfigurationBuilder().Build();
     }
 
+    /// <summary>
+    /// Initialize the ReceiptService with printing panel
+    /// </summary>
+    public void InitializePrinting(Microsoft.UI.Xaml.Controls.Panel printingPanel, Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
+    {
+        _logger.LogInformation("InitializePrinting: Starting initialization");
+        System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: Starting initialization");
+        
+        try
+        {
+            _receiptService.Initialize(printingPanel, dispatcherQueue);
+            _logger.LogInformation("InitializePrinting: ReceiptService initialized successfully");
+            System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: ReceiptService initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "InitializePrinting: Failed to initialize ReceiptService");
+            System.Diagnostics.Debug.WriteLine($"PaymentViewModel.InitializePrinting: Exception - {ex.Message}");
+            throw;
+        }
+    }
+
         public void Initialize(string billingId, string sessionId, decimal totalDue, IEnumerable<OrderItemLineVm>? items = null)
         {
             BillingId = billingId;

@@ -30,12 +30,26 @@ namespace MagiDesk.Frontend.Dialogs
                     // _ = receiptService.InitializeAsync(parentWindow);
                 }
                 
-                this.DataContext = new PaymentViewModel(
+                var paymentViewModel = new PaymentViewModel(
                     App.Payments ?? throw new InvalidOperationException("PaymentApiService not initialized"),
                     receiptService,
                     App.Services?.GetRequiredService<ILogger<PaymentViewModel>>(),
                     App.Services?.GetRequiredService<IConfiguration>()
                 );
+                
+                // Initialize printing for the payment dialog
+                var mainWindow = Window.Current;
+                if (mainWindow?.Content is MainPage mainPage)
+                {
+                    var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
+                    if (printingPanel != null)
+                    {
+                        paymentViewModel.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                        DebugLogger.LogStep("PaymentDialog", "Printing initialized for PaymentDialog");
+                    }
+                }
+                
+                this.DataContext = paymentViewModel;
                 DebugLogger.LogStep("DataContext", "PaymentViewModel created and assigned");
                 
                 this.Loaded += PaymentDialog_Loaded;
