@@ -43,7 +43,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.2.0" />
+        <PackageReference Include="CommunityToolkit.WinUI.Helpers" Version="8.2.250402" />
         <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3405.78" />

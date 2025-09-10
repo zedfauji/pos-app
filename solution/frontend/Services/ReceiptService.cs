@@ -49,10 +49,10 @@ public sealed class ReceiptService : IDisposable
     /// <summary>
     /// Initialize the print service with required UI components
     /// </summary>
-    public void Initialize(Panel printingPanel, DispatcherQueue dispatcherQueue, Window? window = null)
+    public async Task InitializeAsync(Panel printingPanel, DispatcherQueue dispatcherQueue, Window? window = null)
     {
-        _logger.LogInformation("ReceiptService.Initialize: Starting initialization");
-        System.Diagnostics.Debug.WriteLine("ReceiptService.Initialize: Starting initialization");
+        _logger.LogInformation("ReceiptService.InitializeAsync: Starting initialization");
+        System.Diagnostics.Debug.WriteLine("ReceiptService.InitializeAsync: Starting initialization");
         
         try
         {
@@ -60,13 +60,16 @@ public sealed class ReceiptService : IDisposable
             _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
             _printService = new ReceiptPrintService(_printingPanel, _dispatcherQueue, window);
             
-            _logger.LogInformation("ReceiptService.Initialize: Initialization completed successfully");
-            System.Diagnostics.Debug.WriteLine("ReceiptService.Initialize: Initialization completed successfully");
+            // CRITICAL: Initialize the printing system asynchronously
+            await _printService.InitializeAsync();
+            
+            _logger.LogInformation("ReceiptService.InitializeAsync: Initialization completed successfully");
+            System.Diagnostics.Debug.WriteLine("ReceiptService.InitializeAsync: Initialization completed successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ReceiptService.Initialize: Failed to initialize");
-            System.Diagnostics.Debug.WriteLine($"ReceiptService.Initialize: Exception - {ex.Message}");
+            _logger.LogError(ex, "ReceiptService.InitializeAsync: Failed to initialize");
+            System.Diagnostics.Debug.WriteLine($"ReceiptService.InitializeAsync: Exception - {ex.Message}");
             throw;
         }
     }
@@ -136,7 +139,7 @@ public sealed class ReceiptService : IDisposable
 
             if (_printService == null)
             {
-                _logger.LogError("PrintService not initialized. Call Initialize() first.");
+                _logger.LogError("PrintService not initialized. Call InitializeAsync() first.");
                 System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: PrintService not initialized");
                 System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printService is null");
                 System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printingPanel is {(_printingPanel != null ? "not null" : "null")}");
@@ -156,7 +159,7 @@ public sealed class ReceiptService : IDisposable
                             var dispatcherQueue = mainWindow.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
                             if (dispatcherQueue != null)
                             {
-                                Initialize(printingPanel, dispatcherQueue, mainWindow);
+                                await InitializeAsync(printingPanel, dispatcherQueue, mainWindow);
                                 _logger.LogInformation("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
                                 System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
                             }
@@ -252,7 +255,7 @@ public sealed class ReceiptService : IDisposable
         {
             if (_printService == null)
             {
-                _logger.LogError("PrintService not initialized. Call Initialize() first.");
+                _logger.LogError("PrintService not initialized. Call InitializeAsync() first.");
                 return null;
             }
 
@@ -295,7 +298,7 @@ public sealed class ReceiptService : IDisposable
     {
         if (_printService == null)
         {
-            throw new InvalidOperationException("PrintService not initialized. Call Initialize() first.");
+            throw new InvalidOperationException("PrintService not initialized. Call InitializeAsync() first.");
         }
 
         // Create a test receipt for printing

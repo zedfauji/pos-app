@@ -100,14 +100,14 @@ namespace MagiDesk.Frontend.ViewModels
     /// <summary>
     /// Initialize the ReceiptService with printing panel
     /// </summary>
-    public void InitializePrinting(Microsoft.UI.Xaml.Controls.Panel printingPanel, Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
+    public async Task InitializePrinting(Microsoft.UI.Xaml.Controls.Panel printingPanel, Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
     {
         _logger.LogInformation("InitializePrinting: Starting initialization");
         System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: Starting initialization");
         
         try
         {
-            _receiptService.Initialize(printingPanel, dispatcherQueue);
+            await _receiptService.InitializeAsync(printingPanel, dispatcherQueue);
             _logger.LogInformation("InitializePrinting: ReceiptService initialized successfully");
             System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: ReceiptService initialized successfully");
         }

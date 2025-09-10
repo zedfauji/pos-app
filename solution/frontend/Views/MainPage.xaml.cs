@@ -14,8 +14,19 @@ namespace MagiDesk.Frontend.Views
         {
             this.InitializeComponent();
             
-            // Initialize ReceiptService IMMEDIATELY after InitializeComponent
+            // CRITICAL: Initialize ReceiptService asynchronously after InitializeComponent
             // This ensures it's ready before any other pages can create PaymentDialog
+            _ = InitializeReceiptServiceAsync();
+            
+            Loaded += MainPage_Loaded;
+            NavView.BackRequested += NavView_BackRequested;
+            ContentFrame.Navigated += ContentFrame_Navigated;
+            _ = StartBackendMonitorAsync();
+            App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
+        }
+
+        private async Task InitializeReceiptServiceAsync()
+        {
             try
             {
                 if (App.ReceiptService != null)
@@ -36,30 +47,29 @@ namespace MagiDesk.Frontend.Views
                         
                         if (dispatcherQueue != null)
                         {
-                            App.ReceiptService.Initialize(printingPanel, dispatcherQueue, window);
-                            Log.Info("ReceiptService initialized IMMEDIATELY in MainPage constructor");
+                            // CRITICAL: Use async initialization
+                            await App.ReceiptService.InitializeAsync(printingPanel, dispatcherQueue, window);
+                            Log.Info("ReceiptService initialized asynchronously in MainPage");
                         }
                         else
                         {
-                            Log.Error("DispatcherQueue not available in MainPage constructor");
+                            Log.Error("DispatcherQueue not available in MainPage");
                         }
                     }
                     else
                     {
-                        Log.Error("PrintingContainer not found in MainPage constructor");
+                        Log.Error("PrintingContainer not found in MainPage");
                     }
+                }
+                else
+                {
+                    Log.Error("App.ReceiptService is null in MainPage");
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"Failed to initialize ReceiptService in constructor: {ex.Message}");
+                Log.Error($"Failed to initialize ReceiptService in MainPage: {ex.Message}");
             }
-            
-            Loaded += MainPage_Loaded;
-            NavView.BackRequested += NavView_BackRequested;
-            ContentFrame.Navigated += ContentFrame_Navigated;
-            _ = StartBackendMonitorAsync();
-            App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
         }
 
         private void MainPage_Loaded(object sender, RoutedEventArgs e)
