@@ -24,6 +24,28 @@ namespace MagiDesk.Frontend.Views
         {
             try
             {
+                // Initialize global ReceiptService with printing panel
+                if (App.ReceiptService != null)
+                {
+                    try
+                    {
+                        var printingPanel = this.FindName("PrintingContainer") as Panel;
+                        if (printingPanel != null)
+                        {
+                            App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                            Log.Info("ReceiptService initialized with printing panel");
+                        }
+                        else
+                        {
+                            Log.Error("PrintingContainer not found in MainPage");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"Failed to initialize ReceiptService: {ex.Message}");
+                    }
+                }
+
                 // Initial connectivity check
                 _ = CheckBackendAsync();
                 // Apply language to UI

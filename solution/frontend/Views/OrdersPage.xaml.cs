@@ -104,16 +104,7 @@ namespace MagiDesk.Frontend.Views
                 var dlg = new Dialogs.PaymentDialog();
                 if (dlg.DataContext is ViewModels.PaymentViewModel pvm)
                 {
-                    // Initialize printing for the payment dialog
-                    var mainWindow = Window.Current;
-                    if (mainWindow?.Content is MainPage mainPage)
-                    {
-                        var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
-                        if (printingPanel != null)
-                        {
-                            pvm.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-                        }
-                    }
+                    // No need to initialize printing here - App.ReceiptService is already initialized globally
                     
                     if (!string.IsNullOrWhiteSpace(billingId) && !string.IsNullOrWhiteSpace(sessionId))
                     {

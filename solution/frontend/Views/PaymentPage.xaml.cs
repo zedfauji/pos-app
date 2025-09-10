@@ -61,16 +61,8 @@ public sealed partial class PaymentPage : Page
                         // Initialize printing for the payment dialog
                         if (paymentDialog.DataContext is PaymentViewModel paymentVm)
                         {
-                            var mainWindow = Window.Current;
-                            if (mainWindow?.Content is MainPage mainPage)
-                            {
-                                var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
-                                if (printingPanel != null)
-                                {
-                                    paymentVm.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-                                    DebugLogger.LogStep("ProcessPayment_Click", "Printing initialized for PaymentDialog");
-                                }
-                            }
+                            // No need to initialize printing here - App.ReceiptService is already initialized globally
+                            DebugLogger.LogStep("ProcessPayment_Click", "Using globally initialized ReceiptService");
                         }
                         
                         DebugLogger.LogStep("ProcessPayment_Click", "XamlRoot set, calling SetBillData");
