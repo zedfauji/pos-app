@@ -41,13 +41,43 @@ namespace MagiDesk.Frontend.Services
                 {
                     try
                     {
-                        // Use PrintManager.GetForCurrentView() - this is the correct WinUI 3 API
-                        _printManager = PrintManager.GetForCurrentView();
-                        if (_printManager == null)
+                        // CRITICAL FIX: Ensure PrintManager.GetForCurrentView() is called from UI thread
+                        // This requires the calling thread to be in the correct WinUI 3 context
+                        if (_dispatcherQueue != null)
                         {
-                            throw new InvalidOperationException("PrintManager.GetForCurrentView() returned null");
+                            // Use DispatcherQueue to ensure we're on the UI thread
+                            var tcs = new TaskCompletionSource<PrintManager?>();
+                            _dispatcherQueue.TryEnqueue(() =>
+                            {
+                                try
+                                {
+                                    _printManager = PrintManager.GetForCurrentView();
+                                    if (_printManager == null)
+                                    {
+                                        tcs.SetException(new InvalidOperationException("PrintManager.GetForCurrentView() returned null"));
+                                        return;
+                                    }
+                                    _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                                    tcs.SetResult(_printManager);
+                                }
+                                catch (Exception ex)
+                                {
+                                    tcs.SetException(ex);
+                                }
+                            });
+                            
+                            _printManager = await tcs.Task;
                         }
-                        _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                        else
+                        {
+                            // Fallback: try direct call (might fail if not on UI thread)
+                            _printManager = PrintManager.GetForCurrentView();
+                            if (_printManager == null)
+                            {
+                                throw new InvalidOperationException("PrintManager.GetForCurrentView() returned null");
+                            }
+                            _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                        }
                     }
                     catch (Exception ex)
                     {
