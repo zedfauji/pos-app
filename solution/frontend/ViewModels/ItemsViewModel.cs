@@ -12,6 +12,12 @@ public class ItemsViewModel
 
     public ItemsViewModel(ApiService api)
     {
+        // CRITICAL FIX: Ensure ApiService is not null before creating ViewModel
+        // This prevents NullReferenceException if api is null
+        if (api == null)
+        {
+            throw new ArgumentNullException(nameof(api), "ApiService cannot be null. Ensure a valid ApiService instance is provided.");
+        }
         _api = api;
     }
 
