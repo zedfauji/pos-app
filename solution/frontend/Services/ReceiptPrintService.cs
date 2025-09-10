@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Graphics.Printing;
+using WinRT.Interop;
 
 namespace MagiDesk.Frontend.Services
 {
@@ -55,6 +56,14 @@ namespace MagiDesk.Frontend.Services
                         {
                             try
                             {
+                                // CRITICAL FIX: Ensure window is activated before calling PrintManager.GetForCurrentView()
+                                // In WinUI 3 desktop apps, we need to ensure the window context is properly set
+                                if (_window != null)
+                                {
+                                    // Activate the window to ensure it's the current window for PrintManager context
+                                    _window.Activate();
+                                }
+                                
                                 _printManager = PrintManager.GetForCurrentView();
                                 if (_printManager == null)
                                 {
