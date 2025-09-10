@@ -39,14 +39,27 @@ namespace MagiDesk.Frontend.Dialogs
                 
                 // Initialize printing for the payment dialog
                 var mainWindow = Window.Current;
+                DebugLogger.LogStep("PaymentDialog", $"Window.Current: {mainWindow != null}");
+                
                 if (mainWindow?.Content is MainPage mainPage)
                 {
+                    DebugLogger.LogStep("PaymentDialog", $"MainPage found: {mainPage != null}");
                     var printingPanel = mainPage.FindName("PrintingContainer") as Microsoft.UI.Xaml.Controls.Panel;
+                    DebugLogger.LogStep("PaymentDialog", $"PrintingContainer found: {printingPanel != null}");
+                    
                     if (printingPanel != null)
                     {
                         paymentViewModel.InitializePrinting(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
                         DebugLogger.LogStep("PaymentDialog", "Printing initialized for PaymentDialog");
                     }
+                    else
+                    {
+                        DebugLogger.LogStep("PaymentDialog", "ERROR: PrintingContainer not found!");
+                    }
+                }
+                else
+                {
+                    DebugLogger.LogStep("PaymentDialog", "ERROR: MainPage not found!");
                 }
                 
                 this.DataContext = paymentViewModel;

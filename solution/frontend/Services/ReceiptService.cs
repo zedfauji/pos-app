@@ -138,6 +138,9 @@ public sealed class ReceiptService : IDisposable
             {
                 _logger.LogError("PrintService not initialized. Call Initialize() first.");
                 System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: PrintService not initialized");
+                System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printService is null");
+                System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printingPanel is {(_printingPanel != null ? "not null" : "null")}");
+                System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _dispatcherQueue is {(_dispatcherQueue != null ? "not null" : "null")}");
                 return false;
             }
             
