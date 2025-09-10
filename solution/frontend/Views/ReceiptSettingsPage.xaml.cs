@@ -19,7 +19,7 @@ public sealed partial class ReceiptSettingsPage : Page
         {
             ViewModel = App.Services?.GetRequiredService<ReceiptSettingsViewModel>() 
                 ?? new ReceiptSettingsViewModel(
-                    App.ReceiptService ?? new ReceiptService(null, null),
+                    App.ReceiptService ?? throw new InvalidOperationException("ReceiptService not initialized in App"),
                     App.SettingsApi ?? new SettingsApiService(new HttpClient(), null),
                     null,
                     null
@@ -29,7 +29,7 @@ public sealed partial class ReceiptSettingsPage : Page
         {
             // Fallback if DI is not available
             ViewModel = new ReceiptSettingsViewModel(
-                App.ReceiptService ?? new ReceiptService(null, null),
+                App.ReceiptService ?? throw new InvalidOperationException("ReceiptService not initialized in App"),
                 App.SettingsApi ?? new SettingsApiService(new HttpClient(), null),
                 null,
                 null

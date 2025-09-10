@@ -202,6 +202,9 @@ namespace MagiDesk.Frontend
                 innerVendorOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
                 VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri("https://localhost:7016/") });
+                
+                // Initialize ReceiptService in catch block too
+                ReceiptService = new Services.ReceiptService(null, null);
             }
         }
 

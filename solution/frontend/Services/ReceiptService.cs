@@ -141,7 +141,40 @@ public sealed class ReceiptService : IDisposable
                 System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printService is null");
                 System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _printingPanel is {(_printingPanel != null ? "not null" : "null")}");
                 System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: _dispatcherQueue is {(_dispatcherQueue != null ? "not null" : "null")}");
-                return false;
+                
+                // Try to initialize if not already done (safety fallback)
+                try
+                {
+                    var mainWindow = Window.Current;
+                    if (mainWindow?.Content is MainPage mainPage)
+                    {
+                        var printingPanel = mainPage.FindName("PrintingContainer") as Panel;
+                        if (printingPanel != null)
+                        {
+                            Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                            _logger.LogInformation("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
+                            System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
+                        }
+                        else
+                        {
+                            _logger.LogError("ReceiptService.PrintReceiptAsync: Emergency initialization failed - PrintingContainer not found");
+                            System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization failed - PrintingContainer not found");
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogError("ReceiptService.PrintReceiptAsync: Emergency initialization failed - MainPage not found");
+                        System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization failed - MainPage not found");
+                        return false;
+                    }
+                }
+                catch (Exception initEx)
+                {
+                    _logger.LogError(initEx, "ReceiptService.PrintReceiptAsync: Emergency initialization failed");
+                    System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: Emergency initialization failed - {initEx.Message}");
+                    return false;
+                }
             }
             
             _logger.LogInformation("ReceiptData details: BillId='{BillId}', ItemsCount={ItemsCount}, TotalAmount={TotalAmount}, IsProForma={IsProForma}", 

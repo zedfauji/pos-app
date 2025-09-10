@@ -20,15 +20,8 @@ namespace MagiDesk.Frontend.Dialogs
                 this.InitializeComponent();
                 DebugLogger.LogStep("InitializeComponent", "Completed successfully");
                 
-                // Use the properly configured PaymentApiService from App instead of creating a new HttpClient
-                var receiptService = App.ReceiptService ?? new ReceiptService(null, null);
-                
-                // Initialize the receipt service with the current window if it's not already initialized
-                if (receiptService != App.ReceiptService)
-                {
-                    // Skip initialization for now - will be done when printing is actually needed
-                    // _ = receiptService.InitializeAsync(parentWindow);
-                }
+                // Always use the global ReceiptService - it should never be null
+                var receiptService = App.ReceiptService ?? throw new InvalidOperationException("ReceiptService not initialized in App");
                 
                 var paymentViewModel = new PaymentViewModel(
                     App.Payments ?? throw new InvalidOperationException("PaymentApiService not initialized"),
