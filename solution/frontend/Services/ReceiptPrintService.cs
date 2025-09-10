@@ -17,14 +17,16 @@ namespace MagiDesk.Frontend.Services
         private PrintDocument? _printDocument;
         private readonly Panel _printingPanel;
         private readonly DispatcherQueue _dispatcherQueue;
+        private readonly Window? _window;
         private bool _disposed = false;
         private PrintReceiptData? _currentReceipt;
         private string _printTitle = "Receipt";
 
-        public ReceiptPrintService(Panel printingPanel, DispatcherQueue dispatcherQueue)
+        public ReceiptPrintService(Panel printingPanel, DispatcherQueue dispatcherQueue, Window? window = null)
         {
             _printingPanel = printingPanel ?? throw new ArgumentNullException(nameof(printingPanel));
             _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
+            _window = window;
         }
 
         public async Task PrintReceiptAsync(PrintReceiptData receiptData, string title = "Receipt")
@@ -39,6 +41,7 @@ namespace MagiDesk.Frontend.Services
                 {
                     try
                     {
+                        // Use PrintManager.GetForCurrentView() - this is the correct WinUI 3 API
                         _printManager = PrintManager.GetForCurrentView();
                         if (_printManager == null)
                         {

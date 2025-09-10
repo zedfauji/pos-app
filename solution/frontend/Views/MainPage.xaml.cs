@@ -32,8 +32,8 @@ namespace MagiDesk.Frontend.Views
                         var printingPanel = this.FindName("PrintingContainer") as Panel;
                         if (printingPanel != null)
                         {
-                            App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-                            Log.Info("ReceiptService initialized with printing panel");
+                            App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), Window.Current);
+                            Log.Info("ReceiptService initialized with printing panel and window");
                         }
                         else
                         {

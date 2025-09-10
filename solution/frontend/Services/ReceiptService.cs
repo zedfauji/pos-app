@@ -49,7 +49,7 @@ public sealed class ReceiptService : IDisposable
     /// <summary>
     /// Initialize the print service with required UI components
     /// </summary>
-    public void Initialize(Panel printingPanel, DispatcherQueue dispatcherQueue)
+    public void Initialize(Panel printingPanel, DispatcherQueue dispatcherQueue, Window? window = null)
     {
         _logger.LogInformation("ReceiptService.Initialize: Starting initialization");
         System.Diagnostics.Debug.WriteLine("ReceiptService.Initialize: Starting initialization");
@@ -58,7 +58,7 @@ public sealed class ReceiptService : IDisposable
         {
             _printingPanel = printingPanel ?? throw new ArgumentNullException(nameof(printingPanel));
             _dispatcherQueue = dispatcherQueue ?? throw new ArgumentNullException(nameof(dispatcherQueue));
-            _printService = new ReceiptPrintService(_printingPanel, _dispatcherQueue);
+            _printService = new ReceiptPrintService(_printingPanel, _dispatcherQueue, window);
             
             _logger.LogInformation("ReceiptService.Initialize: Initialization completed successfully");
             System.Diagnostics.Debug.WriteLine("ReceiptService.Initialize: Initialization completed successfully");
@@ -146,7 +146,7 @@ public sealed class ReceiptService : IDisposable
                 try
                 {
                     // Try multiple approaches to get the main window
-                    var mainWindow = Window.Current ?? App.MainWindow;
+                    var mainWindow = window ?? Window.Current ?? App.MainWindow;
                     if (mainWindow?.Content is MainPage mainPage)
                     {
                         var printingPanel = mainPage.FindName("PrintingContainer") as Panel;
@@ -156,7 +156,7 @@ public sealed class ReceiptService : IDisposable
                             var dispatcherQueue = mainWindow.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
                             if (dispatcherQueue != null)
                             {
-                                Initialize(printingPanel, dispatcherQueue);
+                                Initialize(printingPanel, dispatcherQueue, mainWindow);
                                 _logger.LogInformation("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
                                 System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
                             }
