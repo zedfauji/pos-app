@@ -13,6 +13,30 @@ namespace MagiDesk.Frontend.Views
         public MainPage()
         {
             this.InitializeComponent();
+            
+            // Initialize ReceiptService IMMEDIATELY after InitializeComponent
+            // This ensures it's ready before any other pages can create PaymentDialog
+            try
+            {
+                if (App.ReceiptService != null)
+                {
+                    var printingPanel = this.FindName("PrintingContainer") as Panel;
+                    if (printingPanel != null)
+                    {
+                        App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), Window.Current);
+                        Log.Info("ReceiptService initialized IMMEDIATELY in MainPage constructor");
+                    }
+                    else
+                    {
+                        Log.Error("PrintingContainer not found in MainPage constructor");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to initialize ReceiptService in constructor: {ex.Message}");
+            }
+            
             Loaded += MainPage_Loaded;
             NavView.BackRequested += NavView_BackRequested;
             ContentFrame.Navigated += ContentFrame_Navigated;
@@ -24,28 +48,9 @@ namespace MagiDesk.Frontend.Views
         {
             try
             {
-                // Initialize global ReceiptService with printing panel
-                if (App.ReceiptService != null)
-                {
-                    try
-                    {
-                        var printingPanel = this.FindName("PrintingContainer") as Panel;
-                        if (printingPanel != null)
-                        {
-                            App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), Window.Current);
-                            Log.Info("ReceiptService initialized with printing panel and window");
-                        }
-                        else
-                        {
-                            Log.Error("PrintingContainer not found in MainPage");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"Failed to initialize ReceiptService: {ex.Message}");
-                    }
-                }
-
+                // ReceiptService is already initialized in constructor
+                // Just do the initial setup here
+                
                 // Initial connectivity check
                 _ = CheckBackendAsync();
                 // Apply language to UI
