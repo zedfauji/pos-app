@@ -23,8 +23,26 @@ namespace MagiDesk.Frontend.Views
                     var printingPanel = this.FindName("PrintingContainer") as Panel;
                     if (printingPanel != null)
                     {
-                        App.ReceiptService.Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), Window.Current);
-                        Log.Info("ReceiptService initialized IMMEDIATELY in MainPage constructor");
+                        // Use App.MainWindow instead of Window.Current to avoid race condition
+                        // Window.Current might be null during MainPage constructor
+                        var window = App.MainWindow ?? Window.Current;
+                        
+                        // Get DispatcherQueue with fallback
+                        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                        if (dispatcherQueue == null && window != null)
+                        {
+                            dispatcherQueue = window.DispatcherQueue;
+                        }
+                        
+                        if (dispatcherQueue != null)
+                        {
+                            App.ReceiptService.Initialize(printingPanel, dispatcherQueue, window);
+                            Log.Info("ReceiptService initialized IMMEDIATELY in MainPage constructor");
+                        }
+                        else
+                        {
+                            Log.Error("DispatcherQueue not available in MainPage constructor");
+                        }
                     }
                     else
                     {
