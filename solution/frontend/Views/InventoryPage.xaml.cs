@@ -12,7 +12,14 @@ public sealed partial class InventoryPage : Page, IToolbarConsumer
     public InventoryPage()
     {
         this.InitializeComponent();
-        _vm = new InventoryViewModel(App.Api!);
+        
+        // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
+        if (App.Api == null)
+        {
+            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+        }
+        _vm = new InventoryViewModel(App.Api);
+        
         this.DataContext = _vm;
         Loaded += InventoryPage_Loaded;
     }

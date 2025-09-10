@@ -212,8 +212,11 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
             var content = await App.Api!.ExportVendorItemsAsync(v.Id!, format);
             if (content is null) { ShowError("Export failed."); return; }
 
+            // CRITICAL FIX: Ensure FileSavePicker is called from UI thread
+            // This is a COM interop call that requires UI thread context
             var picker = new FileSavePicker();
-            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.MainWindow!));
+            var windowHandle = WindowNative.GetWindowHandle(App.MainWindow!);
+            InitializeWithWindow.Initialize(picker, windowHandle);
             picker.SuggestedFileName = $"{v.Name}-items";
             switch (format)
             {
@@ -251,8 +254,11 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
                     ?? (sender as FrameworkElement)?.DataContext as VendorDto;
             if (v is null || string.IsNullOrWhiteSpace(v.Id)) { ShowError("No vendor selected."); return; }
 
+            // CRITICAL FIX: Ensure FileOpenPicker is called from UI thread
+            // This is a COM interop call that requires UI thread context
             var picker = new FileOpenPicker();
-            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.MainWindow!));
+            var windowHandle = WindowNative.GetWindowHandle(App.MainWindow!);
+            InitializeWithWindow.Initialize(picker, windowHandle);
             foreach (var ext in extensions) picker.FileTypeFilter.Add(ext);
             var file = await picker.PickSingleFileAsync();
             if (file is null) return;

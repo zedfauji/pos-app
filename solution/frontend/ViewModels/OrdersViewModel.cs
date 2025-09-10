@@ -16,7 +16,13 @@ public class OrdersViewModel
 
     public OrdersViewModel()
     {
-        _orders = App.OrdersApi ?? throw new InvalidOperationException("OrdersApi not initialized");
+        // CRITICAL FIX: Ensure OrdersApi is initialized before creating ViewModel
+        // This prevents InvalidOperationException if OrdersApi is null
+        if (App.OrdersApi == null)
+        {
+            throw new InvalidOperationException("OrdersApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+        }
+        _orders = App.OrdersApi;
     }
 
     public async Task LoadAsync(bool includeHistory = false, CancellationToken ct = default)

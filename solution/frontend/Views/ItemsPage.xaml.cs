@@ -15,7 +15,14 @@ public sealed partial class ItemsPage : Page, IToolbarConsumer
     public ItemsPage()
     {
         this.InitializeComponent();
-        _vm = new ItemsViewModel(App.Api!);
+        
+        // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
+        if (App.Api == null)
+        {
+            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+        }
+        _vm = new ItemsViewModel(App.Api);
+        
         DataContext = _vm;
         Loaded += ItemsPage_Loaded;
         App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
