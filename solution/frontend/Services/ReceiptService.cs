@@ -225,22 +225,21 @@ public sealed class ReceiptService : IDisposable
     {
         return new PrintReceiptData
         {
-            Header = receiptData.IsProForma ? "PRO FORMA RECEIPT" : "RECEIPT",
-            StoreName = receiptData.StoreName,
-            StoreAddress = receiptData.StoreAddress,
-            StorePhone = receiptData.StorePhone,
-            ReceiptNumber = receiptData.BillId,
-            Date = receiptData.Date,
+            BusinessName = receiptData.StoreName ?? "Business",
+            BillId = receiptData.BillId,
+            Date = receiptData.Date ?? DateTime.Now,
+            IsProForma = receiptData.IsProForma,
             Items = receiptData.Items?.Select(item => new PrintReceiptItem
             {
-                Name = item.Name,
+                Name = item.Name ?? "Item",
                 Quantity = item.Quantity,
-                Price = item.Price
-            }).ToList(),
-            Subtotal = receiptData.Subtotal,
-            Tax = receiptData.Tax,
-            Total = receiptData.TotalAmount,
-            Footer = receiptData.Footer
+                UnitPrice = item.Price,
+                LineTotal = item.Price * item.Quantity
+            }).ToList() ?? new List<PrintReceiptItem>(),
+            DiscountAmount = 0m, // Not available in old structure
+            TaxAmount = receiptData.Tax ?? 0m,
+            TotalAmount = receiptData.TotalAmount,
+            FooterText = receiptData.Footer ?? ""
         };
     }
 
@@ -299,7 +298,22 @@ public sealed class ReceiptService : IDisposable
             throw new InvalidOperationException("PrintService not initialized. Call Initialize() first.");
         }
 
-        await _printService.TestPrintingAsync();
+        // Create a test receipt for printing
+        var testReceipt = new PrintReceiptData
+        {
+            BusinessName = "Test Business",
+            BillId = "TEST-001",
+            Date = DateTime.Now,
+            IsProForma = true,
+            Items = new List<PrintReceiptItem>
+            {
+                new PrintReceiptItem { Name = "Test Item", Quantity = 1, UnitPrice = 10.00m, LineTotal = 10.00m }
+            },
+            TotalAmount = 10.00m,
+            FooterText = "Test Receipt"
+        };
+
+        await _printService.PrintReceiptAsync(testReceipt, "Test Receipt");
     }
 
     public void Dispose()
@@ -307,32 +321,4 @@ public sealed class ReceiptService : IDisposable
         _printService?.Dispose();
         _printService = null;
     }
-}
-
-/// <summary>
-/// Receipt data structure for printing
-/// </summary>
-public class PrintReceiptData
-{
-    public string? Header { get; set; }
-    public string? StoreName { get; set; }
-    public string? StoreAddress { get; set; }
-    public string? StorePhone { get; set; }
-    public string? ReceiptNumber { get; set; }
-    public DateTime? Date { get; set; }
-    public List<PrintReceiptItem>? Items { get; set; }
-    public decimal? Subtotal { get; set; }
-    public decimal? Tax { get; set; }
-    public decimal? Total { get; set; }
-    public string? Footer { get; set; }
-}
-
-/// <summary>
-/// Receipt item for printing
-/// </summary>
-public class PrintReceiptItem
-{
-    public string? Name { get; set; }
-    public int Quantity { get; set; }
-    public decimal Price { get; set; }
 }
