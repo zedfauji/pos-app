@@ -44,8 +44,20 @@ namespace MagiDesk.Frontend.ViewModels
 
         public OrderDetailViewModel()
         {
-            _orders = App.OrdersApi ?? throw new InvalidOperationException("OrdersApi not initialized");
-            _menu = App.Menu ?? throw new InvalidOperationException("MenuApi not initialized");
+            // CRITICAL FIX: Ensure OrdersApi and MenuApi are initialized before creating ViewModel
+            // This prevents InvalidOperationException if services are null
+            if (App.OrdersApi == null)
+            {
+                throw new InvalidOperationException("OrdersApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            }
+            if (App.Menu == null)
+            {
+                throw new InvalidOperationException("MenuApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            }
+            
+            _orders = App.OrdersApi;
+            _menu = App.Menu;
+            
             IncrementQtyCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l) await UpdateQuantityAsync(l, l.Quantity + 1); });
             DecrementQtyCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l && l.Quantity > 1) await UpdateQuantityAsync(l, l.Quantity - 1); });
             DeleteItemCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l) await DeleteItemAsync(l); });

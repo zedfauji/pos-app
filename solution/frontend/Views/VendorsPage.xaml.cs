@@ -226,7 +226,32 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
             }
             var file = await picker.PickSaveFileAsync();
             if (file is null) return;
-            await Windows.Storage.FileIO.WriteTextAsync(file, content);
+            
+            // CRITICAL FIX: Ensure Windows.Storage.FileIO.WriteTextAsync() is called from UI thread
+            // This is a COM interop call that requires UI thread context
+            var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            if (dispatcherQueue != null)
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                dispatcherQueue.TryEnqueue(async () =>
+                {
+                    try
+                    {
+                        await Windows.Storage.FileIO.WriteTextAsync(file, content);
+                        tcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.SetException(ex);
+                    }
+                });
+                await tcs.Task;
+            }
+            else
+            {
+                // Fallback: try direct call (might fail if not on UI thread)
+                await Windows.Storage.FileIO.WriteTextAsync(file, content);
+            }
             ShowInfo($"Exported {format.ToUpper()} for {v.Name}.");
         }
         catch (Exception ex)
