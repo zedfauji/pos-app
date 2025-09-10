@@ -56,18 +56,21 @@ namespace MagiDesk.Frontend.Services
                         {
                             try
                             {
-                                // CRITICAL FIX: Ensure window is activated before calling PrintManager.GetForCurrentView()
-                                // In WinUI 3 desktop apps, we need to ensure the window context is properly set
+                                // CRITICAL FIX: Ensure proper window context for PrintManager in WinUI 3 desktop apps
                                 if (_window != null)
                                 {
-                                    // Activate the window to ensure it's the current window for PrintManager context
+                                    // Ensure the window is active and has focus
                                     _window.Activate();
+                                    
+                                    // Small delay to ensure window activation completes
+                                    System.Threading.Thread.Sleep(100);
                                 }
                                 
+                                // Try to get PrintManager for current view
                                 _printManager = PrintManager.GetForCurrentView();
                                 if (_printManager == null)
                                 {
-                                    tcs.SetException(new InvalidOperationException("PrintManager.GetForCurrentView() returned null"));
+                                    tcs.SetException(new InvalidOperationException("PrintManager.GetForCurrentView() returned null - window context may not be properly set"));
                                     return;
                                 }
                                 _printManager.PrintTaskRequested += OnPrintTaskRequested;
@@ -75,7 +78,7 @@ namespace MagiDesk.Frontend.Services
                             }
                             catch (Exception ex)
                             {
-                                tcs.SetException(ex);
+                                tcs.SetException(new InvalidOperationException($"PrintManager initialization failed: {ex.Message}", ex));
                             }
                         });
                         
