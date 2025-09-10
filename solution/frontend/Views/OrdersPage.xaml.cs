@@ -116,7 +116,8 @@ namespace MagiDesk.Frontend.Views
                 {
                     // Navigate to receipt preview
                     var frame = this.Parent as Frame;
-                    frame ??= Window.Current.Content as Frame;
+                    frame ??= App.MainWindow?.Content as Frame;
+                    frame ??= Window.Current?.Content as Frame;
                     frame ??= new Frame();
                     var receipt = new ReceiptData
                     {

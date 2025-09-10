@@ -97,8 +97,29 @@ namespace MagiDesk.Frontend.Services
                 _currentReceipt = receiptData;
                 _printTitle = title;
 
-                // Show print UI
-                await PrintManager.ShowPrintUIAsync();
+                // Show print UI - CRITICAL FIX: Ensure this COM interop call is on UI thread
+                if (_dispatcherQueue != null)
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    _dispatcherQueue.TryEnqueue(async () =>
+                    {
+                        try
+                        {
+                            await PrintManager.ShowPrintUIAsync();
+                            tcs.SetResult(true);
+                        }
+                        catch (Exception ex)
+                        {
+                            tcs.SetException(ex);
+                        }
+                    });
+                    await tcs.Task;
+                }
+                else
+                {
+                    // Fallback: try direct call (might fail if not on UI thread)
+                    await PrintManager.ShowPrintUIAsync();
+                }
             }
             catch (Exception ex)
             {

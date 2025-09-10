@@ -16,8 +16,41 @@ namespace MagiDesk.Frontend.Services
             try
             {
                 if (element == null) return false;
-                var rtb = new RenderTargetBitmap();
-                await rtb.RenderAsync(element);
+                
+                // CRITICAL FIX: Ensure RenderTargetBitmap.RenderAsync() is called from UI thread
+                // This is a COM interop call that requires UI thread context
+                RenderTargetBitmap? rtb = null;
+                var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                
+                if (dispatcherQueue != null)
+                {
+                    // Use DispatcherQueue to ensure we're on the UI thread
+                    var tcs = new TaskCompletionSource<RenderTargetBitmap?>();
+                    dispatcherQueue.TryEnqueue(async () =>
+                    {
+                        try
+                        {
+                            rtb = new RenderTargetBitmap();
+                            await rtb.RenderAsync(element);
+                            tcs.SetResult(rtb);
+                        }
+                        catch (Exception ex)
+                        {
+                            tcs.SetException(ex);
+                        }
+                    });
+                    
+                    rtb = await tcs.Task;
+                }
+                else
+                {
+                    // Fallback: try direct call (might fail if not on UI thread)
+                    rtb = new RenderTargetBitmap();
+                    await rtb.RenderAsync(element);
+                }
+                
+                if (rtb == null) return false;
+                
                 var buffer = await rtb.GetPixelsAsync();
                 var bytes = new byte[buffer.Length];
                 Windows.Storage.Streams.DataReader.FromBuffer(buffer).ReadBytes(bytes);
