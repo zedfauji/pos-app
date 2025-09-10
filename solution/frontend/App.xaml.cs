@@ -35,6 +35,11 @@ namespace MagiDesk.Frontend
         {
             this.InitializeComponent();
             this.UnhandledException += App_UnhandledException;
+            
+            // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
+            // This prevents race conditions with InitializeApiAsync
+            ReceiptService = new Services.ReceiptService(null, null);
+            
             _ = InitializeApiAsync();
             ApplyThemeFromConfig();
         }
@@ -179,8 +184,7 @@ namespace MagiDesk.Frontend
                 var logSettings = new Services.HttpLoggingHandler(innerSettings);
                 SettingsApi = new Services.SettingsApiService(new HttpClient(logSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
                 
-                ReceiptService = new Services.ReceiptService(null, null);
-                // ReceiptService will be initialized lazily when printing is needed
+                // ReceiptService is already initialized in constructor
             }
             catch
             {
@@ -210,8 +214,7 @@ namespace MagiDesk.Frontend
                 var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
                 VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri("https://localhost:7016/") });
                 
-                // Initialize ReceiptService in catch block too
-                ReceiptService = new Services.ReceiptService(null, null);
+                // ReceiptService is already initialized in constructor
             }
         }
 
