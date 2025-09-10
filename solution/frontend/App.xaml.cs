@@ -38,6 +38,7 @@ namespace MagiDesk.Frontend
             
             // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
             // This prevents race conditions with InitializeApiAsync
+            // Note: ReceiptService will be properly initialized in MainPage constructor
             ReceiptService = new Services.ReceiptService(null, null);
             
             _ = InitializeApiAsync();

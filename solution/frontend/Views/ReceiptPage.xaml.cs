@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using MagiDesk.Frontend.ViewModels;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MagiDesk.Frontend.Views
 {
@@ -25,9 +27,65 @@ namespace MagiDesk.Frontend.Views
             }
         }
 
-        private void Print_Click(object sender, RoutedEventArgs e)
+        private async void Print_Click(object sender, RoutedEventArgs e)
         {
-            // Placeholder: hook Windows printing or export to PDF logic here
+            try
+            {
+                // CRITICAL FIX: Implement actual printing functionality
+                // This was a placeholder that could cause issues
+                if (App.ReceiptService == null)
+                {
+                    await new ContentDialog
+                    {
+                        Title = "Error",
+                        Content = "Receipt service not available. Please try again.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    }.ShowAsync();
+                    return;
+                }
+
+                // Get the receipt data from the page
+                var receiptData = new Services.ReceiptService.ReceiptData
+                {
+                    BillId = OrderIdText.Text,
+                    Subtotal = decimal.Parse(SubtotalText.Text.Replace("Subtotal: ", "").Replace("$", "")),
+                    DiscountAmount = decimal.Parse(DiscountText.Text.Replace("Discounts: -", "").Replace("$", "")),
+                    TaxAmount = decimal.Parse(TaxText.Text.Replace("Taxes: ", "").Replace("$", "")),
+                    TotalAmount = decimal.Parse(TotalText.Text.Replace("Total: ", "").Replace("$", "")),
+                    Items = (ItemsList.ItemsSource as List<OrderItemLineVm>)?.Select(item => new Services.ReceiptService.ReceiptItem
+                    {
+                        Name = item.Name,
+                        Quantity = item.Quantity,
+                        Price = item.UnitPrice,
+                        Subtotal = item.LineTotal
+                    }).ToList() ?? new List<Services.ReceiptService.ReceiptItem>()
+                };
+
+                // Print the receipt
+                var success = await App.ReceiptService.PrintReceiptAsync(receiptData, App.MainWindow ?? Window.Current, showPreview: true);
+                
+                if (!success)
+                {
+                    await new ContentDialog
+                    {
+                        Title = "Print Failed",
+                        Content = "Failed to print receipt. Please try again.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    }.ShowAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Print error: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                }.ShowAsync();
+            }
         }
     }
 }

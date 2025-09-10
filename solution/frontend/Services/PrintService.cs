@@ -82,13 +82,28 @@ namespace MagiDesk.Frontend.Services
                 var path = Path.Combine(dir, $"receipt_{DateTime.Now:yyyyMMdd_HHmmss}.bmp");
                 await File.WriteAllBytesAsync(path, mem.ToArray());
 
-                var psi = new ProcessStartInfo
+                // CRITICAL FIX: Ensure Process.Start() is called from UI thread
+                // This prevents potential thread context issues
+                var processStartTcs = new TaskCompletionSource<bool>();
+                dispatcherQueue.TryEnqueue(() =>
                 {
-                    FileName = path,
-                    Verb = "print",
-                    UseShellExecute = true
-                };
-                Process.Start(psi);
+                    try
+                    {
+                        var psi = new ProcessStartInfo
+                        {
+                            FileName = path,
+                            Verb = "print",
+                            UseShellExecute = true
+                        };
+                        Process.Start(psi);
+                        processStartTcs.SetResult(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        processStartTcs.SetException(ex);
+                    }
+                });
+                await processStartTcs.Task;
                 return true;
             }
             catch
