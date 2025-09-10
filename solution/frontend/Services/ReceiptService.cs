@@ -145,15 +145,27 @@ public sealed class ReceiptService : IDisposable
                 // Try to initialize if not already done (safety fallback)
                 try
                 {
-                    var mainWindow = Window.Current;
+                    // Try multiple approaches to get the main window
+                    var mainWindow = Window.Current ?? App.MainWindow;
                     if (mainWindow?.Content is MainPage mainPage)
                     {
                         var printingPanel = mainPage.FindName("PrintingContainer") as Panel;
                         if (printingPanel != null)
                         {
-                            Initialize(printingPanel, Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
-                            _logger.LogInformation("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
-                            System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
+                            // Try to get dispatcher queue from the main window or current thread
+                            var dispatcherQueue = mainWindow.DispatcherQueue ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                            if (dispatcherQueue != null)
+                            {
+                                Initialize(printingPanel, dispatcherQueue);
+                                _logger.LogInformation("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
+                                System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization successful");
+                            }
+                            else
+                            {
+                                _logger.LogError("ReceiptService.PrintReceiptAsync: Emergency initialization failed - DispatcherQueue not available");
+                                System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization failed - DispatcherQueue not available");
+                                return false;
+                            }
                         }
                         else
                         {
@@ -166,6 +178,12 @@ public sealed class ReceiptService : IDisposable
                     {
                         _logger.LogError("ReceiptService.PrintReceiptAsync: Emergency initialization failed - MainPage not found");
                         System.Diagnostics.Debug.WriteLine("ReceiptService.PrintReceiptAsync: Emergency initialization failed - MainPage not found");
+                        System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: Window.Current is {Window.Current != null}");
+                        System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: App.MainWindow is {App.MainWindow != null}");
+                        if (mainWindow != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"ReceiptService.PrintReceiptAsync: mainWindow.Content type is {mainWindow.Content?.GetType().Name ?? "null"}");
+                        }
                         return false;
                     }
                 }

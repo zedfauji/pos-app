@@ -13,7 +13,7 @@ namespace MagiDesk.Frontend
     /// </summary>
     public partial class App : Application
     {
-        private Window window = Window.Current;
+        private Window? window;
         public static Window? MainWindow { get; private set; }
         public static I18nService I18n { get; } = new I18nService();
 
@@ -93,6 +93,13 @@ namespace MagiDesk.Frontend
             window ??= new Window();
             window.Title = "MagiDesk";
             MainWindow = window;
+            
+            // Ensure Window.Current is set for the application
+            if (Window.Current == null)
+            {
+                // This shouldn't happen in normal circumstances, but just in case
+                System.Diagnostics.Debug.WriteLine("Warning: Window.Current is null in OnLaunched");
+            }
 
             if (window.Content is not Frame rootFrame)
             {

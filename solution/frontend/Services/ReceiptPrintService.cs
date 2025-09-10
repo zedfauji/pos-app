@@ -37,8 +37,19 @@ namespace MagiDesk.Frontend.Services
                 // Initialize print manager if not already done
                 if (_printManager == null)
                 {
-                    _printManager = PrintManager.GetForCurrentView();
-                    _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                    try
+                    {
+                        _printManager = PrintManager.GetForCurrentView();
+                        if (_printManager == null)
+                        {
+                            throw new InvalidOperationException("PrintManager.GetForCurrentView() returned null");
+                        }
+                        _printManager.PrintTaskRequested += OnPrintTaskRequested;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException($"Failed to initialize PrintManager: {ex.Message}", ex);
+                    }
                 }
 
                 if (_printDocument == null)
