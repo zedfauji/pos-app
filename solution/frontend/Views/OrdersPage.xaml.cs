@@ -67,47 +67,62 @@ namespace MagiDesk.Frontend.Views
         {
             try
             {
-                // Simulate analytics data - in a real implementation, this would come from your analytics service
-                var today = DateTime.Today;
-                var random = new Random();
-                
-                // Update KPI metrics
-                OrdersTodayText.Text = random.Next(15, 45).ToString();
-                RevenueTodayText.Text = (random.Next(800, 2500)).ToString("C");
-                AvgOrderValueText.Text = (random.Next(25, 75)).ToString("C");
-                CompletionRateText.Text = $"{random.Next(85, 98)}%";
-                
-                // Update status monitoring
-                PendingOrdersText.Text = random.Next(0, 8).ToString();
-                InProgressText.Text = random.Next(2, 12).ToString();
-                ReadyForDeliveryText.Text = random.Next(1, 6).ToString();
-                CompletedTodayText.Text = random.Next(20, 40).ToString();
-                
-                // Update performance metrics
-                AvgPrepTimeText.Text = $"{random.Next(8, 25)}m";
-                PeakHourText.Text = $"{random.Next(12, 20):00}:{random.Next(0, 60):00}";
-                EfficiencyScoreText.Text = $"{random.Next(75, 95)}%";
-                
-                // Update analytics summary
-                TotalOrdersText.Text = random.Next(100, 500).ToString();
-                TotalRevenueText.Text = (random.Next(5000, 15000)).ToString("C");
-                AvgOrderTimeText.Text = $"{random.Next(15, 35)}m";
-                CustomerSatisfactionText.Text = $"{random.Next(85, 98)}%";
-                ReturnRateText.Text = $"{random.Next(1, 5)}%";
-                
-                // Update alerts
-                var alertCount = random.Next(0, 3);
-                if (alertCount == 0)
+                // Ensure we're on the UI thread and elements are initialized
+                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
                 {
-                    AlertText.Text = "No critical issues detected";
-                }
-                else
-                {
-                    AlertText.Text = $"{alertCount} critical issue(s) require attention";
-                }
-                
-                // Update recent activity
-                await UpdateRecentActivityAsync();
+                    // Check if elements are initialized before accessing them
+                    if (OrdersTodayText == null || RevenueTodayText == null || AvgOrderValueText == null || 
+                        CompletionRateText == null || PendingOrdersText == null || InProgressText == null ||
+                        ReadyForDeliveryText == null || CompletedTodayText == null || AvgPrepTimeText == null ||
+                        PeakHourText == null || EfficiencyScoreText == null || TotalOrdersText == null ||
+                        TotalRevenueText == null || AvgOrderTimeText == null || CustomerSatisfactionText == null ||
+                        ReturnRateText == null || AlertText == null)
+                    {
+                        return; // Elements not yet initialized, skip update
+                    }
+
+                    // Simulate analytics data - in a real implementation, this would come from your analytics service
+                    var today = DateTime.Today;
+                    var random = new Random();
+                    
+                    // Update KPI metrics
+                    OrdersTodayText.Text = random.Next(15, 45).ToString();
+                    RevenueTodayText.Text = (random.Next(800, 2500)).ToString("C");
+                    AvgOrderValueText.Text = (random.Next(25, 75)).ToString("C");
+                    CompletionRateText.Text = $"{random.Next(85, 98)}%";
+                    
+                    // Update status monitoring
+                    PendingOrdersText.Text = random.Next(0, 8).ToString();
+                    InProgressText.Text = random.Next(2, 12).ToString();
+                    ReadyForDeliveryText.Text = random.Next(1, 6).ToString();
+                    CompletedTodayText.Text = random.Next(20, 40).ToString();
+                    
+                    // Update performance metrics
+                    AvgPrepTimeText.Text = $"{random.Next(8, 25)}m";
+                    PeakHourText.Text = $"{random.Next(12, 20):00}:{random.Next(0, 60):00}";
+                    EfficiencyScoreText.Text = $"{random.Next(75, 95)}%";
+                    
+                    // Update analytics summary
+                    TotalOrdersText.Text = random.Next(100, 500).ToString();
+                    TotalRevenueText.Text = (random.Next(5000, 15000)).ToString("C");
+                    AvgOrderTimeText.Text = $"{random.Next(15, 35)}m";
+                    CustomerSatisfactionText.Text = $"{random.Next(85, 98)}%";
+                    ReturnRateText.Text = $"{random.Next(1, 5)}%";
+                    
+                    // Update alerts
+                    var alertCount = random.Next(0, 3);
+                    if (alertCount == 0)
+                    {
+                        AlertText.Text = "No critical issues detected";
+                    }
+                    else
+                    {
+                        AlertText.Text = $"{alertCount} critical issue(s) require attention";
+                    }
+                    
+                    // Update recent activity
+                    await UpdateRecentActivityAsync();
+                });
             }
             catch (Exception ex)
             {
