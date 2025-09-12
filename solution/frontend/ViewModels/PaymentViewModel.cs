@@ -34,8 +34,8 @@ namespace MagiDesk.Frontend.ViewModels
         private readonly ILogger<PaymentViewModel> _logger;
         private readonly IConfiguration _configuration;
         
-        public string? BillingId { get; private set; }
-        public string? SessionId { get; private set; }
+        public Guid? BillingId { get; private set; }
+        public Guid? SessionId { get; private set; }
         
         // Receipt-related properties
         private UIElement? _receiptPreview;
@@ -130,7 +130,7 @@ namespace MagiDesk.Frontend.ViewModels
         }
     }
 
-        public void Initialize(string billingId, string sessionId, decimal totalDue, IEnumerable<OrderItemLineVm>? items = null)
+        public void Initialize(Guid billingId, Guid sessionId, decimal totalDue, IEnumerable<OrderItemLineVm>? items = null)
         {
             BillingId = billingId;
             SessionId = sessionId;
@@ -172,8 +172,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         public async Task LoadLedgerAsync(CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(BillingId)) return;
-            var ledger = await _payments.GetLedgerAsync(BillingId!, ct);
+            if (BillingId == null || BillingId == Guid.Empty) return;
+            var ledger = await _payments.GetLedgerAsync(BillingId.Value, ct);
             if (ledger != null)
             {
                 TotalDue = ledger.TotalDue;
@@ -185,11 +185,11 @@ namespace MagiDesk.Frontend.ViewModels
 
         public async Task<bool> ApplyDiscountAsync(CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(BillingId)) { Error = "Missing billing"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
-            var safeSessionId = string.IsNullOrWhiteSpace(SessionId) ? BillingId! : SessionId!;
+            if (BillingId == null || BillingId == Guid.Empty) { Error = "Missing billing"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
+            var safeSessionId = SessionId ?? BillingId.Value;
             if (DiscountValue <= 0) { Error = "Discount must be > 0"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
             decimal amount = SelectedDiscountType == "%" ? Math.Round(TotalDue * (DiscountValue / 100m), 2) : DiscountValue;
-            var ledger = await _payments.ApplyDiscountAsync(BillingId!, safeSessionId, amount, DiscountReason);
+            var ledger = await _payments.ApplyDiscountAsync(BillingId.Value, safeSessionId, amount, DiscountReason);
             if (ledger is null) { Error = "Failed to apply discount"; OnPropertyChanged(nameof(Error)); OnPropertyChanged(nameof(HasError)); return false; }
             TotalDue = ledger.TotalDue;
             LedgerDiscount = ledger.TotalDiscount;
@@ -211,7 +211,7 @@ namespace MagiDesk.Frontend.ViewModels
                 DebugLogger.LogStep("ConfirmAsync", "Error properties updated");
                 
                 // Validate required fields
-                if (string.IsNullOrWhiteSpace(BillingId))
+                if (BillingId == null || BillingId == Guid.Empty)
                 {
                     DebugLogger.LogStep("ConfirmAsync", "ERROR: BillingId is null or empty");
                     Error = "Missing billing ID";
@@ -224,7 +224,7 @@ namespace MagiDesk.Frontend.ViewModels
                 DebugLogger.LogStep("ConfirmAsync", $"BillingId: {BillingId}");
                 
                 // Get session ID (fallback to billing ID if session is null)
-                var safeSessionId = string.IsNullOrWhiteSpace(SessionId) ? BillingId! : SessionId!;
+                var safeSessionId = SessionId ?? BillingId.Value;
                 DebugLogger.LogStep("ConfirmAsync", $"SessionId: {safeSessionId}");
                 
                 // Validate payment amount
@@ -260,7 +260,7 @@ namespace MagiDesk.Frontend.ViewModels
                     // Create payment request
                     var paymentRequest = new PaymentApiService.RegisterPaymentRequestDto(
                         SessionId: safeSessionId,
-                        BillingId: BillingId!,
+                        BillingId: BillingId.Value,
                         TotalDue: TotalDue,
                         Lines: new[] { paymentLine },
                         ServerId: userId
@@ -271,7 +271,7 @@ namespace MagiDesk.Frontend.ViewModels
                     // Register the payment
                     DebugLogger.LogStep("ConfirmAsync", "Calling _payments.RegisterPaymentAsync");
                     var payment = await _payments.RegisterPaymentAsync(paymentRequest);
-                    DebugLogger.LogStep("ConfirmAsync", $"RegisterPaymentAsync completed, ledger: {payment?.BillingId ?? "null"}");
+                    DebugLogger.LogStep("ConfirmAsync", $"RegisterPaymentAsync completed, ledger: {payment?.BillingId.ToString() ?? "null"}");
                     
                     if (payment == null)
                     {
@@ -601,8 +601,16 @@ namespace MagiDesk.Frontend.ViewModels
                     UseShellExecute = true
                 };
                 
-                System.Diagnostics.Process.Start(startInfo);
-                _logger.LogInformation("OpenPdfInDefaultAppAsync: PDF opened successfully");
+                var process = System.Diagnostics.Process.Start(startInfo);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync();
+                    _logger.LogInformation("OpenPdfInDefaultAppAsync: PDF opened successfully");
+                }
+                else
+                {
+                    throw new InvalidOperationException("Failed to start PDF viewer process");
+                }
             }
             catch (Exception ex)
             {
@@ -733,6 +741,11 @@ namespace MagiDesk.Frontend.ViewModels
                 _logger.LogInformation("Exporting receipt as PDF for Bill ID: {BillId}", BillingId);
                 
                 var receiptData = await CreateReceiptDataAsync(false); // Final receipt
+                if (receiptData == null)
+                {
+                    _logger.LogError("CreateReceiptDataAsync returned null for final receipt");
+                    return null;
+                }
                 var filePath = await _receiptService.SavePdfAsync(receiptData);
                 
                 if (!string.IsNullOrEmpty(filePath))
@@ -756,7 +769,7 @@ namespace MagiDesk.Frontend.ViewModels
             }
         }
 
-        private async Task<ReceiptService.ReceiptData> CreateReceiptDataAsync(bool isProForma)
+        private async Task<ReceiptService.ReceiptData?> CreateReceiptDataAsync(bool isProForma)
         {
             try
             {
@@ -801,14 +814,16 @@ namespace MagiDesk.Frontend.ViewModels
                     try
                     {
                         var item = _items[i];
+                        if (item == null) continue;
+                        
                         _logger.LogInformation("Creating ReceiptItem {Index} from OrderItemLineVm", i);
                         
                         var receiptItem = new ReceiptService.ReceiptItem
                         {
-                            Name = item?.Name ?? "Unknown",
-                            Quantity = item?.Quantity ?? 0,
-                            UnitPrice = item?.UnitPrice ?? 0,
-                            Subtotal = item?.LineTotal ?? 0
+                            Name = item.Name ?? "Unknown",
+                            Quantity = item.Quantity,
+                            UnitPrice = item.UnitPrice,
+                            Subtotal = item.LineTotal
                         };
                         
                         _logger.LogInformation("ReceiptItem {Index} created: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, Subtotal={Subtotal}", 
@@ -837,7 +852,7 @@ namespace MagiDesk.Frontend.ViewModels
 
                 _logger.LogInformation("Creating ReceiptData object...");
                 _logger.LogInformation("ReceiptData properties: BusinessName='{BusinessName}', BillingId='{BillingId}', SelectedMethod='{SelectedMethod}', LedgerDiscount={LedgerDiscount}, Paid={Paid}", 
-                    businessName, BillingId ?? "NULL", SelectedMethod ?? "NULL", LedgerDiscount, Paid);
+                    businessName, BillingId?.ToString() ?? "NULL", SelectedMethod ?? "NULL", LedgerDiscount, Paid);
 
                 try
                 {
@@ -855,8 +870,8 @@ namespace MagiDesk.Frontend.ViewModels
                         DiscountAmount = LedgerDiscount,
                         TaxAmount = taxAmount,
                         TotalAmount = totalAmount,
-                        BillId = BillingId ?? "Unknown",
-                        PaymentMethod = SelectedMethod,
+                        BillId = BillingId?.ToString() ?? "Unknown",
+                        PaymentMethod = SelectedMethod ?? "Cash",
                         AmountPaid = isProForma ? 0 : Paid,
                         Change = isProForma ? 0 : Math.Max(0, Paid - totalAmount),
                         IsProForma = isProForma

@@ -31,7 +31,7 @@ public class TableRepository
             .Build();
         _connString = cfg["Db:Postgres:ConnectionString"] ?? string.Empty;
         _localPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "tables.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(_localPath)!);
+        SafeFileOperations.EnsureDirectoryExists(Path.GetDirectoryName(_localPath)!);
         _useDatabase = !string.IsNullOrWhiteSpace(_connString);
         _apiBaseUrl = cfg["TablesApi:BaseUrl"];
         // Initialize HTTP client with logging
@@ -41,18 +41,34 @@ public class TableRepository
         _http = new HttpClient(logging);
     }
 
-    public async Task<(string? sessionId, string? billingId)> GetActiveSessionForTableAsync(string tableLabel, CancellationToken ct = default)
+    public async Task<(Guid? sessionId, Guid? billingId)> GetActiveSessionForTableAsync(string tableLabel, CancellationToken ct = default)
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"TableRepository: Looking for active session for table: '{tableLabel}'");
             var list = await GetActiveSessionsAsync(ct);
+            System.Diagnostics.Debug.WriteLine($"TableRepository: Found {list.Count} active sessions");
+            
+            foreach (var session in list)
+            {
+                System.Diagnostics.Debug.WriteLine($"TableRepository: Active session - TableId='{session.TableId}', SessionId='{session.SessionId}', BillingId='{session.BillingId}'");
+            }
+            
             var match = list.FirstOrDefault(s => string.Equals(s.TableId, tableLabel, StringComparison.OrdinalIgnoreCase));
             if (match != null)
             {
-                return (match.SessionId.ToString(), match.BillingId?.ToString());
+                System.Diagnostics.Debug.WriteLine($"TableRepository: Found matching session for '{tableLabel}' - SessionId='{match.SessionId}', BillingId='{match.BillingId}'");
+                return (match.SessionId, match.BillingId);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"TableRepository: No matching session found for table '{tableLabel}'");
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"TableRepository: Exception in GetActiveSessionForTableAsync: {ex.Message}");
+        }
         return (null, null);
     }
 
@@ -82,7 +98,7 @@ public class TableRepository
                 if (health.IsSuccessStatusCode)
                 {
                     // seed (idempotent)
-                    await _http.PostAsync(new Uri(new Uri(_apiBaseUrl!), "/tables/seed"), content: null);
+                    await _http.PostAsync(new Uri(new Uri(_apiBaseUrl!), "/tables/seed"), content: new StringContent(""));
                     SourceLabel = "API";
                     return;
                 }
@@ -126,7 +142,7 @@ public class TableRepository
             if (!File.Exists(_localPath))
             {
                 var seed = System.Text.Json.JsonSerializer.Serialize(new List<TableStatusDto>(), new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(_localPath, seed);
+                await SafeFileOperations.SafeWriteAsync(_localPath, seed);
             }
         }
     }
@@ -178,7 +194,7 @@ public class TableRepository
         // Local fallback
         if (File.Exists(_localPath))
         {
-            var json = await File.ReadAllTextAsync(_localPath);
+            var json = await SafeFileOperations.SafeReadTextAsync(_localPath);
             var data = System.Text.Json.JsonSerializer.Deserialize<List<TableStatusDto>>(json) ?? new();
             return data;
         }
@@ -226,7 +242,7 @@ public class TableRepository
         var idx = list.FindIndex(x => string.Equals(x.Label, rec.Label, StringComparison.OrdinalIgnoreCase));
         if (idx >= 0) list[idx] = rec; else list.Add(rec);
         var json = System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_localPath, json);
+        await SafeFileOperations.SafeWriteAsync(_localPath, json);
     }
 
     public async Task UpsertManyAsync(IEnumerable<TableStatusDto> recs)
@@ -282,7 +298,7 @@ public class TableRepository
             if (idx >= 0) list[idx] = rec; else list.Add(rec);
         }
         var json = System.Text.Json.JsonSerializer.Serialize(list, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_localPath, json);
+        await SafeFileOperations.SafeWriteAsync(_localPath, json);
     }
 
     public DateTime GetLocalLastWriteUtc()
@@ -338,7 +354,7 @@ public class TableRepository
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), $"/tables/{Uri.EscapeDataString(label)}/stop");
-            var res = await _http.PostAsync(url, content: null, ct);
+            var res = await _http.PostAsync(url, content: new StringContent(""), ct);
             if (!res.IsSuccessStatusCode)
             {
                 var body = await res.Content.ReadAsStringAsync(ct);
@@ -381,7 +397,7 @@ public class TableRepository
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), $"/bills/{billId:D}/close");
-            var res = await _http.PostAsync(url, content: null, ct);
+            var res = await _http.PostAsync(url, content: new StringContent(""), ct);
             return res.IsSuccessStatusCode;
         }
         catch { return false; }
@@ -421,7 +437,7 @@ public class TableRepository
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), $"/tables/{Uri.EscapeDataString(label)}/force-free");
-            var res = await _http.PostAsync(url, content: null, ct);
+            var res = await _http.PostAsync(url, content: new StringContent(""), ct);
             return res.IsSuccessStatusCode;
         }
         catch { return false; }
@@ -467,7 +483,7 @@ public class TableRepository
         {
             var baseUri = new Uri(new Uri(_apiBaseUrl!), $"/tables/{Uri.EscapeDataString(fromLabel)}/move");
             var url = new Uri(baseUri + $"?to={Uri.EscapeDataString(toLabel)}");
-            var res = await _http.PostAsync(url, content: null, ct);
+            var res = await _http.PostAsync(url, content: new StringContent(""), ct);
             if (res.IsSuccessStatusCode) return (true, "");
             var body = await res.Content.ReadAsStringAsync(ct);
             return (false, body);

@@ -2,47 +2,95 @@
     x:Class="MagiDesk.Frontend.Views.ReceiptPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    mc:Ignorable="d">
-    <Grid Padding="12">
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid Padding="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Receipt" FontSize="20" FontWeight="SemiBold"/>
-            <TextBlock Text="Order:"/>
-            <TextBlock x:Name="OrderIdText"/>
-            <Button Content="Print" Click="Print_Click"/>
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Receipt Printing" 
+                       FontSize="28" 
+                       FontWeight="Bold" 
+                       HorizontalAlignment="Center"/>
+            <TextBlock x:Name="ReceiptInfoText" 
+                       Text="Receipt Information" 
+                       FontSize="16" 
+                       HorizontalAlignment="Center" 
+                       Margin="0,10,0,0"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1">
-            <StackPanel x:Name="ReceiptBody" Spacing="6">
-                <TextBlock Text="Items" FontWeight="SemiBold"/>
-                <ItemsControl x:Name="ItemsList">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="{Binding Name}" Width="200"/>
-                                <TextBlock Text="x"/>
-                                <TextBlock Text="{Binding Quantity}" Width="40"/>
-                                <TextBlock Text="= "/>
-                                <TextBlock Text="{Binding LineTotal}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </ScrollViewer>
+        <!-- Receipt Content -->
+        <StackPanel Grid.Row="1" Spacing="20" HorizontalAlignment="Center">
+            <TextBlock Text="Receipt Page" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       HorizontalAlignment="Center"/>
+            
+            <Border Background="LightGreen" 
+                    Padding="20" 
+                    CornerRadius="10" 
+                    Margin="0,20,0,0">
+                <StackPanel Spacing="10">
+                    <TextBlock x:Name="BillIdText" 
+                               Text="Bill ID: Loading..." 
+                               FontSize="18" 
+                               FontWeight="Bold"/>
+                    <TextBlock x:Name="TableNumberText" 
+                               Text="Table: Loading..." 
+                               FontSize="18" 
+                               FontWeight="Bold"/>
+                    <TextBlock x:Name="TotalAmountText" 
+                               Text="Amount: Loading..." 
+                               FontSize="18" 
+                               FontWeight="Bold"/>
+                    <TextBlock x:Name="ItemCountText" 
+                               Text="Items: Loading..." 
+                               FontSize="16"/>
+                    <TextBlock x:Name="PaymentMethodText" 
+                               Text="Payment Method: Loading..." 
+                               FontSize="16"/>
+                </StackPanel>
+            </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right">
-            <TextBlock x:Name="SubtotalText"/>
-            <TextBlock x:Name="DiscountText"/>
-            <TextBlock x:Name="TaxText"/>
-            <TextBlock x:Name="TotalText" FontWeight="Bold"/>
+            <TextBlock Text="This is a receipt page that opened in a new window!" 
+                       FontSize="14" 
+                       HorizontalAlignment="Center" 
+                       TextWrapping="Wrap" 
+                       Margin="0,20,0,0"/>
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" 
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center" 
+                    Spacing="20" 
+                    Margin="0,20,0,0">
+            <Button Content="Print Receipt" 
+                    Click="PrintReceipt_Click" 
+                    Background="Blue" 
+                    Foreground="White" 
+                    Padding="20,10" 
+                    FontSize="16"/>
+            <Button Content="Preview Receipt" 
+                    Click="PreviewReceipt_Click" 
+                    Background="Purple" 
+                    Foreground="White" 
+                    Padding="20,10" 
+                    FontSize="16"/>
+            <Button Content="Close" 
+                    Click="Close_Click" 
+                    Background="Gray" 
+                    Foreground="White" 
+                    Padding="20,10" 
+                    FontSize="16"/>
         </StackPanel>
     </Grid>
 </Page>

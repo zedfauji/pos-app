@@ -58,11 +58,11 @@ namespace MagiDesk.Frontend.ViewModels
             _orders = App.OrdersApi;
             _menu = App.Menu;
             
-            IncrementQtyCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l) await UpdateQuantityAsync(l, l.Quantity + 1); });
-            DecrementQtyCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l && l.Quantity > 1) await UpdateQuantityAsync(l, l.Quantity - 1); });
-            DeleteItemCommand = new RelayCommand(async o => { if (o is OrderItemLineVm l) await DeleteItemAsync(l); });
-            RefreshCommand = new RelayCommand(async _ => await LoadAsync());
-            LoadLogsCommand = new RelayCommand(async _ => await LoadLogsAsync());
+            IncrementQtyCommand = new Services.RelayCommand(async o => { if (o is OrderItemLineVm l) await UpdateQuantityAsync(l, l.Quantity + 1); });
+            DecrementQtyCommand = new Services.RelayCommand(async o => { if (o is OrderItemLineVm l && l.Quantity > 1) await UpdateQuantityAsync(l, l.Quantity - 1); });
+            DeleteItemCommand = new Services.RelayCommand(async o => { if (o is OrderItemLineVm l) await DeleteItemAsync(l); });
+            RefreshCommand = new Services.RelayCommand(async _ => await LoadAsync());
+            LoadLogsCommand = new Services.RelayCommand(async _ => await LoadLogsAsync());
         }
 
         public async Task InitializeAsync(long orderId, CancellationToken ct = default)

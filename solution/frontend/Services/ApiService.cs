@@ -332,7 +332,7 @@ public class ApiService
     {
         try
         {
-            var res = await _backendHttp.PostAsync("api/inventory/syncProductNames/launch", content: null, ct);
+            var res = await _backendHttp.PostAsync("api/inventory/syncProductNames/launch", content: new StringContent(""), ct);
             if (!res.IsSuccessStatusCode) return (false, string.Empty);
             var doc = await res.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct) ?? new();
             var success = doc.TryGetValue("success", out var s) && s is bool b && b;
@@ -496,6 +496,34 @@ public class ApiService
         catch (Exception ex)
         {
             Log.Error("GetDrafts failed", ex);
+            return new();
+        }
+    }
+
+    // Session Recovery - Get all active sessions from TablesApi
+    public async Task<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>> GetActiveSessionsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            // Get TablesApi base URL from configuration
+            var tablesApiUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") ?? "https://magidesk-tables-904541739138.northamerica-south1.run.app";
+            
+            using var tablesHttp = new HttpClient(new HttpClientHandler 
+            { 
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator 
+            })
+            {
+                BaseAddress = new Uri(tablesApiUrl.TrimEnd('/') + "/"),
+                Timeout = TimeSpan.FromSeconds(10)
+            };
+
+            Log.Info("[TablesApi] GET sessions/active");
+            var result = await tablesHttp.GetFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>("sessions/active", ct);
+            return result ?? new();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GET active sessions failed", ex);
             return new();
         }
     }

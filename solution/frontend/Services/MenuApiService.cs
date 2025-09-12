@@ -87,13 +87,13 @@ public sealed class MenuApiService
     // Rollbacks
     public async Task<bool> RollbackItemAsync(long id, int toVersion, CancellationToken ct = default)
     {
-        var res = await _http.PostAsync($"api/menu/items/{id}/rollback?toVersion={toVersion}", content: null, ct);
+        var res = await _http.PostAsync($"api/menu/items/{id}/rollback?toVersion={toVersion}", content: new StringContent(""), ct);
         return res.IsSuccessStatusCode || (int)res.StatusCode == 202;
     }
 
     public async Task<bool> RollbackComboAsync(long id, int toVersion, CancellationToken ct = default)
     {
-        var res = await _http.PostAsync($"api/menu/combos/{id}/rollback?toVersion={toVersion}", content: null, ct);
+        var res = await _http.PostAsync($"api/menu/combos/{id}/rollback?toVersion={toVersion}", content: new StringContent(""), ct);
         return res.IsSuccessStatusCode || (int)res.StatusCode == 202;
     }
 }

@@ -15,8 +15,8 @@ public class TableStatusDto
 public class BillResult
 {
     public Guid BillId { get; set; }
-    public string? BillingId { get; set; }
-    public string? SessionId { get; set; }
+    public Guid? BillingId { get; set; }
+    public Guid? SessionId { get; set; }
     public string TableLabel { get; set; } = string.Empty;
     public string ServerId { get; set; } = string.Empty;
     public string ServerName { get; set; } = string.Empty;

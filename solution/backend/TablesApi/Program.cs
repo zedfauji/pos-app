@@ -614,7 +614,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     await using (var bill = new NpgsqlCommand(billSql, conn))
     {
         bill.Parameters.AddWithValue("@bid", billId);
-        bill.Parameters.AddWithValue("@billingId", (object?)(billingGuid?.ToString()) ?? DBNull.Value);
+        bill.Parameters.AddWithValue("@billingId", (object?)billingGuid ?? DBNull.Value);
         bill.Parameters.AddWithValue("@sid", sessionId.ToString());
         bill.Parameters.AddWithValue("@label", label);
         bill.Parameters.AddWithValue("@srvId", serverId);
@@ -757,8 +757,38 @@ app.MapGet("/bills/{billId}", async (Guid billId) =>
     br.TimeCost = rdr.IsDBNull(8) ? 0m : rdr.GetDecimal(8);
     br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
     br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
-    br.SessionId = rdr.IsDBNull(11) ? null : rdr.GetString(11);
-    br.BillingId = rdr.IsDBNull(12) ? null : rdr.GetString(12);
+    
+    // Handle UUID fields with error handling
+    if (!rdr.IsDBNull(11))
+    {
+        try
+        {
+            br.SessionId = rdr.GetFieldValue<Guid>(11);
+        }
+        catch (InvalidCastException)
+        {
+            // Field might still be text, try to parse
+            var sessionIdStr = rdr.GetString(11);
+            if (Guid.TryParse(sessionIdStr, out var sessionId))
+                br.SessionId = sessionId;
+        }
+    }
+    
+    if (!rdr.IsDBNull(12))
+    {
+        try
+        {
+            br.BillingId = rdr.GetFieldValue<Guid>(12);
+        }
+        catch (InvalidCastException)
+        {
+            // Field might still be text, try to parse
+            var billingIdStr = rdr.GetString(12);
+            if (Guid.TryParse(billingIdStr, out var parsedBillingId))
+                br.BillingId = parsedBillingId;
+        }
+    }
+    
     return Results.Ok(br);
 });
 
@@ -853,12 +883,12 @@ app.MapPost("/bills/{billId}/settle", async (Guid billId) =>
 });
 
 // Mark bill settled by billingId (used by PaymentApi when ledger reaches paid)
-app.MapPost("/bills/by-billing/{billingId}/settle", async (string billingId) =>
+app.MapPost("/bills/by-billing/{billingId}/settle", async (Guid billingId) =>
 {
     await using var conn = new NpgsqlConnection(connString);
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
-    const string upd = @"UPDATE public.bills SET is_settled = true, payment_state = 'paid' WHERE billing_id = @bid";
+    const string upd = @"UPDATE public.bills SET is_settled = true, payment_state = 'paid' WHERE billing_id::text = @bid::text";
     await using var cmd = new NpgsqlCommand(upd, conn);
     cmd.Parameters.AddWithValue("@bid", billingId);
     var rows = await cmd.ExecuteNonQueryAsync();
@@ -866,13 +896,13 @@ app.MapPost("/bills/by-billing/{billingId}/settle", async (string billingId) =>
 });
 
 // Check if billing ID exists (used by PaymentApi for validation)
-app.MapGet("/bills/by-billing/{billingId}", async (string billingId) =>
+app.MapGet("/bills/by-billing/{billingId}", async (Guid billingId) =>
 {
     await using var conn = new NpgsqlConnection(connString);
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
     const string sql = @"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, session_id, billing_id, is_settled, payment_state
-                         FROM public.bills WHERE billing_id = @bid";
+                         FROM public.bills WHERE billing_id::text = @bid::text";
     await using var cmd = new NpgsqlCommand(sql, conn);
     cmd.Parameters.AddWithValue("@bid", billingId);
     await using var rdr = await cmd.ExecuteReaderAsync();
@@ -883,16 +913,46 @@ app.MapGet("/bills/by-billing/{billingId}", async (string billingId) =>
         TableLabel = rdr.GetString(1),
         ServerId = rdr.GetString(2),
         ServerName = rdr.GetString(3),
-        StartTime = rdr.GetFieldValue<DateTimeOffset>(4).DateTime,
-        EndTime = rdr.GetFieldValue<DateTimeOffset>(5).DateTime,
+        StartTime = rdr.GetFieldValue<DateTime>(4),
+        EndTime = rdr.GetFieldValue<DateTime>(5),
         TotalTimeMinutes = rdr.GetInt32(6),
         Items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(rdr.GetString(7)) ?? new(),
         TimeCost = rdr.GetDecimal(8),
         ItemsCost = rdr.GetDecimal(9),
         TotalAmount = rdr.GetDecimal(10)
     };
-    br.SessionId = rdr.IsDBNull(11) ? null : rdr.GetString(11);
-    br.BillingId = rdr.IsDBNull(12) ? null : rdr.GetString(12);
+    
+    // Handle UUID fields with error handling
+    if (!rdr.IsDBNull(11))
+    {
+        try
+        {
+            br.SessionId = rdr.GetFieldValue<Guid>(11);
+        }
+        catch (InvalidCastException)
+        {
+            // Field might still be text, try to parse
+            var sessionIdStr = rdr.GetString(11);
+            if (Guid.TryParse(sessionIdStr, out var sessionId))
+                br.SessionId = sessionId;
+        }
+    }
+    
+    if (!rdr.IsDBNull(12))
+    {
+        try
+        {
+            br.BillingId = rdr.GetFieldValue<Guid>(12);
+        }
+        catch (InvalidCastException)
+        {
+            // Field might still be text, try to parse
+            var billingIdStr = rdr.GetString(12);
+            if (Guid.TryParse(billingIdStr, out var parsedBillingId))
+                br.BillingId = parsedBillingId;
+        }
+    }
+    
     return Results.Ok(br);
 });
 
@@ -935,6 +995,131 @@ app.MapPost("/tables/{label}/items", async (string label, List<ItemLine> itemsBo
     return Results.Ok();
 });
 
+// Heartbeat endpoint to keep sessions alive
+app.MapPost("/sessions/{sessionId}/heartbeat", async (Guid sessionId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    
+    // Update last_heartbeat timestamp for the session
+    const string heartbeatSql = @"UPDATE public.table_sessions 
+                                 SET last_heartbeat = @now 
+                                 WHERE session_id = @sid AND status = 'active'";
+    
+    await using var cmd = new NpgsqlCommand(heartbeatSql, conn);
+    cmd.Parameters.AddWithValue("@sid", sessionId);
+    cmd.Parameters.AddWithValue("@now", DateTime.UtcNow);
+    
+    var rowsAffected = await cmd.ExecuteNonQueryAsync();
+    
+    if (rowsAffected > 0)
+    {
+        return Results.Ok(new { sessionId, heartbeat = DateTime.UtcNow });
+    }
+    else
+    {
+        return Results.NotFound(new { message = "Session not found or not active" });
+    }
+});
+
+// Cleanup stale sessions (no heartbeat for X minutes)
+app.MapPost("/sessions/cleanup-stale", async ([FromQuery] int? timeoutMinutes) =>
+{
+    var timeout = timeoutMinutes ?? 5; // Default 5 minutes timeout
+    
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    
+    // Find sessions with no heartbeat for the specified timeout
+    const string findStaleSql = @"SELECT session_id, table_label, server_id, server_name, start_time, billing_id, items
+                                 FROM public.table_sessions 
+                                 WHERE status = 'active' 
+                                 AND (last_heartbeat IS NULL OR last_heartbeat < @timeout)";
+    
+    var staleSessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start, Guid? billingId, string items)>();
+    
+    await using (var cmd = new NpgsqlCommand(findStaleSql, conn))
+    {
+        cmd.Parameters.AddWithValue("@timeout", DateTime.UtcNow.AddMinutes(-timeout));
+        await using var rdr = await cmd.ExecuteReaderAsync();
+        while (await rdr.ReadAsync())
+        {
+            staleSessions.Add((
+                rdr.GetFieldValue<Guid>(0),
+                rdr.GetString(1),
+                rdr.GetString(2),
+                rdr.GetString(3),
+                rdr.GetFieldValue<DateTime>(4),
+                rdr.IsDBNull(5) ? null : rdr.GetFieldValue<Guid>(5),
+                rdr.IsDBNull(6) ? "[]" : rdr.GetString(6)
+            ));
+        }
+    }
+    
+    int cleanedCount = 0;
+    foreach (var session in staleSessions)
+    {
+        try
+        {
+            // Close the session and create a bill
+            const string closeSql = "UPDATE public.table_sessions SET end_time = @end, status = 'closed' WHERE session_id = @sid";
+            await using (var closeCmd = new NpgsqlCommand(closeSql, conn))
+            {
+                closeCmd.Parameters.AddWithValue("@sid", session.sid);
+                closeCmd.Parameters.AddWithValue("@end", DateTime.UtcNow);
+                await closeCmd.ExecuteNonQueryAsync();
+            }
+            
+            // Create bill for the closed session
+            var end = DateTime.UtcNow;
+            var minutes = (int)Math.Max(0, (end - session.start).TotalMinutes);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(session.items) ?? new();
+            var itemsCost = items.Sum(i => i.price * i.quantity);
+            var timeCost = await GetRatePerMinuteAsync(conn, defaultRatePerMinute) * minutes;
+            var total = timeCost + itemsCost;
+            
+            const string billSql = @"INSERT INTO public.bills(bill_id, billing_id, session_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status, is_settled, payment_state)
+                                    VALUES(@bid, @billingId, @sid, @table, @serverId, @serverName, @start, @end, @minutes, @items, @timeCost, @itemsCost, @total, 'awaiting_payment', false, 'not-paid')";
+            
+            await using (var billCmd = new NpgsqlCommand(billSql, conn))
+            {
+                billCmd.Parameters.AddWithValue("@bid", Guid.NewGuid());
+                billCmd.Parameters.AddWithValue("@billingId", (object?)session.billingId ?? DBNull.Value);
+                billCmd.Parameters.AddWithValue("@sid", session.sid.ToString());
+                billCmd.Parameters.AddWithValue("@table", session.table);
+                billCmd.Parameters.AddWithValue("@serverId", session.serverId);
+                billCmd.Parameters.AddWithValue("@serverName", session.serverName);
+                billCmd.Parameters.AddWithValue("@start", session.start);
+                billCmd.Parameters.AddWithValue("@end", end);
+                billCmd.Parameters.AddWithValue("@minutes", minutes);
+                billCmd.Parameters.Add("@items", NpgsqlDbType.Jsonb).Value = System.Text.Json.JsonSerializer.Serialize(items);
+                billCmd.Parameters.AddWithValue("@timeCost", timeCost);
+                billCmd.Parameters.AddWithValue("@itemsCost", itemsCost);
+                billCmd.Parameters.AddWithValue("@total", total);
+                await billCmd.ExecuteNonQueryAsync();
+            }
+            
+            // Free the table
+            const string freeTableSql = @"UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL, updated_at = now() WHERE label = @label";
+            await using (var freeCmd = new NpgsqlCommand(freeTableSql, conn))
+            {
+                freeCmd.Parameters.AddWithValue("@label", session.table);
+                await freeCmd.ExecuteNonQueryAsync();
+            }
+            
+            cleanedCount++;
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Failed to cleanup stale session {SessionId}", session.sid);
+        }
+    }
+    
+    return Results.Ok(new { cleanedCount, timeoutMinutes = timeout, staleSessions = staleSessions.Count });
+});
+
 app.MapPost("/tables/bulkUpsert", async (IEnumerable<TableStatusDto> recs) =>
 {
     await using var conn = new NpgsqlConnection(connString);
@@ -975,7 +1160,7 @@ app.MapGet("/tables", async () =>
             Type = rdr.GetString(1),
             Occupied = rdr.GetBoolean(2),
             OrderId = rdr.IsDBNull(3) ? null : rdr.GetString(3),
-            StartTime = rdr.IsDBNull(4) ? null : rdr.GetFieldValue<DateTimeOffset>(4),
+            StartTime = rdr.IsDBNull(4) ? null : rdr.GetFieldValue<DateTime>(4),
             Server = rdr.IsDBNull(5) ? null : rdr.GetString(5)
         });
     }
@@ -1015,7 +1200,7 @@ app.MapGet("/tables/{label}", async (string label) =>
             Type = rdr.GetString(1),
             Occupied = rdr.GetBoolean(2),
             OrderId = rdr.IsDBNull(3) ? null : rdr.GetString(3),
-            StartTime = rdr.IsDBNull(4) ? null : rdr.GetFieldValue<DateTimeOffset>(4),
+            StartTime = rdr.IsDBNull(4) ? null : rdr.GetFieldValue<DateTime>(4),
             Server = rdr.IsDBNull(5) ? null : rdr.GetString(5)
         });
     }
@@ -1118,6 +1303,7 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         updated_at timestamptz NOT NULL DEFAULT now()
     );
     ALTER TABLE public.table_sessions ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]';
+    ALTER TABLE public.table_sessions ADD COLUMN IF NOT EXISTS last_heartbeat timestamp NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS order_id text NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS start_time timestamptz NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS server text NULL;
@@ -1131,12 +1317,13 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         end_time timestamp NULL,
         status text NOT NULL CHECK (status IN ('active','closed')) DEFAULT 'active',
         items jsonb NOT NULL DEFAULT '[]',
-        billing_id uuid NULL
+        billing_id uuid NULL,
+        last_heartbeat timestamp NULL
     );
 
     CREATE TABLE IF NOT EXISTS public.bills (
         bill_id uuid PRIMARY KEY,
-        billing_id text NULL UNIQUE,
+        billing_id uuid NULL UNIQUE,
         session_id text NULL,
         table_label text NOT NULL,
         server_id text NOT NULL,
@@ -1159,12 +1346,35 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS time_cost numeric NOT NULL DEFAULT 0;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS items_cost numeric NOT NULL DEFAULT 0;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS total_amount numeric NOT NULL DEFAULT 0;
-                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS billing_id text NULL;
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS billing_id uuid NULL;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS session_id text NULL;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'awaiting_payment';
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS is_settled boolean NOT NULL DEFAULT false;
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS payment_state text NOT NULL DEFAULT 'not-paid';
-                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS closed_at timestamp NULL;";
+                         ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS closed_at timestamp NULL;
+                         
+                         -- Migrate existing billing_id from TEXT to UUID if needed
+                         DO $$ 
+                         BEGIN
+                           -- Check if billing_id column exists and is TEXT type
+                           IF EXISTS (
+                             SELECT 1 FROM information_schema.columns 
+                             WHERE table_schema = 'public' 
+                               AND table_name = 'bills' 
+                               AND column_name = 'billing_id' 
+                               AND data_type = 'text'
+                           ) THEN
+                             -- Convert TEXT billing_id to UUID
+                             UPDATE public.bills 
+                             SET billing_id = billing_id::uuid 
+                             WHERE billing_id IS NOT NULL 
+                               AND billing_id != '' 
+                               AND billing_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+                             
+                             -- Alter column type to UUID
+                             ALTER TABLE public.bills ALTER COLUMN billing_id TYPE uuid USING billing_id::uuid;
+                           END IF;
+                         END $$;";
     const string sql3 = @"CREATE TABLE IF NOT EXISTS public.app_settings(
                             key text PRIMARY KEY,
                             value text NOT NULL

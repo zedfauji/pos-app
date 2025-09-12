@@ -56,6 +56,7 @@
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
                 <NavigationViewItem Content="Menu" Tag="MenuPage" Icon="Shop"/>
+                <NavigationViewItem Content="Modifiers" Tag="ModifierManagementPage" Icon="Edit"/>
                 <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem Content="Vendor-Orders" Tag="VendorOrdersPage" Icon="List"/>
@@ -70,6 +71,12 @@
                 <NavigationViewItemHeader Content="Administration"/>
                 <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
                 <NavigationViewItem Content="Settings" Tag="SettingsPage" Icon="Setting"/>
+                
+                <NavigationViewItemSeparator/>
+                
+                <!-- Development/Testing Group -->
+                <NavigationViewItemHeader Content="Development"/>
+                <!-- PaymentPaneTestPage removed - no longer using panes -->
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>
         </NavigationView>

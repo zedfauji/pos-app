@@ -16,7 +16,7 @@ public static class SessionService
         try
         {
             if (!File.Exists(FilePath)) { Current = null; return; }
-            var bytes = await File.ReadAllBytesAsync(FilePath);
+            var bytes = await SafeFileOperations.SafeReadBytesAsync(FilePath);
             
             // Use .NET cryptography instead of Windows Runtime COM interop
             // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
@@ -32,7 +32,7 @@ public static class SessionService
                 // If decryption fails, clear the session
                 Current = null;
                 // Optionally delete the corrupted file
-                try { File.Delete(FilePath); } catch { }
+                try { await SafeFileOperations.SafeDeleteAsync(FilePath); } catch { }
             }
         }
         catch (Exception ex)
@@ -45,13 +45,13 @@ public static class SessionService
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+            SafeFileOperations.EnsureDirectoryExists(Path.GetDirectoryName(FilePath)!);
             var json = System.Text.Json.JsonSerializer.Serialize(session);
             
             // Use .NET file operations instead of Windows Runtime COM interop
             // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
             var bytes = Encoding.UTF8.GetBytes(json);
-            await File.WriteAllBytesAsync(FilePath, bytes);
+            await SafeFileOperations.SafeWriteBytesAsync(FilePath, bytes);
             Current = session;
         }
         catch (Exception ex)
@@ -60,9 +60,9 @@ public static class SessionService
         }
     }
 
-    public static void Clear()
+    public static async Task ClearAsync()
     {
-        try { if (File.Exists(FilePath)) File.Delete(FilePath); } catch { }
+        try { if (File.Exists(FilePath)) await SafeFileOperations.SafeDeleteAsync(FilePath); } catch { }
         Current = null;
     }
 }

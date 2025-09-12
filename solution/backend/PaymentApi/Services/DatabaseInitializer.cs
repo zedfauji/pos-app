@@ -39,9 +39,9 @@ public sealed class DatabaseInitializer : IHostedService
 create schema if not exists pay;
 
 create table if not exists pay.payments (
-  payment_id       bigserial primary key,
-  session_id       text not null,
-  billing_id       text not null,
+  payment_id       uuid primary key default gen_random_uuid(),
+  session_id       uuid not null,
+  billing_id       uuid not null,
   amount_paid      numeric(12,2) not null check (amount_paid >= 0),
   currency         text not null default 'USD',
   payment_method   text not null,

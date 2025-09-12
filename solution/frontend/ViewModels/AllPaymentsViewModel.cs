@@ -159,7 +159,7 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 filtered = filtered.Where(p => 
                     p.PaymentId.ToString().Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    p.SessionId.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    p.SessionId.ToString().Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
                     p.PaymentMethod.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
             }
 

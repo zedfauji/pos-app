@@ -31,7 +31,7 @@ public sealed class OrderService : IOrderService
                 var vendor = snap.vendorPrice;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendor) * qty;
-                pricedItems.Add(new OrderItemDto(0, i.MenuItemId, null, qty, basePrice, delta, lineTotal, profit));
+                pricedItems.Add(new OrderItemDto(0, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
             }
             else if (i.ComboId is not null)
             {
@@ -44,47 +44,55 @@ public sealed class OrderService : IOrderService
                 var delta = 0m; // combo-level modifiers not implemented
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendorSum) * qty;
-                pricedItems.Add(new OrderItemDto(0, null, i.ComboId, qty, basePrice, delta, lineTotal, profit));
+                pricedItems.Add(new OrderItemDto(0, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
             }
         }
 
         var subtotal = pricedItems.Sum(x => x.LineTotal);
-        var order = new OrderDto(0, req.SessionId, req.TableId, "open", subtotal, 0m, 0m, subtotal, pricedItems.Sum(x => x.Profit), pricedItems);
+        var order = new OrderDto(0, req.SessionId, req.TableId, "open", "pending", subtotal, 0m, 0m, subtotal, pricedItems.Sum(x => x.Profit), pricedItems);
 
-        // Inventory checks by SKU derived from menu snapshots
-        var skuQty = new List<(string Sku, decimal Quantity)>();
+        // Check inventory only for drinks (pre-made items)
+        var drinkSkuQty = new List<(string Sku, decimal Quantity)>();
         foreach (var it in pricedItems)
         {
             if (it.MenuItemId is not null)
             {
                 var snap = await _repo.GetMenuItemSnapshotAsync(it.MenuItemId.Value, ct);
-                skuQty.Add((snap.sku, it.Quantity));
+                if (IsDrinkCategory(snap.category))
+                {
+                    drinkSkuQty.Add((snap.sku, it.Quantity));
+                }
             }
             else if (it.ComboId is not null)
             {
-                // Expand combo to items: aggregate menu item SKUs by quantity via repository
+                // Expand combo to items: check drinks in combo
                 var links = await _repo.GetComboItemsAsync(it.ComboId.Value, ct);
                 foreach (var link in links)
                 {
                     var snap = await _repo.GetMenuItemSnapshotAsync(link.MenuItemId, ct);
-                    skuQty.Add((snap.sku, it.Quantity * link.Quantity));
+                    if (IsDrinkCategory(snap.category))
+                    {
+                        drinkSkuQty.Add((snap.sku, it.Quantity * link.Quantity));
+                    }
                 }
             }
         }
-        if (skuQty.Count > 0)
+        
+        // Check inventory for drinks only
+        if (drinkSkuQty.Count > 0)
         {
-            var ok = await _repo.CheckInventoryAvailabilityBySkuAsync(skuQty, ct);
-            if (!ok) throw new InvalidOperationException("INSUFFICIENT_STOCK");
+            var ok = await _repo.CheckInventoryAvailabilityBySkuAsync(drinkSkuQty, ct);
+            if (!ok) throw new InvalidOperationException("INSUFFICIENT_DRINK_STOCK");
         }
 
-        var orderId = await _repo.CreateOrderAsync(order, pricedItems, ct);
+        var orderId = await _repo.CreateOrderAsync(order, pricedItems, req.BillingId, ct);
         await _repo.AppendLogAsync(orderId, "create", null, order, req.ServerId, ct);
 
-        // Deduct inventory (best-effort; throw on failure to keep consistency)
-        if (skuQty.Count > 0)
+        // Deduct inventory for drinks only (best-effort)
+        if (drinkSkuQty.Count > 0)
         {
-            var skuQtyWithCost = skuQty.Select(x => (x.Sku, x.Quantity, (decimal?)null));
-            await _repo.DeductInventoryBySkuAsync(orderId, skuQtyWithCost, ct);
+            var drinkSkuQtyWithCost = drinkSkuQty.Select(x => (x.Sku, x.Quantity, (decimal?)null));
+            await _repo.DeductInventoryBySkuAsync(orderId, drinkSkuQtyWithCost, ct);
         }
 
         var created = await _repo.GetOrderAsync(orderId, ct);
@@ -94,7 +102,7 @@ public sealed class OrderService : IOrderService
     public Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct)
         => _repo.GetOrderAsync(orderId, ct);
 
-    public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(string sessionId, bool includeHistory, CancellationToken ct)
+    public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
         => _repo.GetOrdersBySessionAsync(sessionId, includeHistory, ct);
 
     public async Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
@@ -116,7 +124,7 @@ public sealed class OrderService : IOrderService
                 var vendor = snap.vendorPrice;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendor) * qty;
-                mapped.Add(new OrderItemDto(0, i.MenuItemId, null, qty, basePrice, delta, lineTotal, profit));
+                mapped.Add(new OrderItemDto(0, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
             }
             else if (i.ComboId is not null)
             {
@@ -129,7 +137,7 @@ public sealed class OrderService : IOrderService
                 var delta = 0m;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendorSum) * qty;
-                mapped.Add(new OrderItemDto(0, null, i.ComboId, qty, basePrice, delta, lineTotal, profit));
+                mapped.Add(new OrderItemDto(0, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
             }
         }
 
@@ -181,5 +189,43 @@ public sealed class OrderService : IOrderService
     public async Task RecalculateTotalsAsync(long orderId, CancellationToken ct)
     {
         await _repo.RecalculateTotalsAsync(orderId, ct);
+    }
+
+    public async Task<OrderDto?> MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
+    {
+        await _repo.MarkItemsDeliveredAsync(orderId, itemDeliveries, ct);
+        await _repo.AppendLogAsync(orderId, "mark_delivered", null, itemDeliveries, null, ct);
+        
+        // Update order delivery status based on delivered quantities
+        var order = await _repo.GetOrderAsync(orderId, ct);
+        if (order != null)
+        {
+            var allItemsDelivered = order.Items.All(item => 
+                itemDeliveries.Any(delivery => delivery.OrderItemId == item.Id && delivery.DeliveredQuantity >= item.Quantity));
+            
+            if (allItemsDelivered)
+            {
+                await _repo.UpdateOrderDeliveryStatusAsync(orderId, "delivered", ct);
+            }
+            else
+            {
+                await _repo.UpdateOrderDeliveryStatusAsync(orderId, "partial", ct);
+            }
+        }
+        
+        return await _repo.GetOrderAsync(orderId, ct);
+    }
+
+    public async Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct)
+    {
+        await _repo.UpdateOrderStatusAsync(orderId, "waiting", ct);
+        await _repo.AppendLogAsync(orderId, "mark_waiting", null, new { Status = "waiting" }, null, ct);
+        return await _repo.GetOrderAsync(orderId, ct);
+    }
+
+    private static bool IsDrinkCategory(string category)
+    {
+        var drinkCategories = new[] { "Beverages", "Drinks", "Alcohol", "Beer", "Soda", "Juice", "Water" };
+        return drinkCategories.Contains(category, StringComparer.OrdinalIgnoreCase);
     }
 }

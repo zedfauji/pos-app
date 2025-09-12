@@ -17,9 +17,15 @@
             <TextBlock Text="Order" FontSize="20" FontWeight="SemiBold"/>
             <TextBlock Text="ID:"/>
             <TextBlock Text="{Binding OrderId}"/>
+            <TextBlock Text="Status:"/>
+            <TextBlock Text="{Binding Status}" FontWeight="SemiBold"/>
+            <TextBlock Text="Delivery:"/>
+            <TextBlock Text="{Binding DeliveryStatus}" FontWeight="SemiBold"/>
             <Button Content="Refresh" Click="Refresh_Click"/>
             <Button Content="Load Logs" Click="LoadLogs_Click"/>
-            <Button Content="Checkout" Click="Checkout_Click"/>
+            <Button Content="Mark Waiting" Click="MarkWaiting_Click" IsEnabled="{Binding CanMarkWaiting}"/>
+            <Button Content="Mark Delivered" Click="MarkDelivered_Click" IsEnabled="{Binding CanMarkDelivered}"/>
+            <Button Content="Close Order" Click="CloseOrder_Click" IsEnabled="{Binding CanCloseOrder}"/>
             <NumberBox x:Name="OrderIdBox" Width="140" Minimum="1" SmallChange="1" PlaceholderText="Enter OrderId"/>
             <Button Content="Load" Click="LoadOrderId_Click"/>
         </StackPanel>
@@ -40,8 +46,9 @@
                     <DataTemplate>
                         <Grid Padding="8">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="3*"/>
                                 <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -51,14 +58,14 @@
                             <!-- Item Name -->
                             <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
                             
-                            <!-- Modifiers -->
-                            <TextBlock Grid.Column="1" Text="{Binding ModifiersText}" VerticalAlignment="Center"/>
+                            <!-- Quantity -->
+                            <TextBlock Grid.Column="1" Text="{Binding Quantity}" VerticalAlignment="Center" TextAlignment="Center"/>
                             
-                            <!-- Quantity Controls -->
+                            <!-- Delivered Quantity -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                <Button Content="-" Click="QtyMinus_Click" Width="24" Height="24"/>
-                                <TextBlock Text="{Binding Quantity}" Width="32" TextAlignment="Center" VerticalAlignment="Center"/>
-                                <Button Content="+" Click="QtyPlus_Click" Width="24" Height="24"/>
+                                <Button Content="-" Click="DeliveredMinus_Click" Width="24" Height="24"/>
+                                <TextBlock Text="{Binding DeliveredQuantity}" Width="32" TextAlignment="Center" VerticalAlignment="Center"/>
+                                <Button Content="+" Click="DeliveredPlus_Click" Width="24" Height="24"/>
                             </StackPanel>
                             
                             <!-- Price -->
@@ -67,8 +74,11 @@
                             <!-- Total -->
                             <TextBlock Grid.Column="4" Text="{Binding LineTotal}" VerticalAlignment="Center"/>
                             
+                            <!-- Delivery Status -->
+                            <TextBlock Grid.Column="5" Text="{Binding DeliveryStatus}" VerticalAlignment="Center" TextAlignment="Center"/>
+                            
                             <!-- Actions -->
-                            <Button Grid.Column="5" Content="Cancel" Click="Cancel_Click" VerticalAlignment="Center"/>
+                            <Button Grid.Column="6" Content="Delivered" Click="MarkItemDelivered_Click" VerticalAlignment="Center" IsEnabled="{Binding CanMarkDelivered}"/>
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>

@@ -428,14 +428,17 @@ public class AddItemRow : INotifyPropertyChanged
             if (!string.IsNullOrWhiteSpace(startResult.billingId)) OrderContext.CurrentBillingId = startResult.billingId;
             // Find existing order by session
             var ordersSvc = App.OrdersApi;
-            if (ordersSvc != null && !string.IsNullOrWhiteSpace(startResult.sessionId))
+            if (ordersSvc != null && !string.IsNullOrWhiteSpace(startResult.sessionId) && Guid.TryParse(startResult.sessionId, out var sessionGuid))
             {
-                var list = await ordersSvc.GetOrdersBySessionAsync(startResult.sessionId!);
-                var current = list.FirstOrDefault(o => string.Equals(o.SessionId, startResult.sessionId, StringComparison.OrdinalIgnoreCase));
+                var list = await ordersSvc.GetOrdersBySessionAsync(sessionGuid);
+                var current = list.FirstOrDefault(o => o.SessionId == sessionGuid);
                 if (current == null)
                 {
                     // Create empty order
-                    var req = new Services.OrderApiService.CreateOrderRequestDto(startResult.sessionId!, startResult.billingId, item.Label, user.UserId ?? string.Empty, user.Username ?? string.Empty, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
+                    Guid? billingGuid = null;
+                    if (!string.IsNullOrWhiteSpace(startResult.billingId) && Guid.TryParse(startResult.billingId, out var parsedBillingId))
+                        billingGuid = parsedBillingId;
+                    var req = new Services.OrderApiService.CreateOrderRequestDto(sessionGuid, billingGuid, item.Label, user.UserId ?? string.Empty, user.Username ?? string.Empty, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
                     var created = await ordersSvc.CreateOrderAsync(req);
                     if (created != null) current = created;
                 }
@@ -453,6 +456,49 @@ public class AddItemRow : INotifyPropertyChanged
     private async void StopMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        
+        // First, close any open orders for this table's session
+        try
+        {
+            var ordersSvc = App.OrdersApi;
+            if (ordersSvc != null)
+            {
+                // Get the current session ID for this table
+                var (activeSessionId, activeBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
+                if (activeSessionId.HasValue)
+                {
+                    // Get all open orders for this session
+                    var openOrders = await ordersSvc.GetOrdersBySessionAsync(activeSessionId.Value, includeHistory: false);
+                    var ordersToClose = openOrders.Where(o => o.Status == "open").ToList();
+                    
+                    // Close each open order
+                    foreach (var order in ordersToClose)
+                    {
+                        try
+                        {
+                            await ordersSvc.CloseOrderAsync(order.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log the error but continue closing other orders
+                            System.Diagnostics.Debug.WriteLine($"Failed to close order {order.Id}: {ex.Message}");
+                        }
+                    }
+                    
+                    if (ordersToClose.Count > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Closed {ordersToClose.Count} orders for session {activeSessionId.Value}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error but continue with table stopping
+            System.Diagnostics.Debug.WriteLine($"Error closing orders: {ex.Message}");
+        }
+        
+        // Now proceed with normal table stopping
         var stopResult = await _repo.StopSessionAsync(item.Label);
         if (!stopResult.ok)
         {
@@ -554,176 +600,44 @@ public class AddItemRow : INotifyPropertyChanged
     private async void AddItemsMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
-        // Load menu items from MenuApi (instead of Inventory)
-        var menuItems = await FetchMenuItemsAsync();
-        // Load existing session items
-        var existing = await _repo.GetSessionItemsAsync(item.Label);
 
-        // Build UI
-        var stack = new StackPanel { Spacing = 8 };
-        var listView = new ListView { SelectionMode = ListViewSelectionMode.None, Height = 320 };
-        var data = menuItems.Select(mi => new AddItemRow
-        {
-            ItemId = mi.Id.ToString(),
-            Name = mi.Name,
-            Price = mi.SellingPrice,
-            Quantity = 0
-        }).ToList();
-        // prefill existing
-        foreach (var ex in existing)
-        {
-            var row = data.FirstOrDefault(d => string.Equals(d.ItemId, ex.itemId, StringComparison.OrdinalIgnoreCase) || string.Equals(d.Name, ex.name, StringComparison.OrdinalIgnoreCase));
-            if (row != null) { row.Price = ex.price; row.Quantity = ex.quantity; }
-            else data.Add(new AddItemRow { ItemId = ex.itemId, Name = ex.name, Price = ex.price, Quantity = ex.quantity });
-        }
-        listView.ItemsSource = data;
-        listView.ItemTemplate = BuildAddItemTemplate();
-
-        stack.Children.Add(new TextBlock { Text = $"Add items to {item.Label}", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
-        stack.Children.Add(listView);
-
-        var dlg = new ContentDialog
-        {
-            Title = "Add Items",
-            Content = stack,
-            PrimaryButtonText = "Save",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = this.XamlRoot
-        };
-        var res = await dlg.ShowAsync();
-        if (res != ContentDialogResult.Primary) return;
-
-        var lines = data.Where(d => d.Quantity > 0)
-                        .Select(d => new ItemLine { itemId = d.ItemId, name = d.Name, quantity = d.Quantity, price = d.Price })
-                        .ToList();
-        var ok = await _repo.ReplaceSessionItemsAsync(item.Label, lines);
-        if (!ok)
-        {
-            await new ContentDialog { Title = "Save failed", Content = "Unable to save items to session", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
-            return;
-        }
-        // Also mirror items into OrderApi so OrdersPage reflects them
         try
         {
-            var ordersSvc = App.OrdersApi;
-            if (ordersSvc != null)
+            // Get active session for this table
+            var (sessionId, billingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
+            if (!sessionId.HasValue)
             {
-                string? resolvedSid = null; string? resolvedBid = null; string resolutionHint = "";
-                // If no current order, attempt to infer from context/active session/recent sessions for this table and create/find order
-                if (!OrderContext.CurrentOrderId.HasValue)
+                await new ContentDialog
                 {
-                    // 1) Prefer any existing context
-                    var sid = OrderContext.CurrentSessionId; var bid = OrderContext.CurrentBillingId;
-                    if (!string.IsNullOrWhiteSpace(sid) || !string.IsNullOrWhiteSpace(bid)) resolutionHint = "from OrderContext";
-                    // 2) Ask active sessions endpoint by table label if missing
-                    if (string.IsNullOrWhiteSpace(sid))
-                    {
-                        var tuple = await _repo.GetActiveSessionForTableAsync(item.Label);
-                        sid = tuple.sessionId ?? sid;
-                        bid = tuple.billingId ?? bid;
-                        if (!string.IsNullOrWhiteSpace(tuple.sessionId) || !string.IsNullOrWhiteSpace(tuple.billingId)) resolutionHint = "from /sessions/active";
-                    }
-                    // 3) Fallback: look at recent sessions filtered by table and pick the most recent active one
-                    if (string.IsNullOrWhiteSpace(sid))
-                    {
-                        var recent = await _repo.GetSessionsAsync(limit: 10, table: item.Label);
-                        var candidate = recent.FirstOrDefault(r => string.Equals(r.Status, "active", StringComparison.OrdinalIgnoreCase));
-                        if (candidate != null)
-                        {
-                            sid = candidate.SessionId.ToString();
-                            bid = candidate.BillingId?.ToString() ?? bid;
-                            resolutionHint = "from /sessions (recent)";
-                        }
-                    }
-                    if (!string.IsNullOrWhiteSpace(sid)) OrderContext.CurrentSessionId = sid;
-                    if (!string.IsNullOrWhiteSpace(bid)) OrderContext.CurrentBillingId = bid;
-                    resolvedSid = sid; resolvedBid = bid;
-                    if (!string.IsNullOrWhiteSpace(sid))
-                    {
-                        var orderList = await ordersSvc.GetOrdersBySessionAsync(sid);
-                        var currentOrder = orderList.FirstOrDefault(o => string.Equals(o.SessionId, sid, StringComparison.OrdinalIgnoreCase));
-                        if (currentOrder == null)
-                        {
-                            // Create order with minimal metadata
-                            string serverId = string.Empty; string? serverName = null;
-                            var req = new Services.OrderApiService.CreateOrderRequestDto(sid, bid, item.Label, serverId, serverName, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
-                            var created = await ordersSvc.CreateOrderAsync(req);
-                            if (created != null) currentOrder = created;
-                        }
-                        if (currentOrder != null) OrderContext.CurrentOrderId = currentOrder.Id;
-                    }
-                }
-
-                if (OrderContext.CurrentOrderId.HasValue)
-                {
-                    var orderId = OrderContext.CurrentOrderId.Value;
-                    var toAdd = new List<Services.OrderApiService.CreateOrderItemDto>();
-                    foreach (var l in lines)
-                    {
-                        if (long.TryParse(l.itemId, out var menuItemId))
-                        {
-                            toAdd.Add(new Services.OrderApiService.CreateOrderItemDto(menuItemId, null, l.quantity, Array.Empty<Services.OrderApiService.ModifierSelectionDto>()));
-                        }
-                    }
-                    if (toAdd.Count > 0)
-                    {
-                        var updated = await ordersSvc.AddItemsAsync(orderId, toAdd);
-                        if (updated == null)
-                        {
-                            // Fallback: resolve or recreate order, then retry once
-                            OrderContext.CurrentOrderId = null;
-                            var sid = OrderContext.CurrentSessionId;
-                            if (!string.IsNullOrWhiteSpace(sid))
-                            {
-                                var orderList = await ordersSvc.GetOrdersBySessionAsync(sid);
-                                var currentOrder = orderList.FirstOrDefault(o => string.Equals(o.SessionId, sid, StringComparison.OrdinalIgnoreCase));
-                                if (currentOrder == null)
-                                {
-                                    var req = new Services.OrderApiService.CreateOrderRequestDto(sid, OrderContext.CurrentBillingId, item.Label, string.Empty, null, Array.Empty<Services.OrderApiService.CreateOrderItemDto>());
-                                    currentOrder = await ordersSvc.CreateOrderAsync(req);
-                                }
-                                if (currentOrder != null)
-                                {
-                                    OrderContext.CurrentOrderId = currentOrder.Id;
-                                    updated = await ordersSvc.AddItemsAsync(currentOrder.Id, toAdd);
-                                }
-                            }
-                        }
-                        if (updated != null)
-                        {
-                            await new ContentDialog
-                            {
-                                Title = "Order updated",
-                                Content = $"Added {toAdd.Count} item(s) to Order #{OrderContext.CurrentOrderId?.ToString() ?? orderId.ToString()}.",
-                                CloseButtonText = "OK",
-                                XamlRoot = this.XamlRoot
-                            }.ShowAsync();
-                        }
-                        else
-                        {
-                            await new ContentDialog { Title = "Order update failed", Content = "Could not add items to order.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
-                        }
-                    }
-                    else
-                    {
-                        await new ContentDialog { Title = "Nothing to add", Content = "No menu items with numeric IDs were selected to mirror to the order.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
-                    }
-                }
-                else
-                {
-                    var details = $"Table: {item.Label}\nSessionId: {resolvedSid ?? "<none>"}\nBillingId: {resolvedBid ?? "<none>"}\nResolution: {resolutionHint}";
-                    await new ContentDialog { Title = "No active order", Content = "Could not determine or create an Order for this session, so items were not mirrored to OrdersApi.\n\n" + details, CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
-                }
+                    Title = "No Active Session",
+                    Content = $"Table {item.Label} does not have an active session. Please start a session first.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                }.ShowAsync();
+                return;
             }
+
+            // Navigate to menu selection page
+            var menuParams = new MenuSelectionParams
+            {
+                TableLabel = item.Label,
+                SessionId = sessionId.Value,
+                OrderId = OrderContext.CurrentOrderId
+            };
+
+            Frame.Navigate(typeof(MenuSelectionPage), menuParams);
         }
         catch (Exception ex)
         {
-            await new ContentDialog { Title = "Order update failed", Content = ex.Message, CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+            System.Diagnostics.Debug.WriteLine($"Error opening menu dialog: {ex.Message}");
+            await new ContentDialog
+            {
+                Title = "Error",
+                Content = $"Failed to open menu: {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
         }
-
-        // update ItemsSummary
-        item.ItemsSummary = BuildItemsSummary(lines);
     }
 
     private DataTemplate BuildAddItemTemplate()

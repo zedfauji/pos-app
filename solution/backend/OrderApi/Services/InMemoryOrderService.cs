@@ -21,10 +21,10 @@ public sealed class InMemoryOrderService : IOrderService
             decimal priceDelta = 0m; // modifiers ignored in-memory
             decimal lineTotal = (basePrice + priceDelta) * qty;
             decimal profit = lineTotal * 0.3m; // placeholder profit
-            items.Add(new OrderItemDto(itemId, i.MenuItemId, i.ComboId, qty, basePrice, priceDelta, lineTotal, profit));
+            items.Add(new OrderItemDto(itemId, i.MenuItemId, i.ComboId, qty, 0, basePrice, priceDelta, lineTotal, profit));
         }
         var subtotal = items.Sum(x => x.LineTotal);
-        var order = new OrderDto(id, req.SessionId, req.TableId, "open", subtotal, 0m, 0m, subtotal, items.Sum(x => x.Profit), items);
+        var order = new OrderDto(id, req.SessionId, req.TableId, "open", "pending", subtotal, 0m, 0m, subtotal, items.Sum(x => x.Profit), items);
         _orders[id] = order;
         _logs[id] = new List<OrderLogDto>();
         return Task.FromResult(order);
@@ -36,7 +36,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(order);
     }
 
-    public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(string sessionId, bool includeHistory, CancellationToken ct)
+    public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
     {
         var list = _orders.Values.Where(o => o.SessionId == sessionId).OrderBy(o => o.Id).ToList();
         return Task.FromResult((IReadOnlyList<OrderDto>)list);
@@ -54,7 +54,7 @@ public sealed class InMemoryOrderService : IOrderService
             decimal priceDelta = 0m;
             decimal lineTotal = (basePrice + priceDelta) * qty;
             decimal profit = lineTotal * 0.3m;
-            itemList.Add(new OrderItemDto(itemId, i.MenuItemId, i.ComboId, qty, basePrice, priceDelta, lineTotal, profit));
+            itemList.Add(new OrderItemDto(itemId, i.MenuItemId, i.ComboId, qty, 0, basePrice, priceDelta, lineTotal, profit));
         }
         var subtotal = itemList.Sum(x => x.LineTotal);
         var updated = order with { Subtotal = subtotal, Total = subtotal, ProfitTotal = itemList.Sum(x => x.Profit), Items = itemList };
@@ -116,5 +116,29 @@ public sealed class InMemoryOrderService : IOrderService
             _orders[orderId] = order with { Subtotal = subtotal, ProfitTotal = profit, Total = subtotal };
         }
         return Task.CompletedTask;
+    }
+
+    public Task<OrderDto?> MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
+    {
+        if (!_orders.TryGetValue(orderId, out var order)) 
+            return Task.FromResult<OrderDto?>(null);
+
+        // In-memory implementation: just update the order status
+        // In a real implementation, this would update delivered quantities in the database
+        var updated = order with { DeliveryStatus = "partial" };
+        _orders[orderId] = updated;
+        
+        return Task.FromResult<OrderDto?>(updated);
+    }
+
+    public Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct)
+    {
+        if (!_orders.TryGetValue(orderId, out var order)) 
+            return Task.FromResult<OrderDto?>(null);
+
+        var updated = order with { Status = "waiting" };
+        _orders[orderId] = updated;
+        
+        return Task.FromResult<OrderDto?>(updated);
     }
 }

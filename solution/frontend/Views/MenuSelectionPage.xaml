@@ -1,0 +1,213 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.MenuSelectionPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        
+        <Style x:Key="ButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock Text="Add Items to Order" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
+            <TextBlock x:Name="TableInfoText" FontSize="14" Opacity="0.7"/>
+            
+            <!-- Server Selection -->
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <TextBlock Text="Server:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <ComboBox x:Name="ServerComboBox" 
+                          Width="200" 
+                          ItemsSource="{Binding AvailableServers}"
+                          DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedServer, Mode=TwoWay}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Menu Items -->
+            <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                    <TextBlock Text="Menu Items" FontSize="20" FontWeight="SemiBold"/>
+                    <Button x:Name="RefreshButton" 
+                            Content="Refresh" 
+                            Click="RefreshButton_Click"
+                            Margin="16,0,0,0"
+                            Style="{StaticResource ButtonStyle}"/>
+                </StackPanel>
+                
+                <ScrollViewer Height="500" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="MenuItemsControl" ItemsSource="{Binding MenuItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource CardStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="16"/>
+                                            <TextBlock Text="{Binding Description}" FontSize="12" Opacity="0.7" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding PriceText}" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                                            <TextBlock x:Name="CustomizableText" 
+                                                       Text="Customizable" 
+                                                       FontSize="10" 
+                                                       Opacity="0.6" 
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Quantity Controls -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <Button Content="-" 
+                                                    Click="QuantityMinus_Click" 
+                                                    Width="32" 
+                                                    Height="32"
+                                                    IsEnabled="{Binding CanDecrease}"/>
+                                            <TextBlock Text="{Binding SelectedQuantity}" 
+                                                       FontSize="16" 
+                                                       FontWeight="SemiBold" 
+                                                       VerticalAlignment="Center" 
+                                                       MinWidth="30" 
+                                                       TextAlignment="Center"/>
+                                            <Button Content="+" 
+                                                    Click="QuantityPlus_Click" 
+                                                    Width="32" 
+                                                    Height="32"/>
+                                        </StackPanel>
+
+                                        <!-- Customization Panel -->
+                                        <StackPanel Grid.Column="2" x:Name="CustomizationPanel" Visibility="Collapsed" Margin="16,0,0,0">
+                                            <ScrollViewer Height="150" VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl x:Name="ModifiersItemsControl" ItemsSource="{Binding Modifiers}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Margin="0,0,0,12">
+                                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="12"/>
+                                                                <ItemsControl ItemsSource="{Binding Options}" Margin="8,4,0,0">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <CheckBox Content="{Binding DisplayName}"
+                                                                                      Margin="0,2,0,0"
+                                                                                      Click="ModifierOption_Click"/>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </StackPanel>
+
+                                        <!-- Action Buttons -->
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="16,0,0,0">
+                                            <Button Content="Customize"
+                                                    Click="CustomizeItem_Click"
+                                                    VerticalAlignment="Center"/>
+                                            <Button Content="Add"
+                                                    Click="AddItem_Click"
+                                                    VerticalAlignment="Center"
+                                                    IsEnabled="{Binding CanAdd}"
+                                                    Style="{StaticResource ButtonStyle}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+
+            <!-- Order Summary -->
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="Order Summary" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Selected Items:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        
+                        <ScrollViewer Height="200" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="SelectedItemsControl" ItemsSource="{Binding SelectedItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
+                                                CornerRadius="4" 
+                                                Padding="8" 
+                                                Margin="0,0,0,4">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding QuantityText}" FontSize="12" Opacity="0.7"/>
+                                                <TextBlock Text="{Binding CustomizationsText}" FontSize="10" Opacity="0.6" Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding TotalPriceText}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Separator replacement -->
+                        <Rectangle Height="1" Fill="{ThemeResource SystemControlForegroundBaseLowBrush}" Margin="0,12,0,8"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="Total Items:" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="TotalItemsText" Text="0" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="Total Price:" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="TotalPriceText" Text="$0.00" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        
+                        <Button x:Name="ClearSelectionButton" 
+                                Content="Clear All" 
+                                Click="ClearSelection_Click"
+                                Margin="0,8,0,0"
+                                Style="{StaticResource ButtonStyle}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancel" 
+                    Click="Cancel_Click" 
+                    Margin="0,0,12,0"
+                    Style="{StaticResource ButtonStyle}"/>
+            <Button Content="Add to Order" 
+                    Click="AddToOrder_Click" 
+                    IsEnabled="{Binding CanAddToOrder}"
+                    Style="{StaticResource ButtonStyle}"/>
+        </StackPanel>
+    </Grid>
+</Page>

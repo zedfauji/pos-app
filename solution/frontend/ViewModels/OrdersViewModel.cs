@@ -11,8 +11,8 @@ public class OrdersViewModel
     public ObservableCollection<OrderApiService.OrderDto> Orders { get; } = new();
     public ObservableCollection<OrderApiService.OrderLogDto> Logs { get; } = new();
 
-    private string? _sessionId;
-    public void SetSession(string sessionId) => _sessionId = sessionId;
+    private Guid? _sessionId;
+    public void SetSession(Guid sessionId) => _sessionId = sessionId;
 
     public OrdersViewModel()
     {
@@ -27,11 +27,11 @@ public class OrdersViewModel
 
     public async Task LoadAsync(bool includeHistory = false, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_sessionId)) { Orders.Clear(); return; }
-        await LoadBySessionAsync(_sessionId!, includeHistory, ct);
+        if (!_sessionId.HasValue) { Orders.Clear(); return; }
+        await LoadBySessionAsync(_sessionId.Value, includeHistory, ct);
     }
 
-    public async Task LoadBySessionAsync(string sessionId, bool includeHistory = false, CancellationToken ct = default)
+    public async Task LoadBySessionAsync(Guid sessionId, bool includeHistory = false, CancellationToken ct = default)
     {
         Orders.Clear();
         var list = await _orders.GetOrdersBySessionAsync(sessionId, includeHistory, ct);

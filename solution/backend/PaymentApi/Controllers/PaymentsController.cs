@@ -43,21 +43,21 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [HttpPost("{billingId}/discounts")]
-    public async Task<ActionResult<BillLedgerDto>> ApplyDiscountAsync([FromRoute] string billingId, [FromBody] decimal discountAmount, [FromQuery] string sessionId, [FromQuery] string? reason, [FromQuery] string? serverId, CancellationToken ct = default)
+    public async Task<ActionResult<BillLedgerDto>> ApplyDiscountAsync([FromRoute] Guid billingId, [FromBody] decimal discountAmount, [FromQuery] Guid sessionId, [FromQuery] string? reason, [FromQuery] string? serverId, CancellationToken ct = default)
     {
         var ledger = await _service.ApplyDiscountAsync(billingId, sessionId, discountAmount, reason, serverId, ct);
         return Ok(ledger);
     }
 
     [HttpGet("{billingId}")]
-    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> ListPaymentsAsync([FromRoute] string billingId, CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> ListPaymentsAsync([FromRoute] Guid billingId, CancellationToken ct)
     {
         var list = await _service.ListPaymentsAsync(billingId, ct);
         return Ok(list);
     }
 
     [HttpGet("{billingId}/ledger")]
-    public async Task<ActionResult<BillLedgerDto>> GetLedgerAsync([FromRoute] string billingId, CancellationToken ct)
+    public async Task<ActionResult<BillLedgerDto>> GetLedgerAsync([FromRoute] Guid billingId, CancellationToken ct)
     {
         var ledger = await _service.GetLedgerAsync(billingId, ct);
         if (ledger is null) return NotFound();
@@ -65,21 +65,21 @@ public sealed class PaymentsController : ControllerBase
         }
 
     [HttpGet("{billingId}/logs")]
-    public async Task<ActionResult<PagedResult<PaymentLogDto>>> ListLogsAsync([FromRoute] string billingId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    public async Task<ActionResult<PagedResult<PaymentLogDto>>> ListLogsAsync([FromRoute] Guid billingId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         var res = await _service.ListLogsAsync(billingId, page, pageSize, ct);
         return Ok(res);
     }
 
     [HttpPost("{billingId}/close")]
-    public async Task<ActionResult<BillLedgerDto>> CloseAsync([FromRoute] string billingId, [FromQuery] string? serverId, CancellationToken ct)
+    public async Task<ActionResult<BillLedgerDto>> CloseAsync([FromRoute] Guid billingId, [FromQuery] string? serverId, CancellationToken ct)
     {
         var ledger = await _service.CloseBillAsync(billingId, serverId, ct);
         return Ok(ledger);
     }
 
     [HttpGet("{billingId}/receipt")]
-    public async Task<ActionResult<object>> GetReceiptDataAsync(string billingId, CancellationToken ct)
+    public async Task<ActionResult<object>> GetReceiptDataAsync(Guid billingId, CancellationToken ct)
     {
         try
         {

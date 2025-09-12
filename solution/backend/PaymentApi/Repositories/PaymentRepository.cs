@@ -28,7 +28,7 @@ public sealed class PaymentRepository : IPaymentRepository
         }
     }
 
-    public async Task InsertPaymentsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string sessionId, string billingId, string? serverId, IReadOnlyList<RegisterPaymentLineDto> lines, CancellationToken ct)
+    public async Task InsertPaymentsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid sessionId, Guid billingId, string? serverId, IReadOnlyList<RegisterPaymentLineDto> lines, CancellationToken ct)
     {
         const string ins = @"INSERT INTO pay.payments(session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by)
                              VALUES(@sid, @bid, @amt, @pm, @disc, @drea, @tip, @ext, @meta, @by)";
@@ -49,7 +49,7 @@ public sealed class PaymentRepository : IPaymentRepository
         }
     }
 
-    public async Task<(decimal totalDue, decimal totalDiscount, decimal totalPaid, decimal totalTip, string status)> UpsertLedgerAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string sessionId, string billingId, decimal? providedTotalDue, (decimal addPaid, decimal addDiscount, decimal addTip) deltas, CancellationToken ct)
+    public async Task<(decimal totalDue, decimal totalDiscount, decimal totalPaid, decimal totalTip, string status)> UpsertLedgerAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid sessionId, Guid billingId, decimal? providedTotalDue, (decimal addPaid, decimal addDiscount, decimal addTip) deltas, CancellationToken ct)
     {
         // Upsert ledger row
         const string sel = "SELECT total_due, total_discount, total_paid, total_tip, status FROM pay.bill_ledger WHERE billing_id = @bid FOR UPDATE";
@@ -104,7 +104,7 @@ public sealed class PaymentRepository : IPaymentRepository
         return (due, disc, paid, tip, newStatus);
     }
 
-    public async Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(string billingId, CancellationToken ct)
+    public async Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(Guid billingId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
@@ -116,14 +116,14 @@ public sealed class PaymentRepository : IPaymentRepository
         while (await rdr.ReadAsync(ct))
         {
             list.Add(new PaymentDto(
-                rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
+                rdr.GetFieldValue<Guid>(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
                 rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
         }
         return list;
     }
 
-    public async Task<BillLedgerDto?> GetLedgerAsync(string billingId, CancellationToken ct)
+    public async Task<BillLedgerDto?> GetLedgerAsync(Guid billingId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         const string sql = @"SELECT billing_id, session_id, total_due, total_discount, total_paid, total_tip, status FROM pay.bill_ledger WHERE billing_id = @bid";
@@ -131,10 +131,10 @@ public sealed class PaymentRepository : IPaymentRepository
         cmd.Parameters.AddWithValue("@bid", billingId);
         await using var rdr = await cmd.ExecuteReaderAsync(ct);
         if (!await rdr.ReadAsync(ct)) return null;
-        return new BillLedgerDto(rdr.GetString(0), rdr.GetString(1), rdr.GetDecimal(2), rdr.GetDecimal(3), rdr.GetDecimal(4), rdr.GetDecimal(5), rdr.GetString(6));
+        return new BillLedgerDto(rdr.GetFieldValue<Guid>(0), rdr.GetFieldValue<Guid>(1), rdr.GetDecimal(2), rdr.GetDecimal(3), rdr.GetDecimal(4), rdr.GetDecimal(5), rdr.GetString(6));
     }
 
-    public async Task AppendLogAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string billingId, string sessionId, string action, object? oldValue, object? newValue, string? serverId, CancellationToken ct)
+    public async Task AppendLogAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid billingId, Guid sessionId, string action, object? oldValue, object? newValue, string? serverId, CancellationToken ct)
     {
         const string ins = @"INSERT INTO pay.payment_logs(billing_id, session_id, action, old_value, new_value, server_id)
                              VALUES(@bid, @sid, @a, @o, @n, @srv)";
@@ -148,7 +148,7 @@ public sealed class PaymentRepository : IPaymentRepository
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task<(IReadOnlyList<PaymentLogDto> Items, int Total)> ListLogsAsync(string billingId, int page, int pageSize, CancellationToken ct)
+    public async Task<(IReadOnlyList<PaymentLogDto> Items, int Total)> ListLogsAsync(Guid billingId, int page, int pageSize, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         var limit = Math.Clamp(pageSize, 1, 200);
@@ -164,7 +164,7 @@ public sealed class PaymentRepository : IPaymentRepository
         while (await rdr.ReadAsync(ct))
         {
             list.Add(new PaymentLogDto(
-                rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3),
+                rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetString(3),
                 rdr.IsDBNull(4) ? null : rdr.GetFieldValue<object>(4), rdr.IsDBNull(5) ? null : rdr.GetFieldValue<object>(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetFieldValue<DateTimeOffset>(7)));
         }
@@ -187,7 +187,7 @@ public sealed class PaymentRepository : IPaymentRepository
         while (await rdr.ReadAsync(ct))
         {
             list.Add(new PaymentDto(
-                rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
+                rdr.GetFieldValue<Guid>(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
                 rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
         }

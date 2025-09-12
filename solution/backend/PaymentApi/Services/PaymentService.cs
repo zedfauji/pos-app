@@ -24,13 +24,13 @@ public sealed class PaymentService : IPaymentService
             throw new InvalidOperationException("INVALID_AMOUNTS");
         
         // Immutability protection: Validate billing ID format
-        if (string.IsNullOrWhiteSpace(req.BillingId))
-            throw new InvalidOperationException("INVALID_BILLING_ID: Billing ID cannot be null or empty");
+        if (req.BillingId == Guid.Empty)
+            throw new InvalidOperationException("INVALID_BILLING_ID: Billing ID cannot be empty");
         
         // Validate billing ID format (should be immutable format)
-        if (!_idService.IsValidBillingId(req.BillingId))
+        if (!_idService.IsValidBillingId(req.BillingId.ToString()))
         {
-            _idService.LogImmutableIdModificationAttempt("BillingId", req.BillingId, "InvalidFormat");
+            _idService.LogImmutableIdModificationAttempt("BillingId", req.BillingId.ToString(), "InvalidFormat");
             throw new InvalidOperationException("INVALID_BILLING_ID_FORMAT: Billing ID must follow immutable format");
         }
         
@@ -76,7 +76,7 @@ public sealed class PaymentService : IPaymentService
                     {
                         if (session is System.Text.Json.Nodes.JsonObject sessionObj && 
                             sessionObj.TryGetPropertyValue("billingId", out var billingIdNode) &&
-                            billingIdNode?.ToString() == req.BillingId)
+                            billingIdNode?.ToString() == req.BillingId.ToString())
                         {
                             billingIdExists = true;
                             break;
@@ -86,8 +86,34 @@ public sealed class PaymentService : IPaymentService
                 
                 if (!billingIdExists)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, rejecting payment");
-                    throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in active sessions");
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, checking completed bills");
+                    
+                    // Check completed bills as fallback
+                    var billsUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId.ToString())}";
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Checking completed bills endpoint: {billsUrl}");
+                    
+                    using var billsRes = await http.GetAsync(billsUrl, ct);
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Completed bills check response: {(int)billsRes.StatusCode} {billsRes.ReasonPhrase}");
+                    
+                    if (billsRes.IsSuccessStatusCode)
+                    {
+                        var billsJson = await billsRes.Content.ReadAsStringAsync();
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Completed bills response: {billsJson}");
+                        
+                        // Parse the response to check if bill exists
+                        var billData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(billsJson);
+                        if (billData != null)
+                        {
+                            billingIdExists = true;
+                            System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} found in completed bills, proceeding with payment");
+                        }
+                    }
+                    
+                    if (!billingIdExists)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions or completed bills, rejecting payment");
+                        throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in active sessions or completed bills");
+                    }
                 }
                 
                 System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} exists in TablesApi, proceeding with payment");
@@ -146,7 +172,7 @@ public sealed class PaymentService : IPaymentService
                     using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
                     { BaseAddress = new Uri(tablesBase.TrimEnd('/') + "/") };
                     
-                    var settleUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}/settle";
+                    var settleUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId.ToString())}/settle";
                     System.Diagnostics.Debug.WriteLine($"PaymentService: Calling TablesApi settle endpoint: {settleUrl}");
                     
                     using var res = await http.PostAsync(settleUrl, new StringContent(string.Empty), ct);
@@ -180,7 +206,7 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public async Task<BillLedgerDto> CloseBillAsync(string billingId, string? serverId, CancellationToken ct)
+    public async Task<BillLedgerDto> CloseBillAsync(Guid billingId, string? serverId, CancellationToken ct)
     {
         // Mark closed if ledger is settled (paid)
         BillLedgerDto? ledger = null;
@@ -198,7 +224,7 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public async Task<BillLedgerDto> ApplyDiscountAsync(string billingId, string sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct)
+    public async Task<BillLedgerDto> ApplyDiscountAsync(Guid billingId, Guid sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct)
     {
         if (discountAmount <= 0) throw new InvalidOperationException("INVALID_DISCOUNT");
         BillLedgerDto? ledger = null;
@@ -212,13 +238,13 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public Task<BillLedgerDto?> GetLedgerAsync(string billingId, CancellationToken ct)
+    public Task<BillLedgerDto?> GetLedgerAsync(Guid billingId, CancellationToken ct)
         => _repo.GetLedgerAsync(billingId, ct);
 
-    public Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(string billingId, CancellationToken ct)
+    public Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(Guid billingId, CancellationToken ct)
         => _repo.ListPaymentsAsync(billingId, ct);
 
-    public async Task<PagedResult<PaymentLogDto>> ListLogsAsync(string billingId, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<PaymentLogDto>> ListLogsAsync(Guid billingId, int page, int pageSize, CancellationToken ct)
     {
         var (items, total) = await _repo.ListLogsAsync(billingId, page, pageSize, ct);
         return new PagedResult<PaymentLogDto>(items, total);

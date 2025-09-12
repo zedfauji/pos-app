@@ -42,7 +42,7 @@ namespace MagiDesk.Frontend
         public static Services.VendorOrdersApiService? VendorOrders { get; private set; }
         public static Services.ReceiptService? ReceiptService { get; private set; }
         public static Services.SettingsApiService? SettingsApi { get; private set; }
-        public static Services.PaneManager? PaneManager { get; private set; }
+        public static Services.HeartbeatService? HeartbeatService { get; private set; }
         public static IServiceProvider? Services { get; private set; }
 
         /// <summary>
@@ -148,6 +148,16 @@ namespace MagiDesk.Frontend
 #endif
             window.Activate();
 
+            // Add window closing cleanup
+            window.Closed += async (sender, e) =>
+            {
+                try
+                {
+                    await CleanupActiveSessionsAsync();
+                }
+                catch { }
+            };
+
             // CRITICAL FIX: Remove WindowNative COM interop calls to prevent Marshal.ThrowExceptionForHR errors
             // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
             // Window activation is handled automatically by the system
@@ -212,8 +222,8 @@ namespace MagiDesk.Frontend
                 var logSettings = new Services.HttpLoggingHandler(innerSettings);
                 SettingsApi = new Services.SettingsApiService(new HttpClient(logSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
                 
-                // Initialize PaneManager
-                PaneManager = new Services.PaneManager(new Services.NullLogger<Services.PaneManager>());
+                // Initialize HeartbeatService
+                HeartbeatService = new Services.HeartbeatService();
                 
                 // ReceiptService is already initialized in constructor
             }
@@ -245,8 +255,8 @@ namespace MagiDesk.Frontend
                 var logVendorOrders = new Services.HttpLoggingHandler(innerVendorOrders);
                 VendorOrders = new Services.VendorOrdersApiService(new HttpClient(logVendorOrders) { BaseAddress = new Uri("https://localhost:7016/") });
                 
-                // Initialize PaneManager
-                PaneManager = new Services.PaneManager(new Services.NullLogger<Services.PaneManager>());
+                // Initialize HeartbeatService
+                HeartbeatService = new Services.HeartbeatService();
                 
                 // ReceiptService is already initialized in constructor
             }
@@ -257,6 +267,9 @@ namespace MagiDesk.Frontend
                     _isInitializing = false;
                     _isInitialized = true;
                 }
+                
+                // After initialization, attempt to recover any orphaned sessions
+                _ = Task.Run(async () => await RecoverActiveSessionsAsync());
             }
         }
 
@@ -274,10 +287,190 @@ namespace MagiDesk.Frontend
             try
             {
                 Log.Error("Unhandled UI exception", e.Exception);
+                // Attempt cleanup before crash
+                _ = Task.Run(async () => await CleanupActiveSessionsAsync());
             }
             catch { }
             // Let it crash after logging, or set e.Handled = true to try to continue
             // e.Handled = true; // Uncomment to prevent crash during debugging
+        }
+
+
+        private static async Task CleanupActiveSessionsAsync()
+        {
+            try
+            {
+                // Get current session context
+                var sessionId = MagiDesk.Frontend.Services.OrderContext.CurrentSessionId;
+                var billingId = MagiDesk.Frontend.Services.OrderContext.CurrentBillingId;
+                
+                if (!string.IsNullOrWhiteSpace(sessionId) && Guid.TryParse(sessionId, out var sessionGuid))
+                {
+                    // Close any open orders for this session
+                    if (OrdersApi != null)
+                    {
+                        var openOrders = await OrdersApi.GetOrdersBySessionAsync(sessionGuid, includeHistory: false);
+                        var ordersToClose = openOrders.Where(o => o.Status == "open").ToList();
+                        
+                        foreach (var order in ordersToClose)
+                        {
+                            try
+                            {
+                                await OrdersApi.CloseOrderAsync(order.Id);
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                // Stop heartbeat
+                HeartbeatService?.StopHeartbeat();
+
+                // Clear context
+                MagiDesk.Frontend.Services.OrderContext.CurrentSessionId = null;
+                MagiDesk.Frontend.Services.OrderContext.CurrentBillingId = null;
+                MagiDesk.Frontend.Services.OrderContext.CurrentOrderId = null;
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Recover active sessions on app startup - this is the key to handling crashes
+        /// </summary>
+        public static async Task RecoverActiveSessionsAsync()
+        {
+            try
+            {
+                if (Api == null) return;
+
+                // Get all active sessions from the server
+                var activeSessions = await Api.GetActiveSessionsAsync();
+                
+                if (activeSessions.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Found {activeSessions.Count} active sessions that need recovery:");
+                    
+                    foreach (var session in activeSessions)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  - Table: {session.TableId}, Session: {session.SessionId}, Server: {session.ServerName}");
+                    }
+                    
+                    // Show recovery dialog to user
+                    await ShowSessionRecoveryDialogAsync(activeSessions);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Session recovery failed: {ex.Message}");
+            }
+        }
+
+        private static async Task ShowSessionRecoveryDialogAsync(List<MagiDesk.Shared.DTOs.Tables.SessionOverview> sessions)
+        {
+            try
+            {
+                // Wait for main window to be ready
+                await WaitForInitializationAsync();
+                
+                if (MainWindow?.Content is Frame frame && frame.Content is Views.MainPage mainPage)
+                {
+                    var dialog = new Dialogs.SessionRecoveryDialog();
+                    dialog.SetSessions(sessions);
+                    
+                    var result = await dialog.ShowAsync();
+                    
+                    if (result == ContentDialogResult.Primary && dialog.SelectedSession != null)
+                    {
+                        // Resume selected session
+                        await ResumeSessionAsync(dialog.SelectedSession.SessionId);
+                    }
+                    else if (result == ContentDialogResult.Secondary)
+                    {
+                        // Close all sessions
+                        await CloseAllSessionsAsync(sessions);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Session recovery dialog failed: {ex.Message}");
+            }
+        }
+
+        private static async Task ResumeSessionAsync(string sessionId)
+        {
+            try
+            {
+                if (Guid.TryParse(sessionId, out var sessionGuid))
+                {
+                    // Set the session context
+                    MagiDesk.Frontend.Services.OrderContext.CurrentSessionId = sessionId;
+                    
+                    // Get session details and set billing ID
+                    var sessions = await Api.GetActiveSessionsAsync();
+                    var session = sessions.FirstOrDefault(s => s.SessionId == sessionGuid);
+                    if (session != null)
+                    {
+                        MagiDesk.Frontend.Services.OrderContext.CurrentBillingId = session.BillingId?.ToString();
+                    }
+                    
+                    // Start heartbeat for this session
+                    HeartbeatService?.StartHeartbeat();
+                    
+                    System.Diagnostics.Debug.WriteLine($"Resumed session: {sessionId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to resume session {sessionId}: {ex.Message}");
+            }
+        }
+
+        private static async Task CloseAllSessionsAsync(List<MagiDesk.Shared.DTOs.Tables.SessionOverview> sessions)
+        {
+            try
+            {
+                foreach (var session in sessions)
+                {
+                    try
+                    {
+                        // Close orders for this session
+                        if (OrdersApi != null)
+                        {
+                            var orders = await OrdersApi.GetOrdersBySessionAsync(session.SessionId, includeHistory: false);
+                            var openOrders = orders.Where(o => o.Status == "open").ToList();
+                            
+                            foreach (var order in openOrders)
+                            {
+                                await OrdersApi.CloseOrderAsync(order.Id);
+                            }
+                        }
+                        
+                        // Stop the session (this will create a bill)
+                        var tablesApiUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") ?? "https://magidesk-tables-904541739138.northamerica-south1.run.app";
+                        using var tablesHttp = new HttpClient(new HttpClientHandler 
+                        { 
+                            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator 
+                        })
+                        {
+                            BaseAddress = new Uri(tablesApiUrl.TrimEnd('/') + "/"),
+                            Timeout = TimeSpan.FromSeconds(10)
+                        };
+
+                        await tablesHttp.PostAsync($"tables/{Uri.EscapeDataString(session.TableId)}/stop", new StringContent(""));
+                        
+                        System.Diagnostics.Debug.WriteLine($"Closed session: {session.SessionId} on table {session.TableId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to close session {session.SessionId}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to close all sessions: {ex.Message}");
+            }
         }
     }
 }

@@ -23,41 +23,6 @@ namespace MagiDesk.Frontend.Views
             ContentFrame.Navigated += ContentFrame_Navigated;
             _ = StartBackendMonitorAsync();
             App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
-            
-            // Initialize PaneManager and register panes
-            _ = InitializePaneManagerAsync();
-        }
-
-        private async Task InitializePaneManagerAsync()
-        {
-            try
-            {
-                // CRITICAL FIX: Wait for App initialization to prevent race conditions
-                await App.WaitForInitializationAsync();
-                
-                if (App.PaneManager != null && App.MainWindow != null)
-                {
-                    // Initialize PaneManager with main window
-                    App.PaneManager.Initialize(App.MainWindow);
-                    
-                    // Create and register panes
-                    var paymentPane = new MagiDesk.Frontend.Panes.PaymentPane();
-                    var receiptPrinterPane = new MagiDesk.Frontend.Panes.ReceiptPrinterPane();
-                    
-                    App.PaneManager.RegisterPane("PaymentPane", paymentPane);
-                    App.PaneManager.RegisterPane("ReceiptPrinterPane", receiptPrinterPane);
-                    
-                    Log.Info("PaneManager initialized and panes registered");
-                }
-                else
-                {
-                    Log.Warning("PaneManager or MainWindow not available for initialization");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Failed to initialize PaneManager", ex);
-            }
         }
 
         private async Task InitializeReceiptServiceAsync()
@@ -224,6 +189,12 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(MenuPage));
 #endif
                             break;
+                        case "ModifierManagementPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(ModifierManagementPage));
+#endif
+                            break;
                         case "DashboardPage":
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation
@@ -368,11 +339,11 @@ namespace MagiDesk.Frontend.Views
             ThemeService.Apply(isDark);
         }
 
-        private void Logout_Click(object sender, RoutedEventArgs e)
+        private async void Logout_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                Services.SessionService.Clear();
+                await Services.SessionService.ClearAsync();
                 // Navigate to LoginPage
                 if (this.Parent is Frame f)
                 {

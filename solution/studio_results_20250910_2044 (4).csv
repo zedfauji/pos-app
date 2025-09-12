@@ -1,0 +1,3 @@
+"table_name","column_name","invalid_count"
+"pay.bill_ledger","billing_id","1"
+"pay.bill_ledger","session_id","3"

@@ -13,17 +13,17 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
-// HttpClient for InventoryApi with retry policy
+builder.Services.AddScoped<IKitchenService, KitchenService>();
+
+// HttpClient for InventoryApi with retry policy (for drinks only)
 builder.Services.AddHttpClient("InventoryApi", (sp, http) =>
 {
     var cfg = sp.GetRequiredService<IConfiguration>();
     var baseUrl = cfg["InventoryApi:BaseUrl"] ?? Environment.GetEnvironmentVariable("INVENTORYAPI_BASEURL") ?? throw new InvalidOperationException("InventoryApi:BaseUrl not configured");
     http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     http.Timeout = TimeSpan.FromSeconds(10);
-}).AddPolicyHandler(Polly.Extensions.Http.HttpPolicyExtensions
-    .HandleTransientHttpError()
-    .OrResult(resp => (int)resp.StatusCode == 429)
-    .WaitAndRetryAsync(3, retry => TimeSpan.FromMilliseconds(200 * Math.Pow(2, retry))));
+});
+
 // Npgsql DataSource (dev: use LocalConnectionString)
 var pgSection = builder.Configuration.GetSection("Postgres");
 string? connString;

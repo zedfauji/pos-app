@@ -44,10 +44,10 @@ public sealed class MenuViewModel : INotifyPropertyChanged
 
     public MenuViewModel()
     {
-        RefreshCommand = new RelayCommand(async _ => await RefreshAsync());
-        SelectCategoryCommand = new RelayCommand(async c => { SelectedCategory = c as string; await RefreshAsync(); });
-        SelectGroupCommand = new RelayCommand(async g => { SelectedGroup = g as string; await RefreshAsync(); });
-        AddToOrderCommand = new RelayCommand(async o => await AddToOrderAsync(o as MenuItemVm));
+        RefreshCommand = new Services.RelayCommand(async _ => await RefreshAsync());
+        SelectCategoryCommand = new Services.RelayCommand(async c => { SelectedCategory = c as string; await RefreshAsync(); });
+        SelectGroupCommand = new Services.RelayCommand(async g => { SelectedGroup = g as string; await RefreshAsync(); });
+        AddToOrderCommand = new Services.RelayCommand(async o => await AddToOrderAsync(o as MenuItemVm));
         _ = InitializeAsync();
     }
 

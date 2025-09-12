@@ -4,9 +4,9 @@ namespace OrderApi.Repositories;
 
 public interface IOrderRepository
 {
-    Task<long> CreateOrderAsync(OrderDto order, IReadOnlyList<OrderItemDto> items, CancellationToken ct);
+    Task<long> CreateOrderAsync(OrderDto order, IReadOnlyList<OrderItemDto> items, Guid? billingId, CancellationToken ct);
     Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct);
-    Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(string sessionId, bool includeHistory, CancellationToken ct);
+    Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct);
     Task AddOrderItemsAsync(long orderId, IReadOnlyList<OrderItemDto> items, CancellationToken ct);
     Task UpdateOrderItemAsync(long orderId, OrderItemDto item, CancellationToken ct);
     Task SoftDeleteOrderItemAsync(long orderId, long orderItemId, CancellationToken ct);
@@ -29,11 +29,12 @@ public interface IOrderRepository
     Task<(IReadOnlyList<OrderLogDto> Items, int Total)> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct);
     Task RecalculateTotalsAsync(long orderId, CancellationToken ct);
 
-    // Inventory integration
-    Task<bool> CheckInventoryAvailabilityAsync(IEnumerable<(Guid InventoryItemId, decimal Quantity)> items, CancellationToken ct);
-    Task DeductInventoryAsync(long orderId, IEnumerable<(Guid InventoryItemId, decimal Quantity, decimal? UnitCost)> items, CancellationToken ct);
-
-    // SKU-based integration (preferred for normalization with MenuApi)
+    // Inventory integration (for drinks only)
     Task<bool> CheckInventoryAvailabilityBySkuAsync(IEnumerable<(string Sku, decimal Quantity)> items, CancellationToken ct);
     Task DeductInventoryBySkuAsync(long orderId, IEnumerable<(string Sku, decimal Quantity, decimal? UnitCost)> items, CancellationToken ct);
+
+    // Delivery tracking
+    Task MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct);
+    Task UpdateOrderDeliveryStatusAsync(long orderId, string deliveryStatus, CancellationToken ct);
+    Task UpdateOrderStatusAsync(long orderId, string status, CancellationToken ct);
 }

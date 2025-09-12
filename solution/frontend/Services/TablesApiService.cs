@@ -43,16 +43,16 @@ namespace MagiDesk.Frontend.Services
             => _http.PostAsJsonAsync("tables/bulkUpsert", recs, ct);
 
         public Task<HttpResponseMessage> SeedAsync(CancellationToken ct = default)
-            => _http.PostAsync("tables/seed", content: null, ct);
+            => _http.PostAsync("tables/seed", content: new StringContent(""), ct);
 
         public Task<HttpResponseMessage> StartSessionAsync(string label, StartSessionRequest req, CancellationToken ct = default)
             => _http.PostAsJsonAsync($"tables/{Uri.EscapeDataString(label)}/start", req, ct);
 
         public Task<HttpResponseMessage> StopSessionAsync(string label, CancellationToken ct = default)
-            => _http.PostAsync($"tables/{Uri.EscapeDataString(label)}/stop", content: null, ct);
+            => _http.PostAsync($"tables/{Uri.EscapeDataString(label)}/stop", content: new StringContent(""), ct);
 
         public Task<HttpResponseMessage> CloseBillAsync(Guid billId, CancellationToken ct = default)
-            => _http.PostAsync($"bills/{billId:D}/close", content: null, ct);
+            => _http.PostAsync($"bills/{billId:D}/close", content: new StringContent(""), ct);
 
         public Task<BillResult?> GetBillAsync(Guid billId, CancellationToken ct = default)
             => _http.GetFromJsonAsync<BillResult>($"bills/{billId:D}", ct);
