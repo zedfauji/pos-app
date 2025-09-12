@@ -117,6 +117,12 @@
         <Compile Include="Views\VendorsInventoryPage.xaml.cs" />
         <Page Include="Views\InventoryManagementPage.xaml" />
         <Compile Include="Views\InventoryManagementPage.xaml.cs" />
+        <Page Include="Views\InventoryCrudPage.xaml" />
+        <Compile Include="Views\InventoryCrudPage.xaml.cs" />
+        <Page Include="Views\InventoryItemDialog.xaml" />
+        <Compile Include="Views\InventoryItemDialog.xaml.cs" />
+        <Page Include="Views\StockAdjustmentDialog.xaml" />
+        <Compile Include="Views\StockAdjustmentDialog.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
         <Page Include="Views\CashFlowPage.xaml" />

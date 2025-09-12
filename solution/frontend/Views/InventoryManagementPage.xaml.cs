@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
+using Microsoft.Extensions.Logging;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -10,20 +11,29 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
 {
     private readonly InventoryDashboardViewModel _vm;
 
-    public InventoryManagementPage()
-    {
-        this.InitializeComponent();
-        
-        // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
-        if (App.Api == null)
-        {
-            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
-        }
-        _vm = new InventoryDashboardViewModel(App.Api);
-        
-        this.DataContext = _vm;
-        Loaded += InventoryManagementPage_Loaded;
-    }
+                public InventoryManagementPage()
+                {
+                    this.InitializeComponent();
+                    
+                    // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
+                    if (App.Api == null)
+                    {
+                        throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+                    }
+                    
+                    // TODO: Implement proper dependency injection for services
+                    // For now, create mock services
+                    var inventoryService = new InventoryService(new HttpClient(), new SimpleLogger<InventoryService>());
+                    var vendorService = new VendorService(new HttpClient(), new SimpleLogger<VendorService>());
+                    var restockService = new RestockService(new HttpClient(), new SimpleLogger<RestockService>());
+                    var vendorOrderService = new VendorOrderService(new HttpClient(), new SimpleLogger<VendorOrderService>());
+                    var auditService = new AuditService(new HttpClient(), new SimpleLogger<AuditService>());
+                    
+                    _vm = new InventoryDashboardViewModel(inventoryService, vendorService, restockService, vendorOrderService, auditService);
+                    
+                    this.DataContext = _vm;
+                    Loaded += InventoryManagementPage_Loaded;
+                }
 
     private async void InventoryManagementPage_Loaded(object sender, RoutedEventArgs e)
     {
@@ -38,8 +48,9 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
     // Navigation methods
     private void NavigateToInventory_Click(object sender, TappedRoutedEventArgs e)
     {
-        // TODO: Navigate to Inventory CRUD page
-        ShowComingSoonDialog("Inventory Management", "Full inventory CRUD functionality will be implemented here.");
+        // Navigate to Inventory CRUD page
+        var frame = (Frame)this.Parent;
+        frame.Navigate(typeof(InventoryCrudPage));
     }
 
     private void NavigateToVendors_Click(object sender, TappedRoutedEventArgs e)
@@ -100,8 +111,8 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
         // Not applicable for dashboard
     }
 
-    public void OnRefresh()
-    {
-        Refresh_Click(this, new RoutedEventArgs());
+        public void OnRefresh()
+        {
+            Refresh_Click(this, new RoutedEventArgs());
+        }
     }
-}

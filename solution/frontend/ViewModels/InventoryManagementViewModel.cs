@@ -6,7 +6,11 @@ namespace MagiDesk.Frontend.ViewModels;
 
 public class InventoryDashboardViewModel
 {
-    private readonly ApiService _api;
+    private readonly IInventoryService _inventoryService;
+    private readonly IVendorService _vendorService;
+    private readonly IRestockService _restockService;
+    private readonly IVendorOrderService _vendorOrderService;
+    private readonly IAuditService _auditService;
 
     // KPI Properties
     public string TotalStockValue { get; set; } = "$0.00";
@@ -20,9 +24,13 @@ public class InventoryDashboardViewModel
     public ObservableCollection<VendorDto> ActiveVendors { get; } = new();
     public ObservableCollection<InventoryTransactionDto> RecentTransactions { get; } = new();
 
-    public InventoryDashboardViewModel(ApiService api)
+    public InventoryDashboardViewModel(IInventoryService inventoryService, IVendorService vendorService, IRestockService restockService, IVendorOrderService vendorOrderService, IAuditService auditService)
     {
-        _api = api;
+        _inventoryService = inventoryService;
+        _vendorService = vendorService;
+        _restockService = restockService;
+        _vendorOrderService = vendorOrderService;
+        _auditService = auditService;
     }
 
     public async Task LoadDashboardDataAsync(CancellationToken ct = default)
@@ -53,13 +61,9 @@ public class InventoryDashboardViewModel
     {
         try
         {
-            // TODO: Replace with actual API call to get stock value
-            // For now, simulate with sample data
-            var totalValue = 125000.50m;
-            var change = 5.2m;
-            
-            TotalStockValue = totalValue.ToString("C");
-            StockValueChange = $"+{change:F1}%";
+            var stockValue = await _inventoryService.GetStockValueAsync(ct);
+            TotalStockValue = stockValue.TotalValue.ToString("C");
+            StockValueChange = $"+{stockValue.ValueChange:F1}%";
         }
         catch (Exception ex)
         {
@@ -73,22 +77,20 @@ public class InventoryDashboardViewModel
     {
         try
         {
-            // TODO: Call inventoryApi reports/low-stock endpoint
-            // For now, simulate with sample data
-            LowStockCount = 12;
+            var lowStockItems = await _inventoryService.GetLowStockItemsAsync(null, ct);
+            LowStockCount = lowStockItems.Count();
             
             // Load sample low stock items
             LowStockItems.Clear();
-            var sampleItems = new[]
+            foreach (var item in lowStockItems.Take(5)) // Show top 5
             {
-                new ItemDto { Id = "1", Sku = "COF-BEAN-001", Name = "Coffee Beans", Stock = 5 },
-                new ItemDto { Id = "2", Sku = "BUR-PAT-001", Name = "Burger Patties", Stock = 8 },
-                new ItemDto { Id = "3", Sku = "FRI-OIL-001", Name = "Cooking Oil", Stock = 3 }
-            };
-
-            foreach (var item in sampleItems)
-            {
-                LowStockItems.Add(item);
+                LowStockItems.Add(new ItemDto 
+                { 
+                    Id = item.ItemId, 
+                    Sku = item.Sku, 
+                    Name = item.Name, 
+                    Stock = (int)item.QuantityOnHand 
+                });
             }
         }
         catch (Exception ex)
@@ -102,9 +104,8 @@ public class InventoryDashboardViewModel
     {
         try
         {
-            // TODO: Call inventoryApi to get pending vendor orders
-            // For now, simulate with sample data
-            PendingOrdersCount = 7;
+            var pendingOrders = await _vendorOrderService.GetPendingOrdersAsync(ct);
+            PendingOrdersCount = pendingOrders.Count();
         }
         catch (Exception ex)
         {
@@ -117,7 +118,7 @@ public class InventoryDashboardViewModel
     {
         try
         {
-            // TODO: Call inventoryApi to get fast moving items
+            // TODO: Implement fast movers logic based on transaction data
             // For now, simulate with sample data
             FastMoversCount = 15;
         }
@@ -132,19 +133,18 @@ public class InventoryDashboardViewModel
     {
         try
         {
-            // TODO: Call inventoryApi to get recent transactions
-            // For now, simulate with sample data
+            var transactions = await _inventoryService.GetRecentTransactionsAsync(10, ct);
             RecentTransactions.Clear();
-            var sampleTransactions = new[]
+            foreach (var transaction in transactions)
             {
-                new InventoryTransactionDto { Id = "1", ItemName = "Coffee Beans", Type = "Sale", Quantity = -2, Timestamp = DateTime.Now.AddHours(-1) },
-                new InventoryTransactionDto { Id = "2", ItemName = "Burger Patties", Type = "Restock", Quantity = 50, Timestamp = DateTime.Now.AddHours(-2) },
-                new InventoryTransactionDto { Id = "3", ItemName = "Cooking Oil", Type = "Sale", Quantity = -1, Timestamp = DateTime.Now.AddHours(-3) }
-            };
-
-            foreach (var transaction in sampleTransactions)
-            {
-                RecentTransactions.Add(transaction);
+                RecentTransactions.Add(new InventoryTransactionDto
+                {
+                    Id = transaction.Id,
+                    ItemName = transaction.ItemName,
+                    Type = transaction.Type,
+                    Quantity = transaction.Quantity,
+                    Timestamp = transaction.Timestamp
+                });
             }
         }
         catch (Exception ex)
@@ -167,8 +167,14 @@ public class InventoryDashboardViewModel
 public class InventoryTransactionDto
 {
     public string Id { get; set; } = string.Empty;
+    public string ItemId { get; set; } = string.Empty;
     public string ItemName { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty; // Sale, Restock, Adjustment, etc.
     public decimal Quantity { get; set; }
+    public decimal? UnitCost { get; set; }
+    public string? Source { get; set; }
+    public string? SourceRef { get; set; }
     public DateTime Timestamp { get; set; }
+    public string? UserId { get; set; }
+    public string? Notes { get; set; }
 }
