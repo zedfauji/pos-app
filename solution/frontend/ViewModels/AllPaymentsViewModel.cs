@@ -289,7 +289,7 @@ namespace MagiDesk.Frontend.ViewModels
             }
         }
 
-        public async Task ProcessRefundAsync(Guid paymentId)
+        public async Task ProcessRefundAsync(long paymentId)
         {
             try
             {

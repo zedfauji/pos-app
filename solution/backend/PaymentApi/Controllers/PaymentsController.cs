@@ -49,6 +49,20 @@ public sealed class PaymentsController : ControllerBase
         return Ok(ledger);
     }
 
+    [HttpGet("all")]
+    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> GetAllPaymentsAsync([FromQuery] int limit = 100, CancellationToken ct = default)
+    {
+        try
+        {
+            var payments = await _service.GetAllPaymentsAsync(limit, ct);
+            return Ok(payments);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = "INTERNAL_ERROR", message = ex.Message });
+        }
+    }
+
     [HttpGet("{billingId}")]
     public async Task<ActionResult<IReadOnlyList<PaymentDto>>> ListPaymentsAsync([FromRoute] Guid billingId, CancellationToken ct)
     {

@@ -116,7 +116,7 @@ public sealed class PaymentRepository : IPaymentRepository
         while (await rdr.ReadAsync(ct))
         {
             list.Add(new PaymentDto(
-                rdr.GetFieldValue<Guid>(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
+                rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
                 rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
         }
@@ -187,7 +187,7 @@ public sealed class PaymentRepository : IPaymentRepository
         while (await rdr.ReadAsync(ct))
         {
             list.Add(new PaymentDto(
-                rdr.GetFieldValue<Guid>(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
+                rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
                 rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
                 rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
         }
