@@ -52,7 +52,6 @@
                         <NavigationViewItem Content="All Payments" Tag="AllPaymentsPage" Icon="List"/>
                     </NavigationViewItem.MenuItems>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
                 <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
 
                 <NavigationViewItemSeparator/>
@@ -61,6 +60,7 @@
                 <NavigationViewItemHeader Content="Management"/>
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
 
                 <NavigationViewItemSeparator/>
 
