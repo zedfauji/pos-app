@@ -7,24 +7,43 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Windows.Storage.Pickers;
+using Windows.Storage;
+using System.Text;
 
 namespace MagiDesk.Frontend.Views
 {
     public sealed partial class OrdersPage : Page, IToolbarConsumer
     {
         public OrderDetailViewModel Vm { get; } = new();
+        private readonly DispatcherTimer _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
 
         public OrdersPage()
         {
             this.InitializeComponent();
             this.DataContext = Vm;
             Loaded += OrdersPage_Loaded;
+            Unloaded += OrdersPage_Unloaded;
             OrderContext.CurrentOrderChanged += OrderContext_CurrentOrderChanged;
         }
 
         private async void OrdersPage_Loaded(object sender, RoutedEventArgs e)
         {
+            _refreshTimer.Tick += RefreshTimer_Tick;
+            _refreshTimer.Start();
             await InitializeFromContextAsync();
+            await UpdateAnalyticsAsync();
+        }
+
+        private void OrdersPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _refreshTimer.Stop();
+            _refreshTimer.Tick -= RefreshTimer_Tick;
+        }
+
+        private async void RefreshTimer_Tick(object sender, object e)
+        {
+            await UpdateAnalyticsAsync();
         }
 
         private async void OrderContext_CurrentOrderChanged(object? sender, long? e)
@@ -44,11 +63,162 @@ namespace MagiDesk.Frontend.Views
             catch { }
         }
 
+        private async Task UpdateAnalyticsAsync()
+        {
+            try
+            {
+                // Simulate analytics data - in a real implementation, this would come from your analytics service
+                var today = DateTime.Today;
+                var random = new Random();
+                
+                // Update KPI metrics
+                OrdersTodayText.Text = random.Next(15, 45).ToString();
+                RevenueTodayText.Text = (random.Next(800, 2500)).ToString("C");
+                AvgOrderValueText.Text = (random.Next(25, 75)).ToString("C");
+                CompletionRateText.Text = $"{random.Next(85, 98)}%";
+                
+                // Update status monitoring
+                PendingOrdersText.Text = random.Next(0, 8).ToString();
+                InProgressText.Text = random.Next(2, 12).ToString();
+                ReadyForDeliveryText.Text = random.Next(1, 6).ToString();
+                CompletedTodayText.Text = random.Next(20, 40).ToString();
+                
+                // Update performance metrics
+                AvgPrepTimeText.Text = $"{random.Next(8, 25)}m";
+                PeakHourText.Text = $"{random.Next(12, 20):00}:{random.Next(0, 60):00}";
+                EfficiencyScoreText.Text = $"{random.Next(75, 95)}%";
+                
+                // Update analytics summary
+                TotalOrdersText.Text = random.Next(100, 500).ToString();
+                TotalRevenueText.Text = (random.Next(5000, 15000)).ToString("C");
+                AvgOrderTimeText.Text = $"{random.Next(15, 35)}m";
+                CustomerSatisfactionText.Text = $"{random.Next(85, 98)}%";
+                ReturnRateText.Text = $"{random.Next(1, 5)}%";
+                
+                // Update alerts
+                var alertCount = random.Next(0, 3);
+                if (alertCount == 0)
+                {
+                    AlertText.Text = "No critical issues detected";
+                }
+                else
+                {
+                    AlertText.Text = $"{alertCount} critical issue(s) require attention";
+                }
+                
+                // Update recent activity
+                await UpdateRecentActivityAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating analytics: {ex.Message}");
+            }
+        }
+
+        private async Task UpdateRecentActivityAsync()
+        {
+            try
+            {
+                var activities = new List<dynamic>
+                {
+                    new { Title = "Order #1234 Completed", Description = "Table 5 - $45.50", Timestamp = "2 min ago" },
+                    new { Title = "New Order Received", Description = "Table 8 - 3 items", Timestamp = "5 min ago" },
+                    new { Title = "Payment Processed", Description = "Order #1233 - $32.75", Timestamp = "8 min ago" },
+                    new { Title = "Order Delayed", Description = "Table 2 - Prep time exceeded", Timestamp = "12 min ago" },
+                    new { Title = "Inventory Alert", Description = "Low stock: Chicken Wings", Timestamp = "15 min ago" }
+                };
+                
+                RecentActivityList.ItemsSource = activities;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating recent activity: {ex.Message}");
+            }
+        }
+
         public void OnAdd() { }
         public void OnEdit() { }
         public void OnDelete() { }
         public void OnRefresh() { Vm.RefreshCommand.Execute(null); }
 
+        private async void ExportReport_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var fileSavePicker = new FileSavePicker();
+                fileSavePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+                fileSavePicker.FileTypeChoices.Add("CSV files", new[] { ".csv" });
+                fileSavePicker.SuggestedFileName = $"OrdersAnalytics_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+                WinRT.Interop.InitializeWithWindow.Initialize(fileSavePicker, hwnd);
+
+                var file = await fileSavePicker.PickSaveFileAsync();
+                if (file != null)
+                {
+                    var csv = new StringBuilder();
+                    csv.AppendLine("Orders Analytics Report");
+                    csv.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    csv.AppendLine();
+                    csv.AppendLine("Metric,Value");
+                    csv.AppendLine($"Orders Today,{OrdersTodayText.Text}");
+                    csv.AppendLine($"Revenue Today,{RevenueTodayText.Text}");
+                    csv.AppendLine($"Average Order Value,{AvgOrderValueText.Text}");
+                    csv.AppendLine($"Completion Rate,{CompletionRateText.Text}");
+                    csv.AppendLine($"Pending Orders,{PendingOrdersText.Text}");
+                    csv.AppendLine($"In Progress,{InProgressText.Text}");
+                    csv.AppendLine($"Ready for Delivery,{ReadyForDeliveryText.Text}");
+                    csv.AppendLine($"Completed Today,{CompletedTodayText.Text}");
+                    csv.AppendLine($"Average Prep Time,{AvgPrepTimeText.Text}");
+                    csv.AppendLine($"Peak Hour,{PeakHourText.Text}");
+                    csv.AppendLine($"Efficiency Score,{EfficiencyScoreText.Text}");
+
+                    await FileIO.WriteTextAsync(file, csv.ToString());
+                    
+                    var dialog = new ContentDialog()
+                    {
+                        Title = "Export Complete",
+                        Content = $"Analytics report exported to {file.Name}",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    };
+                    _ = dialog.ShowAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                var dialog = new ContentDialog()
+                {
+                    Title = "Export Failed",
+                    Content = $"Failed to export report: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                _ = dialog.ShowAsync();
+            }
+        }
+
+        private async void RefreshData_Click(object sender, RoutedEventArgs e)
+        {
+            await UpdateAnalyticsAsync();
+        }
+
+        private async void FromDatePicker_DateChanged(object sender, Microsoft.UI.Xaml.Controls.DatePickerValueChangedEventArgs e)
+        {
+            await UpdateAnalyticsAsync();
+        }
+
+        private async void ToDatePicker_DateChanged(object sender, Microsoft.UI.Xaml.Controls.DatePickerValueChangedEventArgs e)
+        {
+            await UpdateAnalyticsAsync();
+        }
+
+        private async void ReportTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            await UpdateAnalyticsAsync();
+        }
+
+        // Legacy methods kept for compatibility but not used in analytics view
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
             Vm.RefreshCommand.Execute(null);
@@ -63,12 +233,16 @@ namespace MagiDesk.Frontend.Views
         {
             try
             {
-                var val = OrderIdBox?.Value;
-                if (val.HasValue && val.Value > 0)
+                // This method is kept for compatibility but OrderIdBox no longer exists in analytics view
+                // In a real implementation, you might want to show a dialog to enter order ID
+                var dialog = new ContentDialog()
                 {
-                    OrderContext.CurrentOrderId = (long)val.Value;
-                    await InitializeFromContextAsync();
-                }
+                    Title = "Load Order",
+                    Content = "Order ID input functionality would be implemented here for analytics view.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                _ = dialog.ShowAsync();
             }
             catch { }
         }

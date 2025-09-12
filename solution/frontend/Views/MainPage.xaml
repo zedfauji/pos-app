@@ -45,7 +45,6 @@
                 <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
                 <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="List"/>
-                <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="Link"/>
                 <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
                 <NavigationViewItem Content="Payments" Tag="PaymentPage" Icon="Shop">
                     <NavigationViewItem.MenuItems>
@@ -61,6 +60,7 @@
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
                 <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
+                <NavigationViewItem Content="Orders Analytics" Tag="OrdersPage" Icon="BarChart4"/>
 
                 <NavigationViewItemSeparator/>
 
