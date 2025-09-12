@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="using:MagiDesk.Frontend.Services"
     mc:Ignorable="d">
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -71,7 +72,7 @@
                 </DataTemplate>
             </ListView.HeaderTemplate>
             <ListView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="services:InventoryItemDto">
                     <Grid Padding="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="100"/>
