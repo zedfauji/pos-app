@@ -103,7 +103,9 @@ public sealed class MenuService : IMenuService
 
     private static bool IsDrinkCategory(string category)
     {
-        var drinkCategories = new[] { "Beverages", "Drinks", "Alcohol", "Beer", "Soda", "Juice", "Water" };
-        return drinkCategories.Contains(category, StringComparer.OrdinalIgnoreCase);
+        // Only treat pre-made drinks as inventory items
+        // Coffee, tea, etc. are made-to-order like food items
+        var preMadeDrinkCategories = new[] { "Alcohol", "Beer", "Soda", "Juice", "Water", "Bottled Drinks" };
+        return preMadeDrinkCategories.Contains(category, StringComparer.OrdinalIgnoreCase);
     }
 }
