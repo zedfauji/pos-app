@@ -1,0 +1,17 @@
+{
+  "SessionId": "test-session",
+  "BillingId": "invalid-billing-id-12345",
+  "TotalDue": 100.00,
+  "Lines": [
+    {
+      "AmountPaid": 50.00,
+      "PaymentMethod": "cash",
+      "DiscountAmount": 0.00,
+      "DiscountReason": null,
+      "TipAmount": 0.00,
+      "ExternalRef": null,
+      "Meta": null
+    }
+  ],
+  "ServerId": "test-server"
+}

@@ -27,6 +27,48 @@ public sealed partial class AllPaymentsPage : Page
         await ViewModel.LoadPaymentsAsync();
     }
 
+    private async void ExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var exportDialog = new ContentDialog
+            {
+                Title = "Export Payment History",
+                Content = "Choose export format:",
+                PrimaryButtonText = "CSV",
+                SecondaryButtonText = "Excel",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await exportDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                await ViewModel.ExportToCsvAsync();
+                ShowSuccessMessage("Payment history exported to CSV successfully!");
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                await ViewModel.ExportToExcelAsync();
+                ShowSuccessMessage("Payment history exported to Excel successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorMessage($"Export failed: {ex.Message}");
+        }
+    }
+
+    private void BackToPayments_Click(object sender, RoutedEventArgs e)
+    {
+        Frame.Navigate(typeof(PaymentPage));
+    }
+
+    private void ToggleDebugInfo_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ShowDebugInfo = !ViewModel.ShowDebugInfo;
+    }
+
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         if (sender is TextBox textBox)
@@ -51,6 +93,25 @@ public sealed partial class AllPaymentsPage : Page
         }
     }
 
+    private void AmountRangeFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.AmountRangeFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
+    private void ClearFilters_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearFilters();
+        
+        // Reset UI controls
+        SearchBox.Text = "";
+        PaymentMethodFilter.SelectedIndex = 0;
+        DateRangeFilter.SelectedIndex = 0;
+        AmountRangeFilter.SelectedIndex = 0;
+    }
+
     private async void ViewPaymentDetails_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is PaymentApiService.PaymentDto payment)
@@ -68,14 +129,7 @@ public sealed partial class AllPaymentsPage : Page
             }
             catch (Exception ex)
             {
-                var errorDialog = new ContentDialog
-                {
-                    Title = "Error",
-                    Content = $"Failed to load payment details: {ex.Message}",
-                    CloseButtonText = "OK",
-                    XamlRoot = this.XamlRoot
-                };
-                await errorDialog.ShowAsync();
+                ShowErrorMessage($"Failed to load payment details: {ex.Message}");
             }
         }
     }
@@ -89,8 +143,8 @@ public sealed partial class AllPaymentsPage : Page
                 var confirmDialog = new ContentDialog
                 {
                     Title = "Confirm Refund",
-                    Content = $"Are you sure you want to refund payment {payment.PaymentId} for {payment.AmountPaid:C}?",
-                    PrimaryButtonText = "Refund",
+                    Content = $"Are you sure you want to refund payment {payment.PaymentId} for {payment.AmountPaid:C}?\n\nThis action cannot be undone.",
+                    PrimaryButtonText = "Process Refund",
                     CloseButtonText = "Cancel",
                     XamlRoot = this.XamlRoot
                 };
@@ -98,13 +152,12 @@ public sealed partial class AllPaymentsPage : Page
                 var result = await confirmDialog.ShowAsync();
                 if (result == ContentDialogResult.Primary)
                 {
-                    // Process refund logic here
-                    // await ViewModel.ProcessRefundAsync(payment.PaymentId);
+                    await ViewModel.ProcessRefundAsync(payment.PaymentId);
                     
                     var successDialog = new ContentDialog
                     {
                         Title = "Refund Processed",
-                        Content = $"Refund for payment {payment.PaymentId} has been processed successfully.",
+                        Content = $"Refund for payment {payment.PaymentId} has been processed successfully.\n\nRefund amount: {payment.AmountPaid:C}",
                         CloseButtonText = "OK",
                         XamlRoot = this.XamlRoot
                     };
@@ -116,14 +169,23 @@ public sealed partial class AllPaymentsPage : Page
             }
             catch (Exception ex)
             {
-                var errorDialog = new ContentDialog
-                {
-                    Title = "Error",
-                    Content = $"Failed to process refund: {ex.Message}",
-                    CloseButtonText = "OK",
-                    XamlRoot = this.XamlRoot
-                };
-                await errorDialog.ShowAsync();
+                ShowErrorMessage($"Failed to process refund: {ex.Message}");
+            }
+        }
+    }
+
+    private async void PrintReceipt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is PaymentApiService.PaymentDto payment)
+        {
+            try
+            {
+                await ViewModel.PrintReceiptAsync(payment);
+                ShowSuccessMessage($"Receipt for payment {payment.PaymentId} sent to printer successfully!");
+            }
+            catch (Exception ex)
+            {
+                ShowErrorMessage($"Failed to print receipt: {ex.Message}");
             }
         }
     }
@@ -140,5 +202,29 @@ public sealed partial class AllPaymentsPage : Page
         panel.Children.Add(new TextBlock { Text = $"Created By: {payment.CreatedBy}", Margin = new Thickness(0, 5, 0, 0) });
         
         return panel;
+    }
+
+    private async void ShowSuccessMessage(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Success",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void ShowErrorMessage(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Error",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
     }
 }

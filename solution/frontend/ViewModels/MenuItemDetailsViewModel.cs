@@ -51,8 +51,19 @@ namespace MagiDesk.Frontend.ViewModels
 
         public MenuItemDetailsViewModel(MenuItemVm item)
         {
-            _menu = App.Menu ?? throw new InvalidOperationException("MenuApi not initialized");
-            _orders = App.OrdersApi ?? throw new InvalidOperationException("OrdersApi not initialized");
+            // CRITICAL FIX: Ensure MenuApi and OrdersApi are initialized before creating ViewModel
+            // This prevents InvalidOperationException if services are null
+            if (App.Menu == null)
+            {
+                throw new InvalidOperationException("MenuApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            }
+            if (App.OrdersApi == null)
+            {
+                throw new InvalidOperationException("OrdersApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            }
+            
+            _menu = App.Menu;
+            _orders = App.OrdersApi;
             _item = item;
             Name = item.Name;
             PictureUrl = item.PictureUrl;

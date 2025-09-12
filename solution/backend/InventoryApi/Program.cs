@@ -1,4 +1,5 @@
 using InventoryApi.Repositories;
+using InventoryApi.Services;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,9 @@ builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IVendorRepository, VendorRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
+// Services
+builder.Services.AddScoped<DatabaseInitializer>();
+
 // MVC + Swagger + CORS
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -49,6 +53,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Initialize database schema
+using (var scope = app.Services.CreateScope())
+{
+    var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+    await initializer.InitializeAsync();
+}
+
 app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new { ok = true, service = "InventoryApi", ts = DateTimeOffset.UtcNow }))

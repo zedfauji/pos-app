@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using MagiDesk.Frontend.Services;
 using System.Globalization;
 using System.Net.Http;
+using Microsoft.Extensions.Logging;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -15,30 +16,126 @@ public sealed partial class SettingsPage : Page
 {
     private IConfigurationRoot? _config;
     private SettingsApiService _settingsApi;
+    private readonly ILogger<SettingsPage> _logger;
+
+    // Fallback logger for when DI is not available
+    private class NullLogger<T> : ILogger<T>
+    {
+        public IDisposable BeginScope<TState>(TState state) => null!;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{logLevel}] {formatter(state, exception)}");
+            if (exception != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception: {exception}");
+            }
+        }
+    }
 
     public SettingsPage()
     {
-        this.InitializeComponent();
-        ApplyLanguage();
-        App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
-        LoadConfig();
-        // Rate controls removed in minimal layout
-        // Prefer dedicated SettingsApi base URL from config if available
-        var settingsBase = _config?["SettingsApi:BaseUrl"]
-            ?? App.Api?.BackendBase?.ToString()
-            ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
-        _settingsApi = new SettingsApiService(settingsBase);
-        // Default to first category
-        try { CategoryList.SelectedIndex = 0; } catch { }
-        _ = LoadFromBackendAsync();
-        _ = UpdateAppSummaryAsync();
+        try
+        {
+            _logger = new NullLogger<SettingsPage>();
+            _logger.LogInformation("SettingsPage constructor started");
+            
+            this.InitializeComponent();
+            _logger.LogInformation("InitializeComponent completed");
+            
+            ApplyLanguage();
+            _logger.LogInformation("ApplyLanguage completed");
+            
+            if (App.I18n != null)
+            {
+                App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
+                _logger.LogInformation("LanguageChanged event handler registered");
+            }
+            else
+            {
+                _logger.LogWarning("App.I18n is null, skipping language event handler");
+            }
+            
+            // LoadConfig will be called asynchronously after SettingsApi is initialized
+            _logger.LogInformation("Config loading will be done asynchronously");
+            
+            // Rate controls removed in minimal layout
+            // Prefer dedicated SettingsApi base URL from config if available
+            var settingsBase = _config?["SettingsApi:BaseUrl"]
+                ?? App.Api?.BackendBase?.ToString()
+                ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
+            
+            _logger.LogInformation($"Settings API base URL: {settingsBase}");
+            
+            try
+            {
+                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsBase) }, null);
+                _logger.LogInformation("SettingsApiService created successfully");
+            }
+            catch (Exception ex)
+            {
+                // Fallback to a default settings service if URI is invalid
+                _logger.LogError(ex, "Failed to create SettingsApiService with primary URL, using fallback");
+                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://localhost:5001/") }, null);
+                System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
+            }
+            
+            // Default to first category
+            // Simplified layout - all panels visible by default
+            _logger.LogInformation("Using simplified layout - all panels visible");
+            
+            // Safely initialize async operations
+            try
+            {
+                _logger.LogInformation("Starting async initialization operations");
+                _ = LoadFromBackendAsync();
+                _ = UpdateAppSummaryAsync();
+                _logger.LogInformation("Async initialization operations started");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to start async initialization operations");
+                System.Diagnostics.Debug.WriteLine($"Settings page initialization error: {ex.Message}");
+            }
+            
+            _logger.LogInformation("SettingsPage constructor completed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Critical error in SettingsPage constructor");
+            System.Diagnostics.Debug.WriteLine($"CRITICAL ERROR in SettingsPage constructor: {ex}");
+            throw; // Re-throw to see the crash in debugger
+        }
     }
 
     private async Task LoadAuditAsync()
     {
         try
         {
-            var list = await _settingsApi.GetAuditAsync(GetSettingsHost(), 50);
+            _logger.LogInformation("LoadAuditAsync started");
+            
+            var host = GetSettingsHost();
+            _logger.LogInformation($"GetSettingsHost returned for audit: {host}");
+            
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                _logger.LogWarning("Host is null or empty, setting empty audit list");
+                AuditList.ItemsSource = new List<object>();
+                return;
+            }
+            
+            _logger.LogInformation("Calling GetAuditAsync");
+            var list = await _settingsApi.GetAuditAsync(host, 50);
+            _logger.LogInformation($"GetAuditAsync completed, result is null: {list == null}");
+            
+            if (list == null)
+            {
+                _logger.LogWarning("Audit list is null, setting empty audit list");
+                AuditList.ItemsSource = new List<object>();
+                return;
+            }
+            
+            _logger.LogInformation($"Processing {list.Count} audit entries");
             // Display a simplified projection for readability
             var view = list.Select(x => new
             {
@@ -46,11 +143,15 @@ public sealed partial class SettingsPage : Page
                 timestamp = x.ContainsKey("timestamp") ? x["timestamp"] : null,
                 changes = x.ContainsKey("changes") ? System.Text.Json.JsonSerializer.Serialize(x["changes"]) : null
             }).ToList();
+            
             AuditList.ItemsSource = view;
+            _logger.LogInformation($"Set AuditList.ItemsSource with {view.Count} items");
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Audit error: {ex.Message}";
+            _logger.LogError(ex, "Error in LoadAuditAsync");
+            if (StatusText != null)
+                StatusText.Text = $"Audit error: {ex.Message}";
         }
     }
 
@@ -59,105 +160,190 @@ public sealed partial class SettingsPage : Page
         await LoadAuditAsync();
     }
 
-    private void LoadConfig()
+    private async Task LoadConfigAsync()
     {
         try
         {
+            _logger.LogInformation("LoadConfigAsync started - loading from SettingsApi");
+            
+            // Load settings from SettingsApi instead of local config files
+            var host = GetSettingsHost();
+            _logger.LogInformation($"Loading settings for host: {host}");
+            
+            // Load frontend settings
+            var frontendSettings = await _settingsApi.GetFrontendAsync(host);
+            if (frontendSettings != null)
+            {
+                _logger.LogInformation("Loading frontend settings from SettingsApi");
+                
+                if (BaseUrlText != null && frontendSettings.ContainsKey("ApiBaseUrl"))
+                {
+                    BaseUrlText.Text = frontendSettings["ApiBaseUrl"]?.ToString() ?? "";
+                    _logger.LogInformation($"Set BaseUrlText from SettingsApi: {BaseUrlText.Text}");
+                }
+                
+                if (ThemeSelector != null && frontendSettings.ContainsKey("Theme"))
+                {
+                    var theme = frontendSettings["Theme"]?.ToString() ?? "System";
+                    ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase)
+                        ? 1
+                        : theme.Equals("Light", StringComparison.OrdinalIgnoreCase)
+                            ? 2
+                            : 0; // System
+                    _logger.LogInformation($"Set ThemeSelector from SettingsApi: {theme}");
+                }
+            }
+            
+            // Load backend settings
+            var backendSettings = await _settingsApi.GetBackendAsync(host);
+            if (backendSettings != null)
+            {
+                _logger.LogInformation("Loading backend settings from SettingsApi");
+                
+                if (InventoryApiUrlText != null && backendSettings.ContainsKey("InventoryApiUrl"))
+                {
+                    InventoryApiUrlText.Text = backendSettings["InventoryApiUrl"]?.ToString() ?? "";
+                    _logger.LogInformation($"Set InventoryApiUrlText from SettingsApi: {InventoryApiUrlText.Text}");
+                }
+                
+                if (SettingsApiUrlText != null && backendSettings.ContainsKey("SettingsApiUrl"))
+                {
+                    SettingsApiUrlText.Text = backendSettings["SettingsApiUrl"]?.ToString() ?? "";
+                    _logger.LogInformation($"Set SettingsApiUrlText from SettingsApi: {SettingsApiUrlText.Text}");
+                }
+                
+                if (TablesApiUrlText != null && backendSettings.ContainsKey("TablesApiUrl"))
+                {
+                    TablesApiUrlText.Text = backendSettings["TablesApiUrl"]?.ToString() ?? "";
+                    _logger.LogInformation($"Set TablesApiUrlText from SettingsApi: {TablesApiUrlText.Text}");
+                }
+            }
+            
+            // Load app settings for printer configuration
+            var appSettings = await _settingsApi.GetAppAsync(host);
+            if (appSettings?.ReceiptSettings != null)
+            {
+                _logger.LogInformation("Loading receipt/printer settings from SettingsApi");
+                
+                if (PrinterWidthCombo != null)
+                {
+                    var paperSize = appSettings.ReceiptSettings.ReceiptSize ?? "80mm";
+                    PrinterWidthCombo.SelectedIndex = paperSize == "80mm" ? 1 : 0;
+                    _logger.LogInformation($"Set PrinterWidthCombo from SettingsApi: {paperSize}");
+                }
+                
+                if (TaxPercentText != null && !string.IsNullOrWhiteSpace(appSettings.ReceiptSettings.BusinessName))
+                {
+                    // We could add tax percentage to ReceiptSettings if needed
+                    _logger.LogInformation($"Business name from SettingsApi: {appSettings.ReceiptSettings.BusinessName}");
+                }
+            }
+            
+            _logger.LogInformation("LoadConfigAsync completed successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading configuration from SettingsApi");
+            // Fallback to local config if SettingsApi fails
+            await LoadLocalConfigFallback();
+        }
+    }
+    
+    private async Task LoadLocalConfigFallback()
+    {
+        try
+        {
+            _logger.LogWarning("Falling back to local config files");
+            
             var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true);
             _config = builder.Build();
-
-            var baseUrl = _config["Api:BaseUrl"] ?? string.Empty;
-            BaseUrlText.Text = baseUrl;
-            InventoryApiUrlText.Text = _config["InventoryApi:BaseUrl"] ?? InventoryApiUrlText.Text;
-            // Prepopulate Settings/Tables API URLs when available
-            SettingsApiUrlText.Text = _config["SettingsApi:BaseUrl"] ?? SettingsApiUrlText.Text;
-            SettingsHostText.Text = _config["SettingsApi:Host"] ?? SettingsHostText.Text;
-            TablesApiUrlText.Text = _config["TablesApi:BaseUrl"] ?? TablesApiUrlText.Text;
-            // Printer settings
-            var paper = _config["Printer:PaperWidthMm"];
-            if (paper == "80") PrinterWidthCombo.SelectedIndex = 1; else PrinterWidthCombo.SelectedIndex = 0;
-            var tax = _config["Printer:TaxPercent"];
-            if (!string.IsNullOrWhiteSpace(tax)) TaxPercentText.Text = tax;
-
-            // Apply Theme from config when available
-            var theme = (_config["UI:Theme"] ?? "System").Trim();
-            ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase)
-                ? 1
-                : theme.Equals("Light", StringComparison.OrdinalIgnoreCase)
-                    ? 2
-                    : 0; // System
-        }
-        catch
-        {
-            // ignore config errors for now in UI
-        }
-    }
-
-    private void Save_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            string theme = ThemeSelector.SelectedIndex == 1 ? "Dark" : ThemeSelector.SelectedIndex == 2 ? "Light" : "System";
-
-            // Merge base appsettings.json with existing user settings to preserve other sections
-            var basePath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-            using var baseDoc = File.Exists(basePath) ? JsonDocument.Parse(File.ReadAllText(basePath)) : JsonDocument.Parse("{}\n");
-            using var userDoc = File.Exists(path) ? JsonDocument.Parse(File.ReadAllText(path)) : JsonDocument.Parse("{}\n");
-
-            // Build a new combined JSON with Api.BaseUrl and UI.Theme
-            var root = new System.Collections.Generic.Dictionary<string, object?>();
-
-            // Preserve any existing sections we don't manage explicitly
-            void CopyOthers(JsonElement el)
-            {
-                foreach (var prop in el.EnumerateObject())
-                {
-                    if (!string.Equals(prop.Name, "Api", StringComparison.OrdinalIgnoreCase) &&
-                        !string.Equals(prop.Name, "UI", StringComparison.OrdinalIgnoreCase) &&
-                        !root.ContainsKey(prop.Name))
-                    {
-                        root[prop.Name] = JsonSerializer.Deserialize<object>(prop.Value.GetRawText());
-                    }
-                }
-            }
-            CopyOthers(baseDoc.RootElement);
-            CopyOthers(userDoc.RootElement);
-
-            root["Api"] = new { BaseUrl = BaseUrlText.Text };
-            root["UI"] = new { Theme = theme };
-
-            var json = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(path, json);
-
-            try { App.ApplyThemeToRoot(theme); }
-            catch (Exception applyEx) { StatusText.Text = $"Error: {applyEx}"; return; }
-
-            // Save to backend as the source of truth
-            _ = SaveToBackendAsync(BaseUrlText.Text, theme);
-            // Also persist session timers via App settings Extras
-            try
-            {
-                var extras = new System.Collections.Generic.Dictionary<string, object?>
-                {
-                    ["tables.session.warnMinutes"] = (int)(WarnMinutesBox.Value <= 0 ? 0 : WarnMinutesBox.Value),
-                    ["tables.session.autoStopMinutes"] = (int)(AutoStopMinutesBox.Value <= 0 ? 0 : AutoStopMinutesBox.Value)
-                };
-                var appSet = new SettingsApiService.AppSettings { Extras = extras };
-                _ = _settingsApi.SaveAppAsync(appSet, GetSettingsHost());
-            }
-            catch { }
-            StatusText.Text = App.I18n.T("saved");
-            Toast("Saved");
+            
+            // Set default values from local config
+            if (BaseUrlText != null)
+                BaseUrlText.Text = _config["Api:BaseUrl"] ?? "";
+            if (InventoryApiUrlText != null)
+                InventoryApiUrlText.Text = _config["InventoryApi:BaseUrl"] ?? "";
+            if (SettingsApiUrlText != null)
+                SettingsApiUrlText.Text = _config["SettingsApi:BaseUrl"] ?? "";
+            if (TablesApiUrlText != null)
+                TablesApiUrlText.Text = _config["TablesApi:BaseUrl"] ?? "";
+                
+            _logger.LogInformation("Local config fallback completed");
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Error: {ex}";
+            _logger.LogError(ex, "Error loading local config fallback");
+        }
+    }
+
+    private async void Save_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _logger.LogInformation("Save_Click started - saving to SettingsApi");
+            
+            var host = GetSettingsHost();
+            _logger.LogInformation($"Saving settings for host: {host}");
+            
+            // Save frontend settings
+            var frontendSettings = new SettingsApiService.FrontendSettings();
+            if (BaseUrlText != null && !string.IsNullOrWhiteSpace(BaseUrlText.Text))
+                frontendSettings.ApiBaseUrl = BaseUrlText.Text;
+            if (ThemeSelector != null)
+            {
+                var themeIndex = ThemeSelector.SelectedIndex;
+                frontendSettings.Theme = themeIndex == 1 ? "Dark" : themeIndex == 2 ? "Light" : "System";
+            }
+            
+            var frontendSuccess = await _settingsApi.SaveFrontendAsync(frontendSettings, host);
+            _logger.LogInformation($"Frontend settings saved: {frontendSuccess}");
+            
+            // Save backend settings
+            var backendSettings = new SettingsApiService.BackendSettings();
+            if (InventoryApiUrlText != null && !string.IsNullOrWhiteSpace(InventoryApiUrlText.Text))
+                backendSettings.InventoryApiUrl = InventoryApiUrlText.Text;
+            if (SettingsApiUrlText != null && !string.IsNullOrWhiteSpace(SettingsApiUrlText.Text))
+                backendSettings.SettingsApiUrl = SettingsApiUrlText.Text;
+            if (TablesApiUrlText != null && !string.IsNullOrWhiteSpace(TablesApiUrlText.Text))
+                backendSettings.TablesApiUrl = TablesApiUrlText.Text;
+            
+            var backendSuccess = await _settingsApi.SaveBackendAsync(backendSettings, host);
+            _logger.LogInformation($"Backend settings saved: {backendSuccess}");
+            
+            // Save app settings (receipt/printer settings)
+            var appSettings = new SettingsApiService.AppSettings();
+            if (appSettings.ReceiptSettings == null)
+                appSettings.ReceiptSettings = new SettingsApiService.ReceiptSettings();
+                
+            if (PrinterWidthCombo != null)
+                appSettings.ReceiptSettings.ReceiptSize = PrinterWidthCombo.SelectedIndex == 1 ? "80mm" : "58mm";
+            
+            var appSuccess = await _settingsApi.SaveAppAsync(appSettings, host);
+            _logger.LogInformation($"App settings saved: {appSuccess}");
+            
+            if (frontendSuccess && backendSuccess && appSuccess)
+            {
+                if (StatusText != null)
+                    StatusText.Text = "Settings saved to SettingsApi";
+                Toast("Settings saved to SettingsApi");
+                _logger.LogInformation("All settings saved successfully to SettingsApi");
+            }
+            else
+            {
+                if (StatusText != null)
+                    StatusText.Text = "Some settings failed to save";
+                _logger.LogWarning("Some settings failed to save to SettingsApi");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving settings to SettingsApi");
+            if (StatusText != null)
+                StatusText.Text = $"Error: {ex.Message}";
         }
     }
 
@@ -165,38 +351,125 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            LoadingRing.IsActive = true; LoadingRing.Visibility = Visibility.Visible;
+            _logger.LogInformation("LoadFromBackendAsync started");
+            
+            if (LoadingRing != null)
+            {
+                LoadingRing.IsActive = true; 
+                LoadingRing.Visibility = Visibility.Visible;
+                _logger.LogInformation("LoadingRing activated");
+            }
+            else
+            {
+                _logger.LogWarning("LoadingRing is null");
+            }
+            
+            // Load configuration from SettingsApi first
+            await LoadConfigAsync();
+            
             var host = GetSettingsHost();
+            _logger.LogInformation($"GetSettingsHost returned: {host}");
+            
+            _logger.LogInformation("Calling GetFrontendAsync");
             var fe = await _settingsApi.GetFrontendAsync(host);
+            _logger.LogInformation($"GetFrontendAsync completed, result is null: {fe == null}");
             if (fe != null)
             {
-                if (!string.IsNullOrWhiteSpace(fe.ApiBaseUrl)) BaseUrlText.Text = fe.ApiBaseUrl;
-                var theme = string.IsNullOrWhiteSpace(fe.Theme) ? "System" : fe.Theme!;
-                ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
-                BackendSummaryText.Text = $"Backend: {BaseUrlText.Text}";
-                ThemeSummaryText.Text = $"Theme: {theme}";
-                if (fe.RatePerMinute.HasValue)
+                _logger.LogInformation("Processing frontend settings");
+                var frontendSettings = new SettingsApiService.FrontendSettings();
+                foreach (var kvp in fe)
                 {
-                    CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                    frontendSettings[kvp.Key] = kvp.Value;
                 }
+                
+                if (!string.IsNullOrWhiteSpace(frontendSettings.ApiBaseUrl) && BaseUrlText != null) 
+                {
+                    BaseUrlText.Text = frontendSettings.ApiBaseUrl;
+                    _logger.LogInformation($"Set BaseUrlText to: {frontendSettings.ApiBaseUrl}");
+                }
+                    
+                var theme = string.IsNullOrWhiteSpace(frontendSettings.Theme) ? "System" : frontendSettings.Theme!;
+                if (ThemeSelector != null)
+                {
+                    ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+                    _logger.LogInformation($"Set ThemeSelector to: {theme} (index: {ThemeSelector.SelectedIndex})");
+                }
+                    
+                if (BackendSummaryText != null)
+                {
+                    BackendSummaryText.Text = $"Backend: {BaseUrlText?.Text ?? "Not set"}";
+                    _logger.LogInformation($"Set BackendSummaryText");
+                }
+                if (ThemeSummaryText != null)
+                {
+                    ThemeSummaryText.Text = $"Theme: {theme}";
+                    _logger.LogInformation($"Set ThemeSummaryText");
+                }
+                    
+                if (frontendSettings.RatePerMinute.HasValue && CurrentRateText != null)
+                {
+                    CurrentRateText.Text = $"Current Rate: {frontendSettings.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                    _logger.LogInformation($"Set CurrentRateText to: {frontendSettings.RatePerMinute.Value}");
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Frontend settings is null, skipping frontend processing");
             }
 
             // Load backend connection settings
+            _logger.LogInformation("Calling GetBackendAsync");
             var be = await _settingsApi.GetBackendAsync(host);
+            _logger.LogInformation($"GetBackendAsync completed, result is null: {be == null}");
             if (be != null)
             {
-                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
-                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
-                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+                _logger.LogInformation("Processing backend settings");
+                var backendSettings = new SettingsApiService.BackendSettings();
+                foreach (var kvp in be)
+                {
+                    backendSettings[kvp.Key] = kvp.Value;
+                }
+                
+                if (!string.IsNullOrWhiteSpace(backendSettings.BackendApiUrl) && BaseUrlText != null) 
+                {
+                    BaseUrlText.Text = backendSettings.BackendApiUrl;
+                    _logger.LogInformation($"Set BaseUrlText to backend URL: {backendSettings.BackendApiUrl}");
+                }
+                if (!string.IsNullOrWhiteSpace(backendSettings.SettingsApiUrl) && SettingsApiUrlText != null) 
+                {
+                    SettingsApiUrlText.Text = backendSettings.SettingsApiUrl;
+                    _logger.LogInformation($"Set SettingsApiUrlText to: {backendSettings.SettingsApiUrl}");
+                }
+                if (!string.IsNullOrWhiteSpace(backendSettings.TablesApiUrl) && TablesApiUrlText != null) 
+                {
+                    TablesApiUrlText.Text = backendSettings.TablesApiUrl;
+                    _logger.LogInformation($"Set TablesApiUrlText to: {backendSettings.TablesApiUrl}");
+                }
             }
+            else
+            {
+                _logger.LogInformation("Backend settings is null, skipping backend processing");
+            }
+            
+            if (LoadingRing != null)
+            {
+                LoadingRing.IsActive = false; 
+                LoadingRing.Visibility = Visibility.Collapsed;
+                _logger.LogInformation("LoadingRing deactivated");
+            }
+            
+            _logger.LogInformation("LoadFromBackendAsync completed successfully");
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            LoadingRing.IsActive = false; LoadingRing.Visibility = Visibility.Collapsed;
+            _logger.LogError(ex, "Error in LoadFromBackendAsync");
+            if (StatusText != null)
+                StatusText.Text = $"Error: {ex.Message}";
+            if (LoadingRing != null)
+            {
+                LoadingRing.IsActive = false; 
+                LoadingRing.Visibility = Visibility.Collapsed;
+            }
         }
     }
 
@@ -233,11 +506,13 @@ public sealed partial class SettingsPage : Page
                 {
                     if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null)
                     {
-                        if (int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
+                        if (int.TryParse(warn.ToString(), out var wm) && WarnMinutesBox != null) 
+                            WarnMinutesBox.Text = wm.ToString();
                     }
                     if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null)
                     {
-                        if (int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+                        if (int.TryParse(auto.ToString(), out var am) && AutoStopMinutesBox != null) 
+                            AutoStopMinutesBox.Text = am.ToString();
                     }
                 }
             }
@@ -254,7 +529,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             TitleText.Text = App.I18n.T("settings_title");
-            BackendUrlLabel.Text = App.I18n.T("backend_base_url");
+            // BackendUrlLabel removed in simplified layout
             SaveButton.Content = App.I18n.T("save");
         }
         catch { }
@@ -271,7 +546,15 @@ public sealed partial class SettingsPage : Page
             try
             {
                 var fe = await _settingsApi.GetFrontendAsync();
-                if (fe?.RatePerMinute is decimal r) current = r;
+                if (fe != null)
+                {
+                    var frontendSettings = new SettingsApiService.FrontendSettings();
+                    foreach (var kvp in fe)
+                    {
+                        frontendSettings[kvp.Key] = kvp.Value;
+                    }
+                    if (frontendSettings.RatePerMinute is decimal r) current = r;
+                }
             }
             catch { }
 
@@ -376,13 +659,26 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
+            _logger.LogInformation("GetSettingsHost called");
+            
             // Prefer explicit override from config if provided
             var host = _config?["SettingsApi:Host"];
-            if (!string.IsNullOrWhiteSpace(host)) return host;
+            if (!string.IsNullOrWhiteSpace(host)) 
+            {
+                _logger.LogInformation($"Using host from config: {host}");
+                return host;
+            }
+            
             // Fallback to machine name
-            return Environment.MachineName;
+            var machineName = Environment.MachineName;
+            _logger.LogInformation($"Using machine name as host: {machineName}");
+            return machineName;
         }
-        catch { return Environment.MachineName; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetSettingsHost");
+            return "unknown";
+        }
     }
 
     private async void SaveApi_Click(object sender, RoutedEventArgs e)
@@ -466,7 +762,7 @@ public sealed partial class SettingsPage : Page
             var settingsUrl = SettingsApiUrlText.Text?.Trim();
             if (!string.IsNullOrWhiteSpace(settingsUrl))
             {
-                _settingsApi = new SettingsApiService(settingsUrl!);
+                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsUrl!) }, null);
             }
             // Recreate core ApiService with backend + inventory URLs
             var backendUrl = BaseUrlText.Text?.Trim();
@@ -508,9 +804,25 @@ public sealed partial class SettingsPage : Page
                 TotalAmount = 9m
             };
 
-            var view = Services.ReceiptFormatter.BuildReceiptView(bill, paper, tax);
-            await Services.PrintService.PrintVisualAsync(view);
-            Toast("Printed test receipt");
+            // Use new PDFSharp-based printing
+            try
+            {
+                if (App.ReceiptService == null)
+                {
+                    StatusText.Text = "ReceiptService not initialized";
+                    Toast("ReceiptService not initialized");
+                    return;
+                }
+                
+                var migrationService = new Services.ReceiptMigrationService(App.ReceiptService);
+                await migrationService.PrintBillAsync(bill, paper, tax, "Default Printer", isProForma: false);
+                Toast("Printed test receipt");
+            }
+            catch (Exception printEx)
+            {
+                StatusText.Text = $"Print Error: {printEx.Message}";
+                Toast($"Print failed: {printEx.Message}");
+            }
         }
         catch (Exception ex)
         {
@@ -599,45 +911,7 @@ public sealed partial class SettingsPage : Page
     }
 
     // Category switching: show only selected panel
-    private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        try
-        {
-            var idx = CategoryList.SelectedIndex;
-            GeneralPanel.Visibility = idx == 0 ? Visibility.Visible : Visibility.Collapsed;
-            ConnectionsPanel.Visibility = idx == 1 ? Visibility.Visible : Visibility.Collapsed;
-            BillingPanel.Visibility = idx == 2 ? Visibility.Visible : Visibility.Collapsed;
-            TablesPanel.Visibility = idx == 3 ? Visibility.Visible : Visibility.Collapsed;
-            AuditPanel.Visibility = idx == 4 ? Visibility.Visible : Visibility.Collapsed;
-            if (idx == 3)
-            {
-                // Prefill rate from Tables API
-                _ = DispatcherQueue.TryEnqueue(async () =>
-                {
-                    try
-                    {
-                        var repo = new Services.TableRepository();
-                        var rate = await repo.GetRatePerMinuteAsync();
-                        if (rate.HasValue)
-                        {
-                            RatePerMinuteBox.Value = (double)rate.Value;
-                            CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
-                        }
-                    }
-                    catch { }
-                });
-            }
-            else if (idx == 4)
-            {
-                // Auto-load audit on first show
-                _ = DispatcherQueue.TryEnqueue(async () =>
-                {
-                    try { await LoadAuditAsync(); } catch { }
-                });
-            }
-        }
-        catch { }
-    }
+    // CategoryList_SelectionChanged method removed - using simplified layout with all panels visible
 
     private async void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
@@ -649,24 +923,42 @@ public sealed partial class SettingsPage : Page
             var app = await _settingsApi.GetAppDefaultsAsync();
             if (fe != null)
             {
-                BaseUrlText.Text = fe.ApiBaseUrl ?? BaseUrlText.Text;
-                var theme = string.IsNullOrWhiteSpace(fe.Theme) ? "System" : fe.Theme!;
-                ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
-                if (fe.RatePerMinute.HasValue)
+                var frontendSettings = new SettingsApiService.FrontendSettings();
+                foreach (var kvp in fe)
                 {
-                    CurrentRateText.Text = $"Current Rate: {fe.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
+                    frontendSettings[kvp.Key] = kvp.Value;
+                }
+                
+                BaseUrlText.Text = frontendSettings.ApiBaseUrl ?? BaseUrlText.Text;
+                var theme = string.IsNullOrWhiteSpace(frontendSettings.Theme) ? "System" : frontendSettings.Theme!;
+                ThemeSelector.SelectedIndex = theme.Equals("Dark", StringComparison.OrdinalIgnoreCase) ? 1 : theme.Equals("Light", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+                if (frontendSettings.RatePerMinute.HasValue)
+                {
+                    CurrentRateText.Text = $"Current Rate: {frontendSettings.RatePerMinute.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
                 }
             }
             if (be != null)
             {
-                if (!string.IsNullOrWhiteSpace(be.BackendApiUrl)) BaseUrlText.Text = be.BackendApiUrl;
-                if (!string.IsNullOrWhiteSpace(be.SettingsApiUrl)) SettingsApiUrlText.Text = be.SettingsApiUrl;
-                if (!string.IsNullOrWhiteSpace(be.TablesApiUrl)) TablesApiUrlText.Text = be.TablesApiUrl;
+                var backendSettings = new SettingsApiService.BackendSettings();
+                foreach (var kvp in be)
+                {
+                    backendSettings[kvp.Key] = kvp.Value;
+                }
+                
+                if (!string.IsNullOrWhiteSpace(backendSettings.BackendApiUrl)) BaseUrlText.Text = backendSettings.BackendApiUrl;
+                if (!string.IsNullOrWhiteSpace(backendSettings.SettingsApiUrl)) SettingsApiUrlText.Text = backendSettings.SettingsApiUrl;
+                if (!string.IsNullOrWhiteSpace(backendSettings.TablesApiUrl)) TablesApiUrlText.Text = backendSettings.TablesApiUrl;
             }
             if (app != null && app.Extras != null)
             {
-                if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null && int.TryParse(warn.ToString(), out var wm)) WarnMinutesBox.Value = wm;
-                if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null && int.TryParse(auto.ToString(), out var am)) AutoStopMinutesBox.Value = am;
+                if (app.Extras.TryGetValue("tables.session.warnMinutes", out var warn) && warn != null && int.TryParse(warn.ToString(), out var wm)) 
+                {
+                    if (WarnMinutesBox != null) WarnMinutesBox.Text = wm.ToString();
+                }
+                if (app.Extras.TryGetValue("tables.session.autoStopMinutes", out var auto) && auto != null && int.TryParse(auto.ToString(), out var am)) 
+                {
+                    if (AutoStopMinutesBox != null) AutoStopMinutesBox.Text = am.ToString();
+                }
             }
             Toast("Defaults loaded");
         }
@@ -699,7 +991,8 @@ public sealed partial class SettingsPage : Page
             var rate = await repo.GetRatePerMinuteAsync();
             if (rate.HasValue)
             {
-                RatePerMinuteBox.Value = (double)rate.Value;
+                if (RatePerMinuteBox != null) 
+                    RatePerMinuteBox.Text = rate.Value.ToString("0.##", CultureInfo.InvariantCulture);
                 CurrentRateText.Text = $"Current Rate: {rate.Value.ToString("0.##", CultureInfo.InvariantCulture)}";
                 Toast("Rate loaded");
             }
@@ -718,17 +1011,17 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            var val = RatePerMinuteBox.Value;
-            if (val < 0)
+            var val = RatePerMinuteBox?.Text;
+            if (string.IsNullOrWhiteSpace(val) || !decimal.TryParse(val, out var rate) || rate < 0)
             {
                 StatusText.Text = "Rate must be >= 0";
                 return;
             }
             var repo = new Services.TableRepository();
-            var ok = await repo.SetRatePerMinuteAsync(Convert.ToDecimal(val));
+            var ok = await repo.SetRatePerMinuteAsync(rate);
             if (ok)
             {
-                CurrentRateText.Text = $"Current Rate: {Convert.ToDecimal(val).ToString("0.##", CultureInfo.InvariantCulture)}";
+                CurrentRateText.Text = $"Current Rate: {rate.ToString("0.##", CultureInfo.InvariantCulture)}";
                 Toast("Rate saved");
             }
             else

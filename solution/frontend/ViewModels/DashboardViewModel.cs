@@ -22,7 +22,9 @@ public class DashboardViewModel
 
     public async Task LoadAsync(CancellationToken ct = default)
     {
-        (VendorsCount, ItemsCount) = await _api.GetCountsAsync(ct);
+        // Legacy vendor counts removed - using new inventory system
+        VendorsCount = 0;
+        ItemsCount = 0;
         await LoadRemindersAsync(ct);
     }
 
@@ -30,25 +32,7 @@ public class DashboardViewModel
     {
         TodayReminders.Clear();
         UpcomingReminders.Clear();
-        var vendors = await _api.GetVendorsAsync(ct);
-        var today = DateTime.Today.DayOfWeek;
-        var tomorrow = DateTime.Today.AddDays(1).DayOfWeek;
-
-        foreach (var v in vendors)
-        {
-            if (v.ReminderEnabled && !string.IsNullOrWhiteSpace(v.Reminder))
-            {
-                var rem = v.Reminder.Trim();
-                if (MatchesDay(rem, today))
-                {
-                    TodayReminders.Add(v);
-                }
-                else if (MatchesDay(rem, tomorrow))
-                {
-                    UpcomingReminders.Add(v);
-                }
-            }
-        }
+        // Legacy vendor reminders removed - using new inventory system
     }
 
     private static bool MatchesDay(string input, DayOfWeek target)

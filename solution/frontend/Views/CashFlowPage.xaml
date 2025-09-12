@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
     mc:Ignorable="d">
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -29,18 +28,35 @@
             <AppBarButton x:Name="BtnRefresh" Icon="Refresh" Label="Refresh" Click="Refresh_Click"/>
         </CommandBar>
 
-        <!-- History Grid -->
-        <ct:DataGrid Grid.Row="2"
-                     x:Name="HistoryGrid"
-                     AutoGenerateColumns="False"
-                     IsReadOnly="True"
-                     ItemsSource="{Binding HistoryDisplay}">
-            <ct:DataGrid.Columns>
-                <ct:DataGridTextColumn Header="Employee" Binding="{Binding EmployeeName}" Width="2*"/>
-                <ct:DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="*"/>
-                <ct:DataGridTextColumn Header="Cash" Binding="{Binding CashAmount}" Width="*"/>
-                <ct:DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="3*"/>
-            </ct:DataGrid.Columns>
-        </ct:DataGrid>
+        <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
+        <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
+        <ListView Grid.Row="2"
+                  x:Name="HistoryGrid"
+                  ItemsSource="{Binding HistoryDisplay}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="3*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Employee -->
+                        <TextBlock Grid.Column="0" Text="{Binding EmployeeName}" VerticalAlignment="Center"/>
+                        
+                        <!-- Date -->
+                        <TextBlock Grid.Column="1" Text="{Binding Date}" VerticalAlignment="Center"/>
+                        
+                        <!-- Cash -->
+                        <TextBlock Grid.Column="2" Text="{Binding CashAmount}" VerticalAlignment="Center"/>
+                        
+                        <!-- Notes -->
+                        <TextBlock Grid.Column="3" Text="{Binding Notes}" VerticalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

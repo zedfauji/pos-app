@@ -26,7 +26,11 @@ namespace MagiDesk.Frontend.Views
                     Vm.RefreshCommand.Execute(null);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Log the error for debugging but don't crash the page
+                System.Diagnostics.Debug.WriteLine($"Failed to refresh menu: {ex.Message}");
+            }
         }
 
         private async void ItemsGrid_ItemClick(object sender, ItemClickEventArgs e)
@@ -34,6 +38,7 @@ namespace MagiDesk.Frontend.Views
             if (e.ClickedItem is MenuItemVm item)
             {
                 var dlg = new Dialogs.MenuItemDialog(item);
+                dlg.XamlRoot = this.XamlRoot;
                 _ = await dlg.ShowAsync();
             }
         }
@@ -43,6 +48,7 @@ namespace MagiDesk.Frontend.Views
             if ((sender as Button)?.Tag is MenuItemVm item)
             {
                 var dlg = new Dialogs.MenuItemDialog(item);
+                dlg.XamlRoot = this.XamlRoot;
                 _ = await dlg.ShowAsync();
             }
         }

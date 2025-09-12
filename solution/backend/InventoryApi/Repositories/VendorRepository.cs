@@ -12,7 +12,7 @@ public class VendorRepository : IVendorRepository
     public async Task<IReadOnlyList<VendorDto>> ListAsync(CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = "select vendor_id as Id, name as Name, contact_info as ContactInfo, status as Status from inventory.vendors order by name";
+        const string sql = "select vendor_id::text as Id, name as Name, contact_info as ContactInfo, status as Status, budget as Budget, reminder as Reminder, reminder_enabled as ReminderEnabled from inventory.vendors order by name";
         var items = await conn.QueryAsync<VendorDto>(sql);
         return items.ToList();
     }
@@ -20,7 +20,7 @@ public class VendorRepository : IVendorRepository
     public async Task<VendorDto?> GetAsync(string id, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = "select vendor_id as Id, name as Name, contact_info as ContactInfo, status as Status from inventory.vendors where vendor_id=@Id";
+        const string sql = "select vendor_id::text as Id, name as Name, contact_info as ContactInfo, status as Status, budget as Budget, reminder as Reminder, reminder_enabled as ReminderEnabled from inventory.vendors where vendor_id=@Id";
         return await conn.QuerySingleOrDefaultAsync<VendorDto>(sql, new { Id = Guid.Parse(id) });
     }
 

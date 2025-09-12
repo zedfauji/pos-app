@@ -4,89 +4,390 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:vm="using:MagiDesk.Frontend.ViewModels"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d">
-    <ScrollViewer>
-        <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="Billing" FontSize="22" FontWeight="SemiBold" />
 
-            <!-- Filters -->
-            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                <StackPanel>
-                    <TextBlock Text="From" />
-                    <DatePicker x:Name="FromDate" DateChanged="FromDate_DateChanged" />
+    <Page.Resources>
+        <!-- Converters -->
+        <converters:StringToBrushConverter x:Key="StringToBrushConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+
+        <!-- Metric Card Style -->
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="MinHeight" Value="120"/>
+        </Style>
+
+        <!-- Status Badge Style -->
+        <Style x:Key="StatusBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <!-- DataGrid Style -->
+        <Style x:Key="ModernDataGridStyle" TargetType="ListView">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Billing Management" FontSize="24" FontWeight="Bold" 
+                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Manage bills, receipts, and billing analytics" FontSize="14" 
+                             Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="To" />
-                    <DatePicker x:Name="ToDate" DateChanged="ToDate_DateChanged" />
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <Button Content="Refresh" Style="{StaticResource SecondaryButtonStyle}"
+                            Command="{Binding RefreshCommand}"/>
+                    <Button Content="Export" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding ExportCommand}"/>
                 </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Table" />
-                    <TextBox x:Name="TableFilter" Width="160"/>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Server" />
-                    <TextBox x:Name="ServerFilter" Width="160"/>
-                </StackPanel>
-                <Button x:Name="ApplyBtn" Content="Apply" Click="ApplyBtn_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Analytics Cards -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto" 
+                      VerticalScrollMode="Disabled" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Spacing="8" Padding="8,0">
+                <!-- Total Revenue Card -->
+                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Revenue" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalRevenueText}" 
+                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Total Revenue" FontSize="12" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Average Bill Card -->
+                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Average" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding AverageBillAmountText}" 
+                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Average Bill" FontSize="12" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Total Sessions Card -->
+                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Sessions" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalSessions}" 
+                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Total Sessions" FontSize="12" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Average Duration Card -->
+                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Duration" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding AverageSessionDurationText}" 
+                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Avg Duration" FontSize="12" HorizontalAlignment="Center"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
+        </ScrollViewer>
 
-            <!-- Grid -->
-            <TextBlock x:Name="CountText" Text="" Opacity="0.8" />
-            <ListView x:Name="BillsList" ItemsSource="{Binding Bills}" RightTapped="BillsList_RightTapped">
-                <ListView.ContextFlyout>
-                    <MenuFlyout>
-                        <MenuFlyoutItem Text="View receipt" Click="ViewReceipt_Click" />
-                        <MenuFlyoutItem Text="Reprint" Click="Reprint_Click" />
-                    </MenuFlyout>
-                </ListView.ContextFlyout>
-                <ListView.Header>
-                    <Grid Padding="8" Background="#f0f0f0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="100"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="140"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Table" Grid.Column="0" FontWeight="SemiBold"/>
-                        <TextBlock Text="Server" Grid.Column="1" FontWeight="SemiBold"/>
-                        <TextBlock Text="Minutes" Grid.Column="2" FontWeight="SemiBold"/>
-                        <TextBlock Text="Start" Grid.Column="3" FontWeight="SemiBold"/>
-                        <TextBlock Text="End" Grid.Column="4" FontWeight="SemiBold"/>
-                        <TextBlock Text="Bill Id" Grid.Column="5" FontWeight="SemiBold"/>
-                        <TextBlock Text="Actions" Grid.Column="6" FontWeight="SemiBold"/>
-                    </Grid>
-                </ListView.Header>
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Padding="8">
+        <!-- Filters -->
+        <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}" Margin="0,0,0,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Filters" FontSize="16" FontWeight="SemiBold" 
+                         Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Date Range -->
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <TextBlock Text="From Date" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <DatePicker Date="{Binding FromDate, Mode=TwoWay}" 
+                                  Background="{StaticResource CardBrush}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" Spacing="8">
+                        <TextBlock Text="To Date" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <DatePicker Date="{Binding ToDate, Mode=TwoWay}" 
+                                  Background="{StaticResource CardBrush}" 
+                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    
+                    <!-- Table Filter -->
+                    <StackPanel Grid.Column="2" Spacing="8">
+                        <TextBlock Text="Table" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox Text="{Binding TableFilter, Mode=TwoWay}" 
+                               PlaceholderText="Filter by table..."
+                               Background="{StaticResource CardBrush}" 
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    
+                    <!-- Server Filter -->
+                    <StackPanel Grid.Column="3" Spacing="8">
+                        <TextBlock Text="Server" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBox Text="{Binding ServerFilter, Mode=TwoWay}" 
+                               PlaceholderText="Filter by server..."
+                               Background="{StaticResource CardBrush}" 
+                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    
+                    <!-- Filter Actions -->
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                        <Button Content="Apply" Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding ApplyFiltersCommand}"/>
+                        <Button Content="Clear" Style="{StaticResource SecondaryButtonStyle}"
+                                Command="{Binding ClearFiltersCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Bills List -->
+        <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- List Header -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="Bills" FontSize="18" FontWeight="SemiBold" 
+                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                    
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding FilteredBillsCount}" FontSize="14" FontWeight="SemiBold"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="of" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding TotalBillsCount}" FontSize="14" FontWeight="SemiBold"
+                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Bills ListView -->
+                <ListView Grid.Row="1" x:Name="BillsList" 
+                        ItemsSource="{Binding FilteredBills}"
+                        Style="{StaticResource ModernDataGridStyle}"
+                        RightTapped="BillsList_RightTapped">
+                    
+                    <ListView.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="View Receipt" Click="ViewReceipt_Click" />
+                            <MenuFlyoutItem Text="Reprint" Click="Reprint_Click" />
+                            <MenuFlyoutItem Text="Close Bill" Click="CloseBill_Click" />
+                        </MenuFlyout>
+                    </ListView.ContextFlyout>
+                    
+                    <ListView.Header>
+                        <Grid Padding="16,12" Background="{StaticResource BorderBrush}" CornerRadius="8,8,0,0">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="120"/>
                                 <ColumnDefinition Width="120"/>
                                 <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="80"/>
                                 <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="120"/>
-                                <ColumnDefinition Width="140"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding TableLabel}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ServerName}"/>
-                            <TextBlock Grid.Column="2" Text="{Binding TotalTimeMinutes}"/>
-                            <TextBlock Grid.Column="3" Text="{Binding StartLocal}"/>
-                            <TextBlock Grid.Column="4" Text="{Binding EndLocal}"/>
-                            <TextBlock Grid.Column="5" Text="{Binding ShortBillId}"/>
-                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
-                                <Button Content="View" Click="ViewReceipt_Click"/>
-                                <Button Content="Print" Click="ReprintButton_Click"/>
-                                <Button Content="Close" Click="CloseBillButton_Click"/>
-                            </StackPanel>
+                            <TextBlock Grid.Column="0" Text="Bill ID" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="1" Text="Table" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="2" Text="Server" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="3" Text="Duration" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="4" Text="Amount" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="5" Text="Status" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="6" Text="Start" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Grid.Column="7" Text="Actions" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}"/>
                         </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-        </StackPanel>
-    </ScrollViewer>
+                    </ListView.Header>
+                    
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="16,12" Background="Transparent">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="200"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Bill ID -->
+                                <TextBlock Grid.Column="0" Text="{Binding ShortBillId}" 
+                                         FontFamily="Consolas" FontSize="12"
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                
+                                <!-- Table -->
+                                <TextBlock Grid.Column="1" Text="{Binding TableLabel}" 
+                                         FontWeight="SemiBold"
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                
+                                <!-- Server -->
+                                <TextBlock Grid.Column="2" Text="{Binding ServerName}" 
+                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                
+                                <!-- Duration -->
+                                <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
+                                         FontFamily="Consolas" FontSize="12"
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                
+                                <!-- Amount -->
+                                <TextBlock Grid.Column="4" Text="{Binding AmountText}" 
+                                         FontWeight="SemiBold" FontSize="14"
+                                         Foreground="{StaticResource SuccessBrush}"/>
+                                
+                                <!-- Status -->
+                                <Border Grid.Column="5" Style="{StaticResource StatusBadgeStyle}"
+                                      Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}">
+                                    <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold" 
+                                             Foreground="White"/>
+                                </Border>
+                                
+                                <!-- Start Time -->
+                                <TextBlock Grid.Column="6" Text="{Binding StartLocal}" 
+                                         FontSize="11" FontFamily="Consolas"
+                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                
+                                <!-- Actions -->
+                                <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="4">
+                                    <Button Content="View" FontSize="12" Padding="8,4" 
+                                          Style="{StaticResource SecondaryButtonStyle}"
+                                          Click="ViewReceipt_Click" Tag="{Binding}"/>
+                                    <Button Content="Print" FontSize="12" Padding="8,4" 
+                                          Style="{StaticResource SecondaryButtonStyle}"
+                                          Click="Reprint_Click" Tag="{Binding}"/>
+                                    <Button Content="Close" FontSize="12" Padding="8,4" 
+                                          Style="{StaticResource SecondaryButtonStyle}"
+                                          Click="CloseBill_Click" Tag="{Binding}"
+                                          Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="5" Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressRing IsActive="True" Width="40" Height="40" 
+                            Foreground="{StaticResource PrimaryBrush}"/>
+                <TextBlock Text="Loading billing data..." Foreground="White" 
+                         Margin="0,16,0,0" FontSize="16"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Error Message -->
+        <InfoBar Grid.Row="4" x:Name="ErrorInfoBar"
+               IsOpen="{Binding HasError}"
+               Message="{Binding ErrorMessage}"
+               Severity="Error"
+               Margin="8"/>
+    </Grid>
 </Page>

@@ -1,0 +1,163 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.RestockPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:MagiDesk.Frontend.ViewModels"
+    xmlns:services="using:MagiDesk.Frontend.Services"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=viewmodels:RestockViewModel, Is='True'}">
+
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Actions -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="Restock Management" FontSize="24" FontWeight="SemiBold"/>
+            <Button Content="Create Restock Request" Click="CreateRestockRequest_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
+            <Button Content="Auto-Restock Low Stock" Click="AutoRestock_Click" Background="{ThemeResource SystemAccentColor}"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <TextBox x:Name="SearchBox" Width="200" PlaceholderText="Search items..." TextChanged="SearchBox_TextChanged"/>
+            <ComboBox x:Name="StatusFilter" PlaceholderText="Filter by Status" Width="150" SelectionChanged="StatusFilter_SelectionChanged">
+                <ComboBoxItem Content="All" Tag=""/>
+                <ComboBoxItem Content="Pending" Tag="Pending"/>
+                <ComboBoxItem Content="Approved" Tag="Approved"/>
+                <ComboBoxItem Content="Ordered" Tag="Ordered"/>
+                <ComboBoxItem Content="Received" Tag="Received"/>
+                <ComboBoxItem Content="Cancelled" Tag="Cancelled"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Statistics Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Total Requests -->
+            <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Total Requests" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.TotalRequests}" FontSize="20" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Pending Approval -->
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Pending Approval" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.PendingRequests}" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource SystemAccentColor}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Low Stock Items -->
+            <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Low Stock Items" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.LowStockItems}" FontSize="20" FontWeight="SemiBold" Foreground="Orange"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Total Value -->
+            <Border Grid.Column="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Total Value" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.TotalRestockValue}" FontSize="20" FontWeight="SemiBold" Foreground="Green"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Urgent Items -->
+            <Border Grid.Column="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Urgent Items" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.UrgentItems}" FontSize="20" FontWeight="SemiBold" Foreground="Red"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Restock Requests List -->
+        <ListView Grid.Row="2"
+                  x:Name="RestockList"
+                  ItemsSource="{x:Bind _vm.FilteredRequests, Mode=OneWay}"
+                  SelectionMode="Single"
+                  SelectionChanged="RestockList_SelectionChanged">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Request ID" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="Item" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="Current Stock" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="Requested Qty" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="Vendor" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="5" Text="Unit Cost" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Grid.Column="6" Text="Total Cost" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Grid.Column="7" Text="Status" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="8" Text="Actions" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="services:RestockRequestDto">
+                    <Grid Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="{x:Bind RequestId}" VerticalAlignment="Center" FontFamily="Consolas"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ItemName}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        
+                        <Border Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Background="{x:Bind StockStatusColor}" CornerRadius="4" Padding="4,2">
+                            <TextBlock Text="{x:Bind CurrentStock}" FontSize="10" Foreground="White"/>
+                        </Border>
+                        
+                        <TextBlock Grid.Column="3" Text="{x:Bind RequestedQuantity}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="{x:Bind VendorName}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="{x:Bind UnitCost}" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                        <TextBlock Grid.Column="6" Text="{x:Bind TotalCost}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                        
+                        <Border Grid.Column="7" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Background="{x:Bind StatusColor}" CornerRadius="4" Padding="4,2">
+                            <TextBlock Text="{x:Bind Status}" FontSize="10" Foreground="White"/>
+                        </Border>
+                        
+                        <StackPanel Grid.Column="8" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Content="Approve" Click="ApproveRequest_Click" Tag="{x:Bind RequestId}" FontSize="10" Padding="4,2" Background="Green" Foreground="White"/>
+                            <Button Content="Order" Click="MarkAsOrdered_Click" Tag="{x:Bind RequestId}" FontSize="10" Padding="4,2" Background="Blue" Foreground="White"/>
+                            <Button Content="Receive" Click="MarkAsReceived_Click" Tag="{x:Bind RequestId}" FontSize="10" Padding="4,2" Background="Purple" Foreground="White"/>
+                            <Button Content="Cancel" Click="CancelRequest_Click" Tag="{x:Bind RequestId}" FontSize="10" Padding="4,2" Background="Red" Foreground="White"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

@@ -6,16 +6,45 @@ namespace MenuApi.Services;
 public sealed class MenuService : IMenuService
 {
     private readonly IMenuRepository _repo;
+    private readonly IInventoryService _inventoryService;
 
-    public MenuService(IMenuRepository repo)
+    public MenuService(IMenuRepository repo, IInventoryService inventoryService)
     {
         _repo = repo;
+        _inventoryService = inventoryService;
     }
 
     public async Task<PagedResult<MenuItemDto>> ListItemsAsync(MenuItemQueryDto query, CancellationToken ct)
     {
         var (items, total) = await _repo.ListItemsAsync(query, ct);
-        return new PagedResult<MenuItemDto>(items, total);
+        
+        // Filter drinks based on inventory availability
+        var availableItems = new List<MenuItemDto>();
+        foreach (var item in items)
+        {
+            // Check inventory for drinks (categories: Beverages, Drinks, etc.)
+            if (IsDrinkCategory(item.Category))
+            {
+                var hasStock = await _inventoryService.CheckItemAvailabilityAsync(item.Sku, 1, ct);
+                if (hasStock)
+                {
+                    availableItems.Add(item);
+                }
+                else
+                {
+                    // Mark drink as unavailable but still show it
+                    var unavailableItem = item with { IsAvailable = false };
+                    availableItems.Add(unavailableItem);
+                }
+            }
+            else
+            {
+                // Food items don't need inventory checks
+                availableItems.Add(item);
+            }
+        }
+        
+        return new PagedResult<MenuItemDto>(availableItems, availableItems.Count);
     }
 
     public Task<MenuItemDetailsDto?> GetItemAsync(long id, CancellationToken ct)
@@ -71,4 +100,12 @@ public sealed class MenuService : IMenuService
 
     public Task RollbackComboAsync(long id, int toVersion, string user, CancellationToken ct)
         => _repo.RollbackComboAsync(id, toVersion, user, ct);
+
+    private static bool IsDrinkCategory(string category)
+    {
+        // Only treat pre-made drinks as inventory items
+        // Coffee, tea, etc. are made-to-order like food items
+        var preMadeDrinkCategories = new[] { "Alcohol", "Beer", "Soda", "Juice", "Water", "Bottled Drinks" };
+        return preMadeDrinkCategories.Contains(category, StringComparer.OrdinalIgnoreCase);
+    }
 }

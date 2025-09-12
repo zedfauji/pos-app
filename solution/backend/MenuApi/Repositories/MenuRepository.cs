@@ -56,27 +56,60 @@ public sealed class MenuRepository : IMenuRepository
         await using var cmd = new NpgsqlCommand { Connection = conn };
         if (!string.IsNullOrWhiteSpace(query.Q))
         {
-            where.Add("name ILIKE @q");
+            where.Add("m.name ILIKE @q");
             cmd.Parameters.AddWithValue("@q", $"%{query.Q.Trim()}%");
         }
         var whereSql = where.Count > 0 ? (" WHERE " + string.Join(" AND ", where)) : string.Empty;
         var limit = Math.Clamp(query.PageSize, 1, 200);
         var offset = (Math.Max(1, query.Page) - 1) * limit;
-        cmd.CommandText = $@"SELECT modifier_id, name, description, is_required, allow_multiple, max_selections
-                             FROM menu.modifiers{whereSql}
-                             ORDER BY name LIMIT @l OFFSET @o";
+        
+        // Use JOIN to get modifiers and their options in one query
+        cmd.CommandText = $@"SELECT m.modifier_id, m.name, m.description, m.is_required, m.allow_multiple, m.max_selections,
+                                   o.option_id, o.name as option_name, o.price_delta, o.is_available, o.sort_order
+                             FROM menu.modifiers m
+                             LEFT JOIN menu.modifier_options o ON m.modifier_id = o.modifier_id
+                             {whereSql.Replace("name", "m.name")}
+                             ORDER BY m.name, o.sort_order LIMIT @l OFFSET @o";
         cmd.Parameters.AddWithValue("@l", limit);
         cmd.Parameters.AddWithValue("@o", offset);
-        var list = new List<ModifierDto>();
+        
+        var modifierDict = new Dictionary<long, ModifierDto>();
         await using (var rdr = await cmd.ExecuteReaderAsync(ct))
         {
             while (await rdr.ReadAsync(ct))
             {
-                var id = rdr.GetInt64(0);
-                var options = await GetModifierOptionsAsync(conn, id, ct);
-                list.Add(new ModifierDto(id, rdr.GetString(1), rdr.GetBoolean(3), rdr.GetBoolean(4), rdr.IsDBNull(5) ? null : rdr.GetInt32(5), options));
+                var modifierId = rdr.GetInt64(0);
+                if (!modifierDict.ContainsKey(modifierId))
+                {
+                    var options = new List<ModifierOptionDto>();
+                    modifierDict[modifierId] = new ModifierDto(
+                        modifierId,
+                        rdr.GetString(1),
+                        rdr.GetBoolean(3),
+                        rdr.GetBoolean(4),
+                        rdr.IsDBNull(5) ? null : rdr.GetInt32(5),
+                        options
+                    );
+                }
+                
+                // Add option if it exists (LEFT JOIN might return null)
+                if (!rdr.IsDBNull(6))
+                {
+                    var option = new ModifierOptionDto(
+                        rdr.GetInt64(6),
+                        rdr.GetString(7),
+                        rdr.GetDecimal(8),
+                        rdr.GetBoolean(9),
+                        rdr.GetInt32(10)
+                    );
+                    ((List<ModifierOptionDto>)modifierDict[modifierId].Options).Add(option);
+                }
             }
         }
+        
+        var list = modifierDict.Values.ToList();
+        
+        // Get total count
         await using var cntCmd = new NpgsqlCommand($"SELECT COUNT(1) FROM menu.modifiers{whereSql}", conn);
         foreach (NpgsqlParameter p in cmd.Parameters)
         {
@@ -90,13 +123,48 @@ public sealed class MenuRepository : IMenuRepository
     public async Task<ModifierDto?> GetModifierAsync(long id, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = @"SELECT modifier_id, name, description, is_required, allow_multiple, max_selections FROM menu.modifiers WHERE modifier_id = @id";
+        const string sql = @"SELECT m.modifier_id, m.name, m.description, m.is_required, m.allow_multiple, m.max_selections,
+                                   o.option_id, o.name as option_name, o.price_delta, o.is_available, o.sort_order
+                             FROM menu.modifiers m
+                             LEFT JOIN menu.modifier_options o ON m.modifier_id = o.modifier_id
+                             WHERE m.modifier_id = @id
+                             ORDER BY o.sort_order";
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@id", id);
+        
+        ModifierDto? modifier = null;
+        var options = new List<ModifierOptionDto>();
+        
         await using var rdr = await cmd.ExecuteReaderAsync(ct);
-        if (!await rdr.ReadAsync(ct)) return null;
-        var options = await GetModifierOptionsAsync(conn, id, ct);
-        return new ModifierDto(id, rdr.GetString(1), rdr.GetBoolean(3), rdr.GetBoolean(4), rdr.IsDBNull(5) ? null : rdr.GetInt32(5), options);
+        while (await rdr.ReadAsync(ct))
+        {
+            if (modifier == null)
+            {
+                modifier = new ModifierDto(
+                    rdr.GetInt64(0),
+                    rdr.GetString(1),
+                    rdr.GetBoolean(3),
+                    rdr.GetBoolean(4),
+                    rdr.IsDBNull(5) ? null : rdr.GetInt32(5),
+                    options
+                );
+            }
+            
+            // Add option if it exists (LEFT JOIN might return null)
+            if (!rdr.IsDBNull(6))
+            {
+                var option = new ModifierOptionDto(
+                    rdr.GetInt64(6),
+                    rdr.GetString(7),
+                    rdr.GetDecimal(8),
+                    rdr.GetBoolean(9),
+                    rdr.GetInt32(10)
+                );
+                options.Add(option);
+            }
+        }
+        
+        return modifier;
     }
 
     public async Task<ModifierDto> CreateModifierAsync(CreateModifierDto dto, string user, CancellationToken ct)

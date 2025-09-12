@@ -31,20 +31,21 @@ public sealed partial class OrderRepository : IOrderRepository
         }
     }
 
-    public async Task<long> CreateOrderAsync(OrderDto order, IReadOnlyList<OrderItemDto> items, CancellationToken ct)
+    public async Task<long> CreateOrderAsync(OrderDto order, IReadOnlyList<OrderItemDto> items, Guid? billingId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
-        const string insOrder = @"INSERT INTO ord.orders(session_id, billing_id, table_id, server_id, server_name, status, subtotal, discount_total, tax_total, total, profit_total)
-                                 VALUES(@sid, @bid, @tid, @srvId, @srvName, @st, @sub, @disc, @tax, @tot, @profit)
+        const string insOrder = @"INSERT INTO ord.orders(session_id, billing_id, table_id, server_id, server_name, status, delivery_status, subtotal, discount_total, tax_total, total, profit_total)
+                                 VALUES(@sid, @bid, @tid, @srvId, @srvName, @st, @deliveryStatus, @sub, @disc, @tax, @tot, @profit)
                                  RETURNING order_id";
         await using var cmd = new NpgsqlCommand(insOrder, conn, tx);
         cmd.Parameters.AddWithValue("@sid", order.SessionId);
-        cmd.Parameters.AddWithValue("@bid", (object?)order.TableId ?? DBNull.Value); // Note: OrderDto uses TableId; billing id not exposed here
+        cmd.Parameters.AddWithValue("@bid", (object?)billingId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@tid", order.TableId);
         cmd.Parameters.AddWithValue("@srvId", "");
         cmd.Parameters.AddWithValue("@srvName", (object?)"" ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@st", order.Status);
+        cmd.Parameters.AddWithValue("@deliveryStatus", order.DeliveryStatus);
         cmd.Parameters.AddWithValue("@sub", order.Subtotal);
         cmd.Parameters.AddWithValue("@disc", order.DiscountTotal);
         cmd.Parameters.AddWithValue("@tax", order.TaxTotal);
@@ -54,8 +55,8 @@ public sealed partial class OrderRepository : IOrderRepository
 
         if (items.Count > 0)
         {
-            const string insItem = @"INSERT INTO ord.order_items(order_id, menu_item_id, combo_id, quantity, base_price, vendor_price, price_delta, line_discount, line_total, profit, selected_modifiers, snapshot_name, snapshot_sku, snapshot_category, snapshot_group, snapshot_version, snapshot_picture_url)
-                                     VALUES(@oid, @mid, @cid, @qty, @base, @vendor, @delta, @ldis, @ltot, @profit, @mods, @sname, @ssku, @scat, @sgrp, @sver, @spic) RETURNING order_item_id";
+            const string insItem = @"INSERT INTO ord.order_items(order_id, menu_item_id, combo_id, quantity, delivered_quantity, base_price, vendor_price, price_delta, line_discount, line_total, profit, selected_modifiers, snapshot_name, snapshot_sku, snapshot_category, snapshot_group, snapshot_version, snapshot_picture_url)
+                                     VALUES(@oid, @mid, @cid, @qty, @deliveredQty, @base, @vendor, @delta, @ldis, @ltot, @profit, @mods, @sname, @ssku, @scat, @sgrp, @sver, @spic) RETURNING order_item_id";
             foreach (var it in items)
             {
                 await using var ic = new NpgsqlCommand(insItem, conn, tx);
@@ -63,6 +64,7 @@ public sealed partial class OrderRepository : IOrderRepository
                 ic.Parameters.AddWithValue("@mid", (object?)it.MenuItemId ?? DBNull.Value);
                 ic.Parameters.AddWithValue("@cid", (object?)it.ComboId ?? DBNull.Value);
                 ic.Parameters.AddWithValue("@qty", it.Quantity);
+                ic.Parameters.AddWithValue("@deliveredQty", it.DeliveredQuantity);
                 ic.Parameters.AddWithValue("@base", it.BasePrice);
                 ic.Parameters.AddWithValue("@vendor", it.Profit >= 0 ? it.BasePrice * 0.7m : 0m); // placeholder vendor
                 ic.Parameters.AddWithValue("@delta", it.PriceDelta);
@@ -86,38 +88,38 @@ public sealed partial class OrderRepository : IOrderRepository
     public async Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = @"SELECT order_id, session_id, table_id, status, subtotal, discount_total, tax_total, total, profit_total
+        const string sql = @"SELECT order_id, session_id, table_id, status, delivery_status, subtotal, discount_total, tax_total, total, profit_total
                              FROM ord.orders WHERE order_id = @id AND is_deleted = false";
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@id", orderId);
         await using var rdr = await cmd.ExecuteReaderAsync(ct);
         if (!await rdr.ReadAsync(ct)) return null;
-        var order = new OrderDto(rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetDecimal(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), new List<OrderItemDto>());
+        var order = new OrderDto(rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetString(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), rdr.GetDecimal(9), new List<OrderItemDto>());
         await rdr.CloseAsync();
-        const string items = @"SELECT order_item_id, menu_item_id, combo_id, quantity, base_price, price_delta, line_total, profit FROM ord.order_items WHERE order_id = @oid AND is_deleted = false";
+        const string items = @"SELECT order_item_id, menu_item_id, combo_id, quantity, delivered_quantity, base_price, price_delta, line_total, profit FROM ord.order_items WHERE order_id = @oid AND is_deleted = false";
         await using var icmd = new NpgsqlCommand(items, conn);
         icmd.Parameters.AddWithValue("@oid", order.Id);
         var list = new List<OrderItemDto>();
         await using var ir = await icmd.ExecuteReaderAsync(ct);
         while (await ir.ReadAsync(ct))
         {
-            list.Add(new OrderItemDto(ir.GetInt64(0), ir.IsDBNull(1) ? null : ir.GetInt64(1), ir.IsDBNull(2) ? null : ir.GetInt64(2), ir.GetInt32(3), ir.GetDecimal(4), ir.GetDecimal(5), ir.GetDecimal(6), ir.GetDecimal(7)));
+            list.Add(new OrderItemDto(ir.GetInt64(0), ir.IsDBNull(1) ? null : ir.GetInt64(1), ir.IsDBNull(2) ? null : ir.GetInt64(2), ir.GetInt32(3), ir.GetInt32(4), ir.GetDecimal(5), ir.GetDecimal(6), ir.GetDecimal(7), ir.GetDecimal(8)));
         }
         return order with { Items = list };
     }
 
-    public async Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(string sessionId, bool includeHistory, CancellationToken ct)
+    public async Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         var where = includeHistory ? "session_id = @sid" : "session_id = @sid AND status = 'open'";
-        await using var cmd = new NpgsqlCommand($@"SELECT order_id, session_id, table_id, status, subtotal, discount_total, tax_total, total, profit_total
+        await using var cmd = new NpgsqlCommand($@"SELECT order_id, session_id, table_id, status, delivery_status, subtotal, discount_total, tax_total, total, profit_total
                                                   FROM ord.orders WHERE {where} AND is_deleted = false ORDER BY created_at DESC", conn);
         cmd.Parameters.AddWithValue("@sid", sessionId);
         var outList = new List<OrderDto>();
         await using var rdr = await cmd.ExecuteReaderAsync(ct);
         while (await rdr.ReadAsync(ct))
         {
-            outList.Add(new OrderDto(rdr.GetInt64(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetDecimal(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), new List<OrderItemDto>()));
+            outList.Add(new OrderDto(rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetString(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), rdr.GetDecimal(9), new List<OrderItemDto>()));
         }
         return outList;
     }
@@ -355,5 +357,49 @@ public sealed partial class OrderRepository : IOrderRepository
         updCmd.Parameters.AddWithValue("@oid", orderId);
         await updCmd.ExecuteNonQueryAsync(ct);
         await tx.CommitAsync(ct);
+    }
+
+    public async Task MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        
+        foreach (var delivery in itemDeliveries)
+        {
+            const string updateSql = @"UPDATE ord.order_items 
+                                     SET delivered_quantity = @deliveredQty, updated_at = now() 
+                                     WHERE order_item_id = @orderItemId AND order_id = @orderId";
+            await using var cmd = new NpgsqlCommand(updateSql, conn, tx);
+            cmd.Parameters.AddWithValue("@deliveredQty", delivery.DeliveredQuantity);
+            cmd.Parameters.AddWithValue("@orderItemId", delivery.OrderItemId);
+            cmd.Parameters.AddWithValue("@orderId", orderId);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+        
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task UpdateOrderDeliveryStatusAsync(long orderId, string deliveryStatus, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string updateSql = @"UPDATE ord.orders 
+                                 SET delivery_status = @deliveryStatus, updated_at = now() 
+                                 WHERE order_id = @orderId";
+        await using var cmd = new NpgsqlCommand(updateSql, conn);
+        cmd.Parameters.AddWithValue("@deliveryStatus", deliveryStatus);
+        cmd.Parameters.AddWithValue("@orderId", orderId);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task UpdateOrderStatusAsync(long orderId, string status, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string updateSql = @"UPDATE ord.orders 
+                                 SET status = @status, updated_at = now() 
+                                 WHERE order_id = @orderId";
+        await using var cmd = new NpgsqlCommand(updateSql, conn);
+        cmd.Parameters.AddWithValue("@status", status);
+        cmd.Parameters.AddWithValue("@orderId", orderId);
+        await cmd.ExecuteNonQueryAsync(ct);
     }
 }

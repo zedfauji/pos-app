@@ -5,161 +5,158 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
+    
     <Grid Padding="24">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <!-- Left menu (vertical tabs) -->
-        <StackPanel Grid.Column="0" Spacing="8">
-            <TextBlock x:Name="TitleText" Text="Settings" FontSize="24" FontWeight="SemiBold"/>
-            <ListView x:Name="CategoryList" SelectionChanged="CategoryList_SelectionChanged">
-                <ListViewItem Content="General"/>
-                <ListViewItem Content="Connections"/>
-                <ListViewItem Content="Billing &amp; Printing"/>
-                <ListViewItem Content="Tables"/>
-                <ListViewItem Content="Audit"/>
-            </ListView>
-        </StackPanel>
+        <!-- Header -->
+        <TextBlock Grid.Row="0" x:Name="TitleText" Text="Settings" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
-        <!-- Right content -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="16" Width="640">
+                
+                <!-- General Settings -->
+                <StackPanel x:Name="GeneralPanel" Spacing="8">
+                    <TextBlock Text="General Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <TextBlock Text="Store Name / Host Key" FontWeight="SemiBold"/>
+                    <TextBox x:Name="SettingsHostText" PlaceholderText="store-1"/>
+                    
+                    <TextBlock Text="Theme" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="ThemeSelector" SelectedIndex="0">
+                        <ComboBoxItem Content="System"/>
+                        <ComboBoxItem Content="Dark"/>
+                        <ComboBoxItem Content="Light"/>
+                    </ComboBox>
+                    
+                    <TextBlock x:Name="ThemeSummaryText" Text="Theme: System" Opacity="0.7"/>
+                    <TextBlock x:Name="AppSummaryText" Text="App Settings: Loading..." Opacity="0.7"/>
+                </StackPanel>
 
-            <ProgressRing x:Name="LoadingRing" IsActive="False" Visibility="Collapsed"/>
-
-            <ScrollViewer Grid.Row="1">
-                <StackPanel Spacing="12" Width="640">
-                    <!-- General -->
-                    <StackPanel x:Name="GeneralPanel" Spacing="8">
-                        <TextBlock Text="General" FontSize="18" FontWeight="SemiBold"/>
-                        <TextBlock Text="Store Name / Host Key" FontWeight="SemiBold"/>
-                        <TextBox x:Name="SettingsHostText" PlaceholderText="store-1"/>
-                        <TextBlock Text="Main UI Settings" FontWeight="SemiBold" Margin="0,8,0,0"/>
-                        <TextBlock x:Name="ThemeLabel" Text="Theme"/>
-                        <ComboBox x:Name="ThemeSelector" SelectedIndex="0">
-                            <ComboBoxItem Content="System"/>
-                            <ComboBoxItem Content="Dark"/>
-                            <ComboBoxItem Content="Light"/>
-                        </ComboBox>
-                        <TextBlock x:Name="ThemeHint" Text="System uses Windows theme" Opacity="0.7" FontSize="12"/>
-                        <TextBlock x:Name="ThemeSummaryText" Text="Theme: -"/>
-                        <TextBlock x:Name="AppSummaryText" Text="App Settings: -"/>
-                    </StackPanel>
-
-                    <!-- Connections -->
-                    <StackPanel x:Name="ConnectionsPanel" Spacing="8" Visibility="Collapsed">
-                        <TextBlock Text="Connections" FontSize="18" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="BackendUrlLabel" Text="Backend Base URL"/>
-                        <TextBox x:Name="BaseUrlText" PlaceholderText="https://localhost:7016"/>
-                        <TextBlock Text="Inventory API URL"/>
-                        <TextBox x:Name="InventoryApiUrlText" PlaceholderText="https://.../inventory"/>
-                        <TextBlock Text="Settings API URL"/>
-                        <TextBox x:Name="SettingsApiUrlText" PlaceholderText="https://.../settings"/>
-                        <TextBlock Text="Tables API URL"/>
-                        <TextBox x:Name="TablesApiUrlText" PlaceholderText="https://.../tables"/>
-
-                        <StackPanel Spacing="6">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse x:Name="BackendStatusDot" Width="10" Height="10" Fill="Gray" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="BackendSummaryText" Text="Backend: -"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse x:Name="InventoryStatusDot" Width="10" Height="10" Fill="Gray" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="InventoryStatusText" Text="Inventory API: -"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse x:Name="SettingsStatusDot" Width="10" Height="10" Fill="Gray" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="SettingsStatusText" Text="Settings API: -"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Ellipse x:Name="TablesStatusDot" Width="10" Height="10" Fill="Gray" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TablesStatusText" Text="Tables API: -"/>
-                            </StackPanel>
+                <!-- API Connections -->
+                <StackPanel x:Name="ConnectionsPanel" Spacing="8">
+                    <TextBlock Text="API Connections" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <TextBlock Text="Backend Base URL" FontWeight="SemiBold"/>
+                    <TextBox x:Name="BaseUrlText" PlaceholderText="https://localhost:7016"/>
+                    
+                    <TextBlock Text="Inventory API URL" FontWeight="SemiBold"/>
+                    <TextBox x:Name="InventoryApiUrlText" PlaceholderText="https://.../inventory"/>
+                    
+                    <TextBlock Text="Settings API URL" FontWeight="SemiBold"/>
+                    <TextBox x:Name="SettingsApiUrlText" PlaceholderText="https://.../settings"/>
+                    
+                    <TextBlock Text="Tables API URL" FontWeight="SemiBold"/>
+                    <TextBox x:Name="TablesApiUrlText" PlaceholderText="https://.../tables"/>
+                    
+                    <!-- Status Indicators -->
+                    <StackPanel Spacing="6" Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="BackendStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="BackendSummaryText" Text="Backend: Unknown"/>
                         </StackPanel>
-                    </StackPanel>
-
-                    <!-- Billing & Printing -->
-                    <StackPanel x:Name="BillingPanel" Spacing="8" Visibility="Collapsed">
-                        <TextBlock Text="Billing &amp; Printing" FontSize="18" FontWeight="SemiBold"/>
-                        <TextBlock Text="Printer Settings" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <StackPanel>
-                                <TextBlock Text="Paper Width"/>
-                                <ComboBox x:Name="PrinterWidthCombo" SelectedIndex="0" Width="120">
-                                    <ComboBoxItem Content="58 mm" Tag="58"/>
-                                    <ComboBoxItem Content="80 mm" Tag="80"/>
-                                </ComboBox>
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="Tax %"/>
-                                <TextBox x:Name="TaxPercentText" PlaceholderText="8.5" Width="100"/>
-                            </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="InventoryStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="InventoryStatusText" Text="Inventory API: Unknown"/>
                         </StackPanel>
-                        <TextBlock Text="Actions" FontWeight="SemiBold"/>
-                    </StackPanel>
-
-                    <!-- Tables -->
-                    <StackPanel x:Name="TablesPanel" Spacing="8" Visibility="Collapsed">
-                        <TextBlock Text="Tables" FontSize="18" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="CurrentRateText" Text="Current Rate: -"/>
-                        <TextBlock Text="Session Timers" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <StackPanel>
-                                <TextBlock Text="Warn after (minutes)"/>
-                                <NumberBox x:Name="WarnMinutesBox" Minimum="0" SmallChange="1" Width="160"/>
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="Auto-stop after (minutes)"/>
-                                <NumberBox x:Name="AutoStopMinutesBox" Minimum="0" SmallChange="5" Width="180"/>
-                            </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="SettingsStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="SettingsStatusText" Text="Settings API: Unknown"/>
                         </StackPanel>
-
-                        <TextBlock Text="Rate Per Minute" FontWeight="SemiBold"/>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <NumberBox x:Name="RatePerMinuteBox" Minimum="0" SmallChange="0.1" Width="160"/>
-                            <Button Content="Load Rate" Click="RateLoad_Click"/>
-                            <Button Content="Save Rate" Click="RateSave_Click"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="TablesStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="TablesStatusText" Text="Tables API: Unknown"/>
                         </StackPanel>
-                    </StackPanel>
-
-                    <!-- Audit -->
-                    <StackPanel x:Name="AuditPanel" Spacing="8" Visibility="Collapsed">
-                        <TextBlock Text="Settings Audit" FontSize="18" FontWeight="SemiBold"/>
-                        <Button Content="Refresh Audit" Click="AuditRefresh_Click" Width="160"/>
-                        <ListView x:Name="AuditList" Height="240">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding section}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding timestamp}" FontSize="12" Opacity="0.7"/>
-                                        <TextBlock Text="{Binding changes}" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
                     </StackPanel>
                 </StackPanel>
-            </ScrollViewer>
 
-            <!-- Bottom actions per category -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
-                <Button x:Name="SaveButton" Content="Save" Click="Save_Click"/>
-                <Button x:Name="SaveApiButton" Content="Save API URLs" Click="SaveApi_Click"/>
-                <Button x:Name="PingApisButton" Content="Refresh Status" Click="PingApis_Click"/>
-                <Button x:Name="TestPrintButton" Content="Print test receipt" Click="TestPrint_Click"/>
-                <Button x:Name="ResetDefaultsButton" Content="Reset to Defaults" Click="ResetDefaults_Click"/>
-            </StackPanel>
+                <!-- Printer Settings -->
+                <StackPanel x:Name="BillingPanel" Spacing="8">
+                    <TextBlock Text="Printer Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <StackPanel>
+                            <TextBlock Text="Paper Width" FontWeight="SemiBold"/>
+                            <ComboBox x:Name="PrinterWidthCombo" SelectedIndex="1" Width="120">
+                                <ComboBoxItem Content="58 mm" Tag="58"/>
+                                <ComboBoxItem Content="80 mm" Tag="80"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Tax %" FontWeight="SemiBold"/>
+                            <TextBox x:Name="TaxPercentText" PlaceholderText="8.5" Width="100"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
 
-            <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
-                <InfoBar x:Name="ToastBar" IsOpen="False" Severity="Success" Message="Saved"/>
-                <TextBlock x:Name="StatusText"/>
+                <!-- Tables Settings -->
+                <StackPanel x:Name="TablesPanel" Spacing="8">
+                    <TextBlock Text="Tables Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <TextBlock x:Name="CurrentRateText" Text="Current Rate: Loading..." FontWeight="SemiBold"/>
+                    
+                    <TextBlock Text="Session Timers" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <StackPanel>
+                            <TextBlock Text="Warn after (minutes)" FontWeight="SemiBold"/>
+                            <TextBox x:Name="WarnMinutesBox" PlaceholderText="30" Width="160"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Auto-stop after (minutes)" FontWeight="SemiBold"/>
+                            <TextBox x:Name="AutoStopMinutesBox" PlaceholderText="120" Width="180"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <TextBlock Text="Rate Per Minute" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox x:Name="RatePerMinuteBox" PlaceholderText="0.50" Width="160"/>
+                        <Button Content="Load Rate" Click="RateLoad_Click"/>
+                        <Button Content="Save Rate" Click="RateSave_Click"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Audit Log -->
+                <StackPanel x:Name="AuditPanel" Spacing="8">
+                    <TextBlock Text="Settings Audit" FontSize="18" FontWeight="SemiBold"/>
+                    <Button Content="Refresh Audit" Click="AuditRefresh_Click" Width="160"/>
+                    <ListView x:Name="AuditList" Height="240">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding section}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding timestamp}" FontSize="12" Opacity="0.7"/>
+                                    <TextBlock Text="{Binding changes}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+
             </StackPanel>
-        </Grid>
+        </ScrollViewer>
+
+        <!-- Bottom Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
+            <Button x:Name="SaveButton" Content="Save Settings" Click="Save_Click"/>
+            <Button x:Name="SaveApiButton" Content="Save API URLs" Click="SaveApi_Click"/>
+            <Button x:Name="PingApisButton" Content="Refresh Status" Click="PingApis_Click"/>
+            <Button x:Name="TestPrintButton" Content="Test Print" Click="TestPrint_Click"/>
+            <Button x:Name="ResetDefaultsButton" Content="Reset Defaults" Click="ResetDefaults_Click"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
+            <InfoBar x:Name="ToastBar" IsOpen="False" Severity="Success" Message="Saved"/>
+            <TextBlock x:Name="StatusText" Text="Ready"/>
+        </StackPanel>
+
+        <!-- Loading Indicator -->
+        <ProgressRing x:Name="LoadingRing" IsActive="False" Visibility="Collapsed" 
+                      HorizontalAlignment="Center" VerticalAlignment="Center" Width="40" Height="40"/>
     </Grid>
 </Page>

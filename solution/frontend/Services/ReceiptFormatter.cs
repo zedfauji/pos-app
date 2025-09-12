@@ -10,10 +10,26 @@ namespace MagiDesk.Frontend.Services
     public static class ReceiptFormatter
     {
         // Converts paper width in mm to pixels at 96 DPI (approx)
-        private static double MmToPx(int mm) => mm * 96.0 / 25.4;
+        private static double MmToPx(int mm)
+        {
+            if (mm <= 0)
+                throw new ArgumentOutOfRangeException(nameof(mm), "Millimeters must be greater than 0");
+            
+            return mm * 96.0 / 25.4;
+        }
 
         public static FrameworkElement BuildReceiptView(BillResult bill, int paperWidthMm, decimal taxPercent)
         {
+            // Validate parameters
+            if (bill == null)
+                throw new ArgumentNullException(nameof(bill), "Bill cannot be null");
+            
+            if (paperWidthMm <= 0)
+                throw new ArgumentOutOfRangeException(nameof(paperWidthMm), "Paper width must be greater than 0");
+            
+            if (taxPercent < 0 || taxPercent > 100)
+                throw new ArgumentOutOfRangeException(nameof(taxPercent), "Tax percent must be between 0 and 100");
+
             var width = MmToPx(paperWidthMm);
             var panel = new StackPanel
             {

@@ -1,0 +1,614 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.ModernDashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:MagiDesk.Frontend.ViewModels"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+
+        <!-- Metric Card Style -->
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="MinHeight" Value="140"/>
+        </Style>
+
+        <!-- Chart Card Style -->
+        <Style x:Key="ChartCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="MinHeight" Value="300"/>
+        </Style>
+
+        <!-- Status Indicator Style -->
+        <Style x:Key="StatusIndicatorStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+        </Style>
+
+        <!-- Animation Styles -->
+        <Style x:Key="FadeInAnimation" TargetType="FrameworkElement">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+
+        <Style x:Key="SlideInAnimation" TargetType="FrameworkElement">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform X="-50"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+
+        <!-- Pulse Animation for Live Data -->
+        <Style x:Key="PulseAnimation" TargetType="FrameworkElement">
+        </Style>
+
+        <!-- Chart Animation Styles -->
+        <Style x:Key="ChartBarAnimation" TargetType="Border">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleY="0" ScaleX="1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MetricCardHoverAnimation" TargetType="Border">
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <CompositeTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Status -->
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                    <TextBlock Text="📊" FontSize="32" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="MagiDesk Dashboard" FontSize="24" FontWeight="SemiBold" 
+                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding LastUpdated}" 
+                                 FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Connection Status -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="{Binding IsConnected, Converter={StaticResource BoolToColorConverter}}"/>
+                    <TextBlock Text="{Binding IsConnected, Converter={StaticResource BoolToStatusConverter}}" 
+                             Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                </StackPanel>
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="2" Content="🔄" FontSize="16" Padding="12" 
+                        CornerRadius="8" Background="{StaticResource PrimaryBrush}"
+                        Click="RefreshButton_Click" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Notifications Bar -->
+        <Border Grid.Row="1" Background="{StaticResource WarningBrush}" Padding="16,8" Margin="0,0,0,8"
+                Visibility="{Binding Notifications.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" Text="🔔" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="1" Text="{Binding UnreadNotifications}" 
+                         Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Content="View All" Background="Transparent" Foreground="White"
+                        Click="ViewNotifications_Click" Padding="8,4"/>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="2" Padding="16" ZoomMode="Disabled">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Executive Summary Cards -->
+                <Grid x:Name="ExecutiveSummaryGrid" Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Responsive Breakpoints -->
+                    <VisualStateManager.VisualStateGroups>
+                        <VisualStateGroup>
+                            <VisualState x:Name="Narrow">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="0"/>
+                                </VisualState.StateTriggers>
+                            </VisualState>
+                            <VisualState x:Name="Medium">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="800"/>
+                                </VisualState.StateTriggers>
+                            </VisualState>
+                            <VisualState x:Name="Wide">
+                                <VisualState.StateTriggers>
+                                    <AdaptiveTrigger MinWindowWidth="1200"/>
+                                </VisualState.StateTriggers>
+                            </VisualState>
+                        </VisualStateGroup>
+                    </VisualStateManager.VisualStateGroups>
+
+                    <!-- Revenue Card -->
+                    <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}">
+                        <Border.Resources>
+                            <Storyboard x:Name="RevenueCardAnimation">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                               From="0" To="1" Duration="0:0:0.8">
+                                    <DoubleAnimation.EasingFunction>
+                                        <CubicEase EasingMode="EaseOut"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
+                                               From="0.8" To="1" Duration="0:0:0.8">
+                                    <DoubleAnimation.EasingFunction>
+                                        <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
+                                               From="0.8" To="1" Duration="0:0:0.8">
+                                    <DoubleAnimation.EasingFunction>
+                                        <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                                    </DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </Border.Resources>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                <TextBlock Text="💰" FontSize="24"/>
+                                <TextBlock Text="Revenue Today" FontSize="16" FontWeight="SemiBold" 
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding TodayRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="32" FontWeight="Bold" 
+                                     Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding SettledRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
+                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding PendingRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
+                                     Foreground="{StaticResource WarningBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tables Card -->
+                    <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                <TextBlock Text="🏓" FontSize="24"/>
+                                <TextBlock Text="Table Occupancy" FontSize="16" FontWeight="SemiBold" 
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding OccupancyPercentage, Converter={StaticResource PercentageConverter}}" FontSize="32" FontWeight="Bold" 
+                                     Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding OccupiedTables}" FontSize="12" 
+                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding AvailableTables}" FontSize="12" 
+                                     Foreground="{StaticResource SuccessBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Orders Card -->
+                    <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                <TextBlock Text="📋" FontSize="24"/>
+                                <TextBlock Text="Orders Today" FontSize="16" FontWeight="SemiBold" 
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding TotalOrdersToday}" FontSize="32" FontWeight="Bold" 
+                                     Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalOrderValue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
+                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding PendingDelivery}" FontSize="12" 
+                                     Foreground="{StaticResource WarningBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sessions Card -->
+                    <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+                                <TextBlock Text="⏱️" FontSize="24"/>
+                                <TextBlock Text="Active Sessions" FontSize="16" FontWeight="SemiBold" 
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding ActiveSessions}" FontSize="32" FontWeight="Bold" 
+                                     Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding SessionsToday}" FontSize="12" 
+                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding AverageSessionMinutes}" FontSize="12" 
+                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Charts and Analytics Row -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Revenue Chart -->
+                    <Border Grid.Column="0" Style="{StaticResource ChartCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📈 Revenue Trend (7 Days)" FontSize="18" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                            
+                            <!-- Simple Bar Chart -->
+                            <Grid Height="200" Margin="0,0,0,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Chart Area -->
+                                <Grid Grid.Row="0" Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Chart Bars -->
+                                    <Border Grid.Column="0" Background="{StaticResource PrimaryBrush}" 
+                                          Height="{Binding RevenueChartData[0].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
+                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="1" Background="{StaticResource PrimaryBrush}" 
+                                          Height="{Binding RevenueChartData[1].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
+                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="2" Background="{StaticResource PrimaryBrush}" 
+                                          Height="{Binding RevenueChartData[2].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
+                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="3" Background="{StaticResource SuccessBrush}" 
+                                          Height="{Binding RevenueChartData[3].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
+                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="4" Background="{StaticResource PrimaryBrush}" 
+                                          Height="{Binding RevenueChartData[4].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
+                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="5" Background="{StaticResource BorderBrush}" 
+                                          Height="20" VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                    <Border Grid.Column="6" Background="{StaticResource BorderBrush}" 
+                                          Height="20" VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
+                                          Style="{StaticResource ChartBarAnimation}">
+                                    </Border>
+                                </Grid>
+                                
+                                <!-- Chart Labels -->
+                                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="0">
+                                    <TextBlock Text="M" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="T" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="W" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="T" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="F" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="S" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="S" Width="40" TextAlignment="Center" FontSize="10" 
+                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Server Performance -->
+                    <Border Grid.Column="1" Style="{StaticResource ChartCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="👥 Server Performance" FontSize="18" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                            
+                            <ListView ItemsSource="{Binding ServerPerformance}" SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                                                <TextBlock Text="{Binding ServerName}" FontWeight="SemiBold" 
+                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding RevenueGenerated, Converter={StaticResource CurrencyConverter}}"
+                                                         Foreground="{StaticResource SuccessBrush}"/>
+                                            </StackPanel>
+                                            
+                                            <ProgressBar Grid.Row="1" Value="{Binding PerformancePercentage}" 
+                                                       Maximum="100" Height="8" Margin="0,0,0,8"
+                                                       Background="{StaticResource BorderBrush}"/>
+                                            
+                                            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16">
+                                                <TextBlock Text="{Binding SessionsToday}" 
+                                                         FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding AverageSessionMinutes}" 
+                                                         FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Live Operations Row -->
+                <Grid Grid.Row="2" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Live Table Status -->
+                    <Border Grid.Column="0" Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+                                <TextBlock Text="🏓" FontSize="20"/>
+                                <TextBlock Text="Live Table Status" FontSize="16" FontWeight="SemiBold" 
+                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <Ellipse Style="{StaticResource StatusIndicatorStyle}" Fill="{StaticResource SuccessBrush}">
+                                </Ellipse>
+                            </StackPanel>
+                            
+                            <!-- Tables Grid -->
+                            <TextBlock Text="Table Status" FontSize="14" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- First row of tables -->
+                                <Border Grid.Row="0" Grid.Column="0" Background="{Binding Tables[0].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[0].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="1" Background="{Binding Tables[1].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[1].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="2" Background="{Binding Tables[2].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[2].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="3" Background="{Binding Tables[3].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[3].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White"/>
+                                </Border>
+                                <Border Grid.Row="0" Grid.Column="4" Background="{Binding Tables[4].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[4].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White"/>
+                                </Border>
+                                
+                                <!-- Second row of tables -->
+                                <Border Grid.Row="1" Grid.Column="0" Background="{Binding Tables[5].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[5].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White" FontSize="10"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="1" Background="{Binding Tables[6].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[6].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White" FontSize="10"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="2" Background="{Binding Tables[7].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[7].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White" FontSize="10"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="3" Background="{Binding Tables[8].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[8].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White" FontSize="10"/>
+                                </Border>
+                                <Border Grid.Row="1" Grid.Column="4" Background="{Binding Tables[9].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                      CornerRadius="8" Padding="8" Margin="2">
+                                    <TextBlock Text="{Binding Tables[9].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
+                                             Foreground="White" FontSize="10"/>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Active Sessions & Reminders -->
+                    <Border Grid.Column="1" Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📋 Active Sessions &amp; Reminders" FontSize="16" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                            
+                            <!-- Active Sessions -->
+                            <TextBlock Text="Active Sessions" FontSize="14" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <ListView ItemsSource="{Binding ActiveSessionsList}" SelectionMode="None" Height="120">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding TableId}" FontWeight="SemiBold" 
+                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding ServerName}" FontSize="10" 
+                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </StackPanel>
+                                            
+                                            <TextBlock Grid.Column="1" Text="{Binding StartTime, Converter={StaticResource TimeAgoConverter}}" 
+                                                     FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                            
+                            <!-- Reminders -->
+                            <TextBlock Text="Reminders" FontSize="14" FontWeight="SemiBold" 
+                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,16,0,8"/>
+                            <ListView ItemsSource="{Binding Reminders}" SelectionMode="None" Height="100">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" 
+                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding Description}" FontSize="10" 
+                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </StackPanel>
+                                            
+                                            <TextBlock Grid.Column="1" Text="{Binding DueTime, Converter={StaticResource TimeAgoConverter}}"
+                                                     FontSize="10" Foreground="{StaticResource WarningBrush}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Quick Actions -->
+                <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="⚡ Quick Actions" FontSize="16" FontWeight="SemiBold" 
+                                 Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button Grid.Column="0" Content="🏓 Start Session" Background="{StaticResource PrimaryBrush}" 
+                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                                  Click="StartSession_Click"/>
+                            <Button Grid.Column="1" Content="📋 View Orders" Background="{StaticResource SuccessBrush}" 
+                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                                  Click="ViewOrders_Click"/>
+                            <Button Grid.Column="2" Content="📊 Generate Report" Background="{StaticResource WarningBrush}" 
+                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                                  Click="GenerateReport_Click"/>
+                            <Button Grid.Column="3" Content="⚙️ Settings" Background="{StaticResource BorderBrush}" 
+                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                                  Click="OpenSettings_Click"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="4" Background="#80000000" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressRing IsActive="True" Width="40" Height="40" Foreground="{StaticResource PrimaryBrush}"/>
+                <TextBlock Text="Loading dashboard data..." Foreground="White" Margin="0,16,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

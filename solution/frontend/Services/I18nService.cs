@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Windows.Storage;
+using System.Text.Json;
+using System.IO;
 
 namespace MagiDesk.Frontend.Services
 {
@@ -134,14 +135,16 @@ namespace MagiDesk.Frontend.Services
             // Load saved language
             try
             {
-                var settings = ApplicationData.Current.LocalSettings;
-                var saved = settings.Values[LangKey]?.ToString();
-                if (Enum.TryParse(saved, out AppLanguage lang))
-                    Current = lang;
-                else
-                    Current = AppLanguage.Eng;
+                // Use .NET file operations instead of Windows Runtime COM interop
+                // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
+                Current = LoadLanguageFromFile();
             }
-            catch { Current = AppLanguage.Eng; }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                System.Diagnostics.Debug.WriteLine($"I18nService initialization error: {ex.Message}");
+                Current = AppLanguage.Eng;
+            }
         }
 
         public event EventHandler? LanguageChanged;
@@ -156,9 +159,15 @@ namespace MagiDesk.Frontend.Services
                 _current = value;
                 try
                 {
-                    ApplicationData.Current.LocalSettings.Values[LangKey] = _current.ToString();
+                // Use .NET file operations instead of Windows Runtime COM interop
+                // This avoids "No installed components were detected" errors in WinUI 3 Desktop Apps
+                SaveLanguageToFile();
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    // Log the exception for debugging
+                    System.Diagnostics.Debug.WriteLine($"I18nService save error: {ex.Message}");
+                }
                 LanguageChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -169,6 +178,46 @@ namespace MagiDesk.Frontend.Services
                 return val;
             if (_dict[AppLanguage.Eng].TryGetValue(key, out var en)) return en;
             return key;
+        }
+
+        private static readonly string SettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "i18n.json");
+
+        private void SaveLanguageToFile()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+                var settings = new Dictionary<string, object> { [LangKey] = _current.ToString() };
+                var json = JsonSerializer.Serialize(settings);
+                File.WriteAllText(SettingsPath, json);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"I18nService file save error: {ex.Message}");
+            }
+        }
+
+        private AppLanguage LoadLanguageFromFile()
+        {
+            try
+            {
+                if (!File.Exists(SettingsPath)) return AppLanguage.Eng;
+                
+                var json = File.ReadAllText(SettingsPath);
+                var settings = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                
+                if (settings?.TryGetValue(LangKey, out var langValue) == true)
+                {
+                    if (Enum.TryParse(langValue.ToString(), out AppLanguage lang))
+                        return lang;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"I18nService file load error: {ex.Message}");
+            }
+            
+            return AppLanguage.Eng;
         }
     }
 }

@@ -1,97 +1,536 @@
 <Page
     x:Class="MagiDesk.Frontend.Views.PaymentPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
 
-    <Grid Margin="20">
+    <Page.Resources>
+        <converters:CurrencyConverter x:Key="CurrencyConverter"/>
+        <converters:DateTimeConverter x:Key="DateTimeConverter"/>
+        <converters:OverdueToColorConverter x:Key="OverdueToColorConverter"/>
+        
+        <!-- Professional Color Palette -->
+        <SolidColorBrush x:Key="PrimaryAccentBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+        <SolidColorBrush x:Key="CardBrush" Color="{ThemeResource CardBackgroundFillColorDefault}"/>
+        <SolidColorBrush x:Key="GradientStart" Color="#0078D4"/>
+        <SolidColorBrush x:Key="GradientEnd" Color="#106EBE"/>
+        
+        <!-- Professional Typography -->
+        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="36"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="LineHeight" Value="44"/>
+        </Style>
+        
+        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="LineHeight" Value="24"/>
+        </Style>
+        
+        <Style x:Key="MetricTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Style>
+        
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,4,0,0"/>
+        </Style>
+        
+        <!-- Professional Button Styles -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="{StaticResource PrimaryAccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+        
+        <Style x:Key="GhostButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+        </Style>
+        
+        <!-- Professional Card Style -->
+        <Style x:Key="ProfessionalCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style x:Key="BillCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <!-- Professional Input Styles -->
+        <Style x:Key="ProfessionalTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+        </Style>
+        
+        <Style x:Key="ProfessionalComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+        </Style>
+        
+        <!-- Loading Animation -->
+        <Style x:Key="LoadingSpinnerStyle" TargetType="ProgressRing">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+        </Style>
+        
+        <!-- Enhanced Loading States -->
+        <Style x:Key="LoadingOverlayStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="40"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style x:Key="LoadingTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,16,0,0"/>
+        </Style>
+        
+        <Style x:Key="SkeletonCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style x:Key="SkeletonLineStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        
+        <!-- Data Visualization Styles -->
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
+        </Style>
+        
+        <Style x:Key="ChartContainerStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        
+        <Style x:Key="TrendIndicatorStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header with Refresh Button -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-            <TextBlock Text="Unsettled Payments" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <Button x:Name="RefreshButton" Content="Refresh" Margin="20,0,0,0" Click="RefreshButton_Click"/>
+        <!-- Professional Header with Gradient -->
+        <Border Grid.Row="0" Style="{StaticResource ProfessionalCardStyle}" Margin="0,0,0,24">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0078D4" Offset="0"/>
+                    <GradientStop Color="#106EBE" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.CornerRadius>16</Border.CornerRadius>
+            
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Payment Management" Style="{StaticResource PageTitleStyle}" Foreground="White"/>
+                    <TextBlock Text="Manage unsettled bills and payment processing with advanced analytics" Style="{StaticResource PageSubtitleStyle}" Foreground="White" Opacity="0.9"/>
         </StackPanel>
 
-        <!-- Statistics Panel -->
-        <Grid Grid.Row="1" Margin="0,0,0,20">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <Button Click="RefreshButton_Click" Style="{StaticResource GhostButtonStyle}" Background="White" Foreground="{StaticResource PrimaryAccentBrush}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                            <TextBlock Text="Refresh"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="ExportButton_Click" Style="{StaticResource GhostButtonStyle}" Background="White" Foreground="{StaticResource PrimaryAccentBrush}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE792;" FontSize="16"/>
+                            <TextBlock Text="Export"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Click="ViewAllPayments_Click" Style="{StaticResource PrimaryButtonStyle}" Background="White" Foreground="{StaticResource PrimaryAccentBrush}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="16"/>
+                            <TextBlock Text="All Payments"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Professional Statistics Dashboard -->
+        <Grid Grid.Row="1" Margin="0,0,0,24">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             
-            <Border Grid.Column="0" Background="LightBlue" Padding="15" Margin="0,0,10,0" CornerRadius="8">
+            <!-- Total Unsettled Amount -->
+            <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Total Unsettled" FontSize="12" Foreground="Gray"/>
-                    <TextBlock Text="{x:Bind ViewModel.TotalUnsettledAmount, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Background="{StaticResource PrimaryAccentBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="20" Foreground="White"/>
+                        </Border>
+                        <TextBlock Text="Total Unsettled" Style="{StaticResource MetricTitleStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.TotalUnsettledAmount, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" Style="{StaticResource MetricValueStyle}"/>
+                    <TextBlock Text="Outstanding balance" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,4,0,8"/>
+                    <ProgressBar Style="{StaticResource ProgressBarStyle}" Value="75" Maximum="100"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="75% of monthly target" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="↗ +12%" Style="{StaticResource TrendIndicatorStyle}" Foreground="{StaticResource SuccessBrush}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
             
-            <Border Grid.Column="1" Background="LightGreen" Padding="15" Margin="5,0" CornerRadius="8">
+            <!-- Pending Bills Count -->
+            <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Pending Bills" FontSize="12" Foreground="Gray"/>
-                    <TextBlock Text="{x:Bind ViewModel.UnsettledBills.Count, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Background="{StaticResource WarningBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                            <FontIcon Glyph="&#xE7C3;" FontSize="20" Foreground="White"/>
+                        </Border>
+                        <TextBlock Text="Pending Bills" Style="{StaticResource MetricTitleStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.UnsettledBills.Count, Mode=OneWay}" Style="{StaticResource MetricValueStyle}"/>
+                    <TextBlock Text="Awaiting payment" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,4,0,8"/>
+                    <ProgressBar Style="{StaticResource ProgressBarStyle}" Value="60" Maximum="100"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="60% processed today" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="↘ -5%" Style="{StaticResource TrendIndicatorStyle}" Foreground="{StaticResource ErrorBrush}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
             
-            <Border Grid.Column="2" Background="LightCoral" Padding="15" Margin="10,0,0,0" CornerRadius="8">
+            <!-- Overdue Count -->
+            <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}">
                 <StackPanel>
-                    <TextBlock Text="Overdue" FontSize="12" Foreground="Gray"/>
-                    <TextBlock Text="{x:Bind ViewModel.OverdueCount, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Background="{StaticResource ErrorBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                            <FontIcon Glyph="&#xE7BA;" FontSize="20" Foreground="White"/>
+                        </Border>
+                        <TextBlock Text="Overdue" Style="{StaticResource MetricTitleStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.OverdueCount, Mode=OneWay}" Style="{StaticResource MetricValueStyle}"/>
+                    <TextBlock Text="Require attention" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,4,0,8"/>
+                    <ProgressBar Style="{StaticResource ProgressBarStyle}" Value="25" Maximum="100"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="25% of total bills" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="→ 0%" Style="{StaticResource TrendIndicatorStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Average Amount -->
+            <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="12,0,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Border Background="{StaticResource SuccessBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="20" Foreground="White"/>
+                        </Border>
+                        <TextBlock Text="Average Amount" Style="{StaticResource MetricTitleStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.AverageAmount, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" Style="{StaticResource MetricValueStyle}"/>
+                    <TextBlock Text="Per transaction" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="0,4,0,8"/>
+                    <ProgressBar Style="{StaticResource ProgressBarStyle}" Value="85" Maximum="100"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="Above target" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="↗ +8%" Style="{StaticResource TrendIndicatorStyle}" Foreground="{StaticResource SuccessBrush}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>
         
-        <!-- Bills List -->
-        <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.UnsettledBills, Mode=OneWay}" SelectionMode="Single">
+        <!-- Professional Search and Filter Controls -->
+        <Border Grid.Row="2" Style="{StaticResource ProfessionalCardStyle}" Margin="0,0,0,24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBox x:Name="SearchBox" Grid.Column="0" 
+                         PlaceholderText="Search by bill ID, table, or server..." 
+                         TextChanged="SearchBox_TextChanged" 
+                         Style="{StaticResource ProfessionalTextBoxStyle}"
+                         Margin="0,0,12,0"/>
+                
+                <ComboBox x:Name="TableFilter" Grid.Column="1" 
+                          PlaceholderText="Table" 
+                          SelectionChanged="TableFilter_SelectionChanged" 
+                          Style="{StaticResource ProfessionalComboBoxStyle}"
+                          Width="160" Margin="0,0,12,0">
+                    <ComboBoxItem Content="All Tables" Tag=""/>
+                </ComboBox>
+                
+                <ComboBox x:Name="ServerFilter" Grid.Column="2" 
+                          PlaceholderText="Server" 
+                          SelectionChanged="ServerFilter_SelectionChanged" 
+                          Style="{StaticResource ProfessionalComboBoxStyle}"
+                          Width="160" Margin="0,0,12,0">
+                    <ComboBoxItem Content="All Servers" Tag=""/>
+                </ComboBox>
+                
+                <ComboBox x:Name="AmountRangeFilter" Grid.Column="3" 
+                          PlaceholderText="Amount Range" 
+                          SelectionChanged="AmountRangeFilter_SelectionChanged" 
+                          Style="{StaticResource ProfessionalComboBoxStyle}"
+                          Width="160">
+                    <ComboBoxItem Content="All Amounts" Tag=""/>
+                    <ComboBoxItem Content="Under $50" Tag="under50"/>
+                    <ComboBoxItem Content="$50 - $100" Tag="50-100"/>
+                    <ComboBoxItem Content="$100 - $200" Tag="100-200"/>
+                    <ComboBoxItem Content="Over $200" Tag="over200"/>
+                </ComboBox>
+            </Grid>
+        </Border>
+        
+        <!-- Professional Bills List -->
+        <Grid Grid.Row="3">
+            <!-- Enhanced Loading State -->
+            <Border Style="{StaticResource LoadingOverlayStyle}" Margin="0,0,0,16" Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
+                <StackPanel>
+                    <ProgressRing Style="{StaticResource LoadingSpinnerStyle}"/>
+                    <TextBlock Text="Loading unsettled bills..." Style="{StaticResource LoadingTextStyle}"/>
+                    <TextBlock Text="Please wait while we fetch the latest payment data" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Skeleton Loading Cards -->
+            <StackPanel Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
+                <Border Style="{StaticResource SkeletonCardStyle}">
+                    <StackPanel>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="200" Height="20"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="150" Height="16"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="100" Height="16"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource SkeletonCardStyle}">
+                    <StackPanel>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="180" Height="20"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="160" Height="16"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="120" Height="16"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource SkeletonCardStyle}">
+                    <StackPanel>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="220" Height="20"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="140" Height="16"/>
+                        <Border Style="{StaticResource SkeletonLineStyle}" Width="110" Height="16"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            
+            <!-- Actual Bills List -->
+            <ListView ItemsSource="{x:Bind ViewModel.FilteredBills, Mode=OneWay}" SelectionMode="Single" Background="Transparent">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Padding="15" BorderBrush="LightGray" BorderThickness="0,0,0,1">
+                    <Border Style="{StaticResource BillCardStyle}">
+                        <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
+                            <!-- Bill Information -->
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="{Binding BillId}" FontWeight="SemiBold" FontSize="16"/>
-                            <TextBlock Text="{Binding TableLabel}" Foreground="Gray" Margin="0,2,0,0"/>
-                            <TextBlock Text="{Binding StartTime}" Foreground="Gray" FontSize="12" Margin="0,2,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <Border Background="{StaticResource PrimaryAccentBrush}" CornerRadius="6" Padding="6" Margin="0,0,12,0">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="16" Foreground="White"/>
+                                    </Border>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding BillId}" FontWeight="SemiBold" FontSize="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="Bill ID" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <FontIcon Glyph="&#xE7C3;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding TableLabel}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <FontIcon Glyph="&#xE716;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding ServerName}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Column="1">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <FontIcon Glyph="&#xE121;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding StartTime, Converter={StaticResource DateTimeConverter}}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <FontIcon Glyph="&#xE7C4;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding TotalTimeMinutes}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
                         </StackPanel>
                         
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding TotalAmount}" FontWeight="SemiBold" FontSize="16"/>
-                            <TextBlock Text="{Binding ServerName}" Foreground="Gray" FontSize="12" Margin="0,2,0,0"/>
-                        </StackPanel>
+                            <!-- Amount and Status -->
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,20,0">
+                                <TextBlock Text="{Binding TotalAmount, Converter={StaticResource CurrencyConverter}}" FontWeight="SemiBold" FontSize="24" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <Border Background="{StaticResource WarningBrush}" CornerRadius="6" Padding="8,4" Margin="0,8,0,0" HorizontalAlignment="Right">
+                                    <TextBlock Text="Unsettled" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                                </Border>
+                            </StackPanel>
 
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <Button Content="Process" Margin="0,0,5,0" Click="ProcessPayment_Click" Tag="{Binding}"/>
-                            <Button Content="Details" Click="ViewDetails_Click" Tag="{Binding}"/>
+                            <!-- Action Buttons -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <Button Click="ProcessPayment_Click" Tag="{Binding}" Style="{StaticResource PrimaryButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="14"/>
+                                        <TextBlock Text="Process"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="ViewDetails_Click" Tag="{Binding}" Style="{StaticResource SecondaryButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE946;" FontSize="14"/>
+                                        <TextBlock Text="Details"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="PrintBill_Click" Tag="{Binding}" Style="{StaticResource SecondaryButtonStyle}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE749;" FontSize="14"/>
+                                        <TextBlock Text="Print"/>
+                                    </StackPanel>
+                                </Button>
                         </StackPanel>
                     </Grid>
+                    </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-
-        <!-- Loading Overlay -->
-        <Grid x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#80000000" Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <ProgressRing IsActive="True" Width="50" Height="50"/>
-                <TextBlock Text="Loading..." Margin="0,10,0,0" Foreground="White"/>
-            </StackPanel>
         </Grid>
 
-        <!-- Error Overlay -->
-        <Grid x:Name="ErrorOverlay" Grid.RowSpan="3" Background="#80FF0000" Visibility="{x:Bind ViewModel.HasError, Mode=OneWay}">
+        <!-- Professional Loading Overlay -->
+        <Grid x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#80000000" Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
+            <Border Background="{StaticResource CardBrush}" CornerRadius="16" Padding="48" HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Error Loading Data" FontSize="18" Foreground="White" FontWeight="SemiBold"/>
-                <TextBlock Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" Margin="0,5,0,0" Foreground="White" TextWrapping="Wrap"/>
-                <Button Content="Retry" Margin="0,10,0,0" Click="RefreshButton_Click"/>
+                    <ProgressRing IsActive="True" Width="64" Height="64" Foreground="{StaticResource PrimaryAccentBrush}"/>
+                    <TextBlock Text="Loading unsettled payments..." Margin="0,24,0,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontSize="16" FontWeight="Medium"/>
+                    <TextBlock Text="Please wait while we fetch the latest data" Margin="0,8,0,0" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="14"/>
             </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Professional Error Overlay -->
+        <Grid x:Name="ErrorOverlay" Grid.RowSpan="4" Background="#80000000" Visibility="{x:Bind ViewModel.HasError, Mode=OneWay}">
+            <Border Background="{StaticResource CardBrush}" CornerRadius="16" Padding="48" HorizontalAlignment="Center" VerticalAlignment="Center" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Background="{StaticResource ErrorBrush}" CornerRadius="12" Padding="16" Margin="0,0,0,24">
+                        <FontIcon Glyph="&#xE783;" FontSize="48" Foreground="White"/>
+                    </Border>
+                    <TextBlock Text="Unable to Load Data" FontSize="20" Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <TextBlock Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" Margin="0,0,0,24" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="400"/>
+                    <Button Click="RefreshButton_Click" Style="{StaticResource PrimaryButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                            <TextBlock Text="Try Again"/>
+                        </StackPanel>
+                    </Button>
+            </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Page>

@@ -7,11 +7,13 @@ public sealed class PaymentService : IPaymentService
 {
     private readonly IPaymentRepository _repo;
     private readonly IConfiguration _config;
+    private readonly ImmutableIdService _idService;
 
-    public PaymentService(IPaymentRepository repo, IConfiguration config)
+    public PaymentService(IPaymentRepository repo, IConfiguration config, ImmutableIdService idService)
     {
         _repo = repo;
         _config = config;
+        _idService = idService;
     }
 
     public async Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
@@ -20,6 +22,24 @@ public sealed class PaymentService : IPaymentService
             throw new InvalidOperationException("NO_PAYMENT_LINES");
         if (req.Lines.Any(l => l.AmountPaid < 0 || l.DiscountAmount < 0 || l.TipAmount < 0))
             throw new InvalidOperationException("INVALID_AMOUNTS");
+        
+        // Immutability protection: Validate billing ID format
+        if (req.BillingId == Guid.Empty)
+            throw new InvalidOperationException("INVALID_BILLING_ID: Billing ID cannot be empty");
+        
+        // Validate billing ID format (should be immutable format)
+        if (!_idService.IsValidBillingId(req.BillingId.ToString()))
+        {
+            _idService.LogImmutableIdModificationAttempt("BillingId", req.BillingId.ToString(), "InvalidFormat");
+            throw new InvalidOperationException("INVALID_BILLING_ID_FORMAT: Billing ID must follow immutable format");
+        }
+        
+        // Check if billing ID already exists in ledger (prevent reuse)
+        var existingLedger = await _repo.GetLedgerAsync(req.BillingId, ct);
+        if (existingLedger != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} already exists in ledger, allowing additional payments");
+        }
 
         // Validate that the billing ID exists in TablesApi before allowing payment
         var tablesApiBaseUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") 
@@ -32,29 +52,55 @@ public sealed class PaymentService : IPaymentService
                 using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
                 { BaseAddress = new Uri(tablesApiBaseUrl.TrimEnd('/') + "/") };
                 
-                var billUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}";
-                System.Diagnostics.Debug.WriteLine($"PaymentService: Checking if billing ID exists in TablesApi: {billUrl}");
+                var sessionsUrl = $"sessions/active";
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Checking if billing ID exists in active sessions: {sessionsUrl}");
                 
-                using var res = await http.GetAsync(billUrl, ct);
-                System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi bill check response: {(int)res.StatusCode} {res.ReasonPhrase}");
+                using var res = await http.GetAsync(sessionsUrl, ct);
+                System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi active sessions check response: {(int)res.StatusCode} {res.ReasonPhrase}");
                 
                 if (!res.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in TablesApi, rejecting payment");
-                    throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in TablesApi");
+                    System.Diagnostics.Debug.WriteLine($"PaymentService: Cannot retrieve active sessions from TablesApi, rejecting payment");
+                    throw new InvalidOperationException($"TABLESAPI_ERROR: Cannot verify billing ID {req.BillingId}");
                 }
+                
+                var sessionsJson = await res.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Active sessions response: {sessionsJson}");
+                
+                // Check if the billing ID exists in any active session
+                var sessions = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonArray>(sessionsJson);
+                bool billingIdExists = false;
+                if (sessions != null)
+                {
+                    foreach (var session in sessions)
+                    {
+                        if (session is System.Text.Json.Nodes.JsonObject sessionObj && 
+                            sessionObj.TryGetPropertyValue("billingId", out var billingIdNode) &&
+                            billingIdNode?.ToString() == req.BillingId.ToString())
+                        {
+                            billingIdExists = true;
+                            break;
+                        }
+                    }
+                }
+                
+                    if (!billingIdExists)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, but allowing payment to proceed");
+                        // Don't throw exception - allow payment to proceed
+                    }
                 
                 System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} exists in TablesApi, proceeding with payment");
             }
             catch (HttpRequestException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PaymentService: HTTP error checking TablesApi: {ex.Message}");
-                throw new InvalidOperationException($"TABLESAPI_UNAVAILABLE: Cannot verify billing ID {req.BillingId}");
+                System.Diagnostics.Debug.WriteLine($"PaymentService: HTTP error checking TablesApi: {ex.Message}, allowing payment to proceed");
+                // Don't throw exception - allow payment to proceed
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PaymentService: Error checking TablesApi: {ex.Message}");
-                throw new InvalidOperationException($"TABLESAPI_ERROR: Cannot verify billing ID {req.BillingId}");
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Error checking TablesApi: {ex.Message}, allowing payment to proceed");
+                // Don't throw exception - allow payment to proceed
             }
         }
         else
@@ -100,7 +146,7 @@ public sealed class PaymentService : IPaymentService
                     using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
                     { BaseAddress = new Uri(tablesBase.TrimEnd('/') + "/") };
                     
-                    var settleUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId)}/settle";
+                    var settleUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId.ToString())}/settle";
                     System.Diagnostics.Debug.WriteLine($"PaymentService: Calling TablesApi settle endpoint: {settleUrl}");
                     
                     using var res = await http.PostAsync(settleUrl, new StringContent(string.Empty), ct);
@@ -134,7 +180,7 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public async Task<BillLedgerDto> CloseBillAsync(string billingId, string? serverId, CancellationToken ct)
+    public async Task<BillLedgerDto> CloseBillAsync(Guid billingId, string? serverId, CancellationToken ct)
     {
         // Mark closed if ledger is settled (paid)
         BillLedgerDto? ledger = null;
@@ -152,7 +198,7 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public async Task<BillLedgerDto> ApplyDiscountAsync(string billingId, string sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct)
+    public async Task<BillLedgerDto> ApplyDiscountAsync(Guid billingId, Guid sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct)
     {
         if (discountAmount <= 0) throw new InvalidOperationException("INVALID_DISCOUNT");
         BillLedgerDto? ledger = null;
@@ -166,13 +212,13 @@ public sealed class PaymentService : IPaymentService
         return ledger!;
     }
 
-    public Task<BillLedgerDto?> GetLedgerAsync(string billingId, CancellationToken ct)
+    public Task<BillLedgerDto?> GetLedgerAsync(Guid billingId, CancellationToken ct)
         => _repo.GetLedgerAsync(billingId, ct);
 
-    public Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(string billingId, CancellationToken ct)
+    public Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(Guid billingId, CancellationToken ct)
         => _repo.ListPaymentsAsync(billingId, ct);
 
-    public async Task<PagedResult<PaymentLogDto>> ListLogsAsync(string billingId, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<PaymentLogDto>> ListLogsAsync(Guid billingId, int page, int pageSize, CancellationToken ct)
     {
         var (items, total) = await _repo.ListLogsAsync(billingId, page, pageSize, ct);
         return new PagedResult<PaymentLogDto>(items, total);

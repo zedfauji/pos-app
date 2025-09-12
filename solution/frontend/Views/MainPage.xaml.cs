@@ -13,6 +13,11 @@ namespace MagiDesk.Frontend.Views
         public MainPage()
         {
             this.InitializeComponent();
+            
+            // CRITICAL: Initialize ReceiptService asynchronously after InitializeComponent
+            // This ensures it's ready before any other pages can create PaymentDialog
+            _ = InitializeReceiptServiceAsync();
+            
             Loaded += MainPage_Loaded;
             NavView.BackRequested += NavView_BackRequested;
             ContentFrame.Navigated += ContentFrame_Navigated;
@@ -20,10 +25,67 @@ namespace MagiDesk.Frontend.Views
             App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
         }
 
+        private async Task InitializeReceiptServiceAsync()
+        {
+            try
+            {
+                if (App.ReceiptService != null)
+                {
+                    var printingPanel = this.FindName("PrintingContainer") as Panel;
+                    if (printingPanel != null)
+                    {
+                        // CRITICAL FIX: Use App.MainWindow instead of Window.Current to avoid race condition
+                        // Window.Current might be null during MainPage constructor
+                        var window = App.MainWindow;
+                        
+                        // Get DispatcherQueue with fallback
+                        var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                        if (dispatcherQueue == null && window != null)
+                        {
+                            dispatcherQueue = window.DispatcherQueue;
+                        }
+                        
+                        if (dispatcherQueue != null)
+                        {
+                            // CRITICAL: Use async initialization
+                            await App.ReceiptService.InitializeAsync(printingPanel, dispatcherQueue, window);
+                            Log.Info("ReceiptService initialized asynchronously in MainPage");
+                        }
+                        else
+                        {
+                            Log.Error("DispatcherQueue not available in MainPage");
+                        }
+                    }
+                    else
+                    {
+                        Log.Error("PrintingContainer not found in MainPage");
+                    }
+                }
+                else
+                {
+                    Log.Error("App.ReceiptService is null in MainPage");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to initialize ReceiptService in MainPage: {ex.Message}");
+            }
+        }
+
         private void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
             try
             {
+                // Ensure navigation pane is always visible and anchored
+                NavView.IsPaneOpen = true;
+                NavView.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
+                
+                // Force refresh the navigation pane layout
+                NavView.UpdateLayout();
+                
+                // ReceiptService is already initialized in constructor
+                // Just do the initial setup here
+                
                 // Initial connectivity check
                 _ = CheckBackendAsync();
                 // Apply language to UI
@@ -46,12 +108,12 @@ namespace MagiDesk.Frontend.Views
                 {
                     NavView.SelectedItem = NavView.MenuItems[0];
                 }
-                Log.Info("Navigating to DashboardPage on load");
+                Log.Info("Navigating to ModernDashboardPage on load");
 #if XAML_ONLY_MAIN
                 // In isolation builds, avoid referencing other pages
                 // Optionally, navigate to self-hosted placeholder
 #else
-                ContentFrame.Navigate(typeof(DashboardPage));
+                ContentFrame.Navigate(typeof(ModernDashboardPage));
 #endif
             }
             catch (Exception ex)
@@ -82,12 +144,12 @@ namespace MagiDesk.Frontend.Views
                     switch (tag)
                     {
                         case "DashboardPage": item.Content = App.I18n.T("dashboard"); break;
-                        case "VendorsPage": item.Content = App.I18n.T("vendors"); break;
-                        case "ItemsPage": item.Content = App.I18n.T("items"); break;
+                        case "MenuManagementPage": item.Content = "Menu Management"; break;
+                        case "VendorOrdersPage": item.Content = App.I18n.T("vendor-orders"); break;
+                        case "InventoryManagementPage": item.Content = App.I18n.T("inventory"); break;
                         case "CashFlowPage": item.Content = App.I18n.T("cash_flow"); break;
-                        case "InventoryPage": item.Content = App.I18n.T("inventory"); break;
+                        case "VendorsInventoryPage": item.Content = "Vendors Inventory"; break;
                         case "BillingPage": item.Content = "Billing"; break;
-                        case "VendorOrdersPage": item.Content = App.I18n.T("orders"); break;
                         case "TablesPage": item.Content = App.I18n.T("tables"); break;
                         case "SettingsPage": item.Content = App.I18n.T("settings"); break;
                         case "UsersPage": item.Content = App.I18n.T("users"); break;
@@ -128,35 +190,17 @@ namespace MagiDesk.Frontend.Views
                     Log.Info($"NavView invoked: {tag}");
                     switch (tag)
                     {
-                        case "MenuPage":
+                        case "MenuManagementPage":
 #if XAML_ONLY_MAIN
 #else
-                            ContentFrame.Navigate(typeof(MenuPage));
+                            ContentFrame.Navigate(typeof(MenuManagementPage));
 #endif
                             break;
                         case "DashboardPage":
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation
 #else
-                            ContentFrame.Navigate(typeof(DashboardPage));
-#endif
-                            break;
-                        case "VendorsPage":
-#if XAML_ONLY_MAIN
-#else
-                            ContentFrame.Navigate(typeof(VendorsPage));
-#endif
-                            break;
-                        case "ItemsPage":
-#if XAML_ONLY_MAIN
-#else
-                            ContentFrame.Navigate(typeof(ItemsPage));
-#endif
-                            break;
-                        case "InventoryPage":
-#if XAML_ONLY_MAIN
-#else
-                            ContentFrame.Navigate(typeof(InventoryPage));
+                            ContentFrame.Navigate(typeof(ModernDashboardPage));
 #endif
                             break;
                         case "VendorOrdersPage":
@@ -165,10 +209,28 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(VendorOrdersPage));
 #endif
                             break;
+                        case "VendorsInventoryPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(VendorsInventoryPage));
+#endif
+                            break;
+                        case "InventoryManagementPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(InventoryManagementPage));
+#endif
+                            break;
                         case "TablesPage":
 #if XAML_ONLY_MAIN
 #else
                             ContentFrame.Navigate(typeof(TablesPage));
+#endif
+                            break;
+                        case "OrdersManagementPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(OrdersManagementPage));
 #endif
                             break;
                         case "OrdersPage":
@@ -192,7 +254,7 @@ namespace MagiDesk.Frontend.Views
                         case "SettingsPage":
 #if XAML_ONLY_MAIN
 #else
-                            ContentFrame.Navigate(typeof(SettingsPage));
+                            ContentFrame.Navigate(typeof(ReceiptSettingsPage));
 #endif
                             break;
                         case "UsersPage":
@@ -278,11 +340,11 @@ namespace MagiDesk.Frontend.Views
             ThemeService.Apply(isDark);
         }
 
-        private void Logout_Click(object sender, RoutedEventArgs e)
+        private async void Logout_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                Services.SessionService.Clear();
+                await Services.SessionService.ClearAsync();
                 // Navigate to LoginPage
                 if (this.Parent is Frame f)
                 {

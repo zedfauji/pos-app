@@ -1,0 +1,277 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.EphemeralPaymentPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Payment Processing" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Transaction:" FontSize="14" Foreground="Gray"/>
+                        <TextBlock x:Name="TransactionIdText" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Table:" FontSize="14" Foreground="Gray"/>
+                        <TextBlock x:Name="TableNumberText" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Customer:" FontSize="14" Foreground="Gray"/>
+                        <TextBlock x:Name="CustomerNameText" FontSize="16" FontWeight="Bold"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+            <Button Grid.Column="1" Content="✕" FontSize="18" Width="36" Height="36" CornerRadius="18"
+                    Background="Transparent" Foreground="Gray" Click="CloseButton_Click"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"/>
+        </Grid>
+
+        <!-- Main Content Area - Two Columns -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="500"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Column: Order Items List -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,20,0">
+                <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Order Items" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        
+                        <ItemsControl x:Name="OrderItemsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,4" Padding="12" BorderBrush="#E0E0E0" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding UnitPrice}" FontSize="12" Foreground="Gray"/>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                                <Button Content="-" Width="24" Height="24" Click="DecreaseQuantity_Click" 
+                                                        Background="#E0E0E0" Foreground="Black" FontSize="12"/>
+                                                <TextBlock Text="{Binding Quantity}" Width="30" TextAlignment="Center" VerticalAlignment="Center"/>
+                                                <Button Content="+" Width="24" Height="24" Click="IncreaseQuantity_Click" 
+                                                        Background="#E0E0E0" Foreground="Black" FontSize="12"/>
+                                                <TextBlock Text="{Binding Subtotal}" Width="50" TextAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        
+                        <!-- Items Total -->
+                        <Border Padding="12" Margin="0,8,0,0" BorderBrush="#E0E0E0" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Items Total:" FontSize="14" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" x:Name="ItemsTotalText" Text="$0.00" FontSize="16" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+
+            <!-- Right Column: Payment Controls -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="16">
+                    
+                    <!-- Customer Amount Input -->
+                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Amount Given by Customer" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            <NumberBox x:Name="CustomerAmountInput" PlaceholderText="Enter amount given" FontSize="14" Margin="0,0,0,12" 
+                                       MinHeight="40"/>
+                            <Button Content="Calculate Change" Click="CalculateChange_Click" 
+                                    Background="#4CAF50" Foreground="White" Padding="12,8" FontSize="14" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="ChangeAmountText" FontSize="14" FontWeight="Bold" Margin="0,12,0,0" 
+                                       HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tip Calculator -->
+                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Tip Calculator" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            
+                            <!-- Tip Percentage Buttons -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <Button Grid.Column="0" Content="10%" Tag="10" Click="TipPercentage_Click" Margin="0,0,4,0"
+                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip10Button"/>
+                                <Button Grid.Column="1" Content="15%" Tag="15" Click="TipPercentage_Click" Margin="2,0"
+                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip15Button"/>
+                                <Button Grid.Column="2" Content="20%" Tag="20" Click="TipPercentage_Click" Margin="2,0"
+                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip20Button"/>
+                                <Button Grid.Column="3" Content="Custom" Tag="Custom" Click="TipPercentage_Click" Margin="4,0,0,0"
+                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="TipCustomButton"/>
+                            </Grid>
+                            
+                            <NumberBox x:Name="TipAmountInput" PlaceholderText="Enter tip amount" FontSize="14" Margin="0,0,0,8" 
+                                       MinHeight="40"/>
+                            <TextBlock x:Name="TipPercentageText" Text="0%" FontSize="14" FontWeight="Bold" 
+                                       HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Payment Methods -->
+                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Payment Method" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Button Grid.Row="0" Grid.Column="0" Content="💵 Cash" Tag="Cash" Click="PaymentMethod_Click" 
+                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="0,0,4,4" x:Name="CashButton"/>
+                                <Button Grid.Row="0" Grid.Column="1" Content="💳 Card" Tag="Card" Click="PaymentMethod_Click" 
+                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="4,0,0,4" x:Name="CardButton"/>
+                                <Button Grid.Row="1" Grid.Column="0" Content="📱 Mobile" Tag="Mobile" Click="PaymentMethod_Click" 
+                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="0,4,4,0" x:Name="MobileButton"/>
+                                <Button Grid.Row="1" Grid.Column="1" Content="🔀 Split" Tag="Split" Click="PaymentMethod_Click" 
+                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="4,4,0,0" x:Name="SplitButton"/>
+                            </Grid>
+
+                            <!-- Split Payment Panel -->
+                            <Border x:Name="SplitPaymentPanel" Padding="12" Margin="0,8,0,0" 
+                                    BorderBrush="#E0E0E0" BorderThickness="1" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="Split Amounts" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                    
+                                    <StackPanel Spacing="4">
+                                        <StackPanel>
+                                            <TextBlock Text="Cash" FontSize="12" Foreground="Gray"/>
+                                            <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Card" FontSize="12" Foreground="Gray"/>
+                                            <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="Digital" FontSize="12" Foreground="Gray"/>
+                                            <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <Border Padding="8" Margin="0,8,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Split Total:" FontSize="12" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="1" x:Name="SplitTotalText" Text="$0.00" FontSize="12" FontWeight="Bold"/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Payment Summary -->
+                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Payment Summary" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            
+                            <StackPanel Spacing="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Items Total:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryItemsTotalText" FontSize="12"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Tip:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryTipText" FontSize="12"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Discount:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryDiscountText" FontSize="12"/>
+                                </Grid>
+                                
+                                <Rectangle Height="1" Fill="#E0E0E0" Margin="0,4"/>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Total:" FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" x:Name="TotalAmountText" FontSize="16" FontWeight="Bold"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="2" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Button Grid.Column="0" Content="Cancel" Click="Cancel_Click" Margin="0,0,8,0"
+                    Background="#F0F0F0" Foreground="Black" Padding="12,8"/>
+            
+            <Button Grid.Column="1" Content="Reset" Click="Reset_Click" Margin="4,0"
+                    Background="#F0F0F0" Foreground="Black" Padding="12,8"/>
+            
+            <Button Grid.Column="2" Content="Process Payment" Click="ProcessPayment_Click" Margin="8,0,0,0"
+                    Background="#4CAF50" Foreground="White" Padding="12,8" FontWeight="SemiBold" x:Name="ProcessPaymentButton"/>
+        </Grid>
+    </Grid>
+</Page>

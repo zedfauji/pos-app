@@ -31,8 +31,8 @@ public class OrdersController : ControllerBase
         return Ok(order);
     }
 
-    [HttpGet("by-session/{sessionId}")]
-    public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetBySessionAsync([FromRoute] string sessionId, [FromQuery] bool includeHistory, CancellationToken ct)
+    [HttpGet("by-session/{sessionId:guid}")]
+    public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetBySessionAsync([FromRoute] Guid sessionId, [FromQuery] bool includeHistory, CancellationToken ct)
     {
         var list = await _service.GetOrdersBySessionAsync(sessionId, includeHistory, ct);
         return Ok(list);
@@ -63,6 +63,22 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<OrderDto>> CloseAsync([FromRoute] long orderId, CancellationToken ct)
     {
         var order = await _service.CloseOrderAsync(orderId, ct);
+        return Ok(order);
+    }
+
+    [HttpPost("{orderId:long}/mark-delivered")]
+    public async Task<ActionResult<OrderDto>> MarkDeliveredAsync([FromRoute] long orderId, [FromBody] MarkDeliveredRequestDto request, CancellationToken ct)
+    {
+        var order = await _service.MarkItemsDeliveredAsync(orderId, request.ItemDeliveries, ct);
+        if (order is null) return NotFound();
+        return Ok(order);
+    }
+
+    [HttpPost("{orderId:long}/mark-waiting")]
+    public async Task<ActionResult<OrderDto>> MarkWaitingAsync([FromRoute] long orderId, CancellationToken ct)
+    {
+        var order = await _service.MarkOrderWaitingAsync(orderId, ct);
+        if (order is null) return NotFound();
         return Ok(order);
     }
 

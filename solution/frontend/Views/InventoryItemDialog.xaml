@@ -1,0 +1,63 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Views.InventoryItemDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Inventory Item"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+    <Grid MinWidth="400" Padding="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- SKU -->
+        <TextBlock Grid.Row="0" Text="SKU" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="1" x:Name="SkuBox" Margin="0,0,0,16"/>
+
+        <!-- Name -->
+        <TextBlock Grid.Row="2" Text="Name" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="3" x:Name="NameBox" Margin="0,0,0,16"/>
+
+        <!-- Category -->
+        <TextBlock Grid.Row="4" Text="Category" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <ComboBox Grid.Row="5" x:Name="CategoryBox" Margin="0,0,0,16">
+            <ComboBoxItem Content="Food" Tag="Food"/>
+            <ComboBoxItem Content="Beverage" Tag="Beverage"/>
+            <ComboBoxItem Content="Raw Material" Tag="Raw Material"/>
+            <ComboBoxItem Content="Supplies" Tag="Supplies"/>
+            <ComboBoxItem Content="Equipment" Tag="Equipment"/>
+        </ComboBox>
+
+        <!-- Stock and Min Stock -->
+        <Grid Grid.Row="6" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Current Stock" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <NumberBox x:Name="StockBox" Value="0" Minimum="0"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="2">
+                <TextBlock Text="Min Stock" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                <NumberBox x:Name="MinStockBox" Value="0" Minimum="0"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Unit Cost -->
+        <TextBlock Grid.Row="7" Text="Unit Cost" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <NumberBox Grid.Row="8" x:Name="UnitCostBox" Value="0" Minimum="0"/>
+    </Grid>
+</ContentDialog>

@@ -10,6 +10,17 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+
+// HttpClient for InventoryApi with retry policy
+builder.Services.AddHttpClient("InventoryApi", (sp, http) =>
+{
+    var cfg = sp.GetRequiredService<IConfiguration>();
+    var baseUrl = cfg["InventoryApi:BaseUrl"] ?? Environment.GetEnvironmentVariable("INVENTORYAPI_BASEURL") ?? throw new InvalidOperationException("InventoryApi:BaseUrl not configured");
+    http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    http.Timeout = TimeSpan.FromSeconds(10);
+});
+
 // Npgsql DataSource (dev: use LocalConnectionString)
 var pgSection = builder.Configuration.GetSection("Postgres");
 string? connString;

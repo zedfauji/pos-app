@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:MagiDesk.Frontend"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
@@ -45,6 +46,25 @@
                 <Setter Property="Foreground"
                         Value="{StaticResource WhiteBrush}" />
             </Style>
+
+            <!-- Dashboard Converters -->
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+            <converters:BoolToStatusConverter x:Key="BoolToStatusConverter" />
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:OccupiedToColorConverter x:Key="OccupiedToColorConverter" />
+            <converters:RevenueToHeightConverter x:Key="RevenueToHeightConverter" />
+            <converters:OccupancyToHeightConverter x:Key="OccupancyToHeightConverter" />
+            <converters:CurrencyConverter x:Key="CurrencyConverter" />
+            <converters:PercentageConverter x:Key="PercentageConverter" />
+            <converters:TimeAgoConverter x:Key="TimeAgoConverter" />
+            <converters:PriorityToColorConverter x:Key="PriorityToColorConverter" />
+            <converters:NotificationTypeToIconConverter x:Key="NotificationTypeToIconConverter" />
+            
+            <!-- Payment Converters -->
+            <converters:PaymentMethodToColorConverter x:Key="PaymentMethodToColorConverter" />
+            <converters:OverdueToColorConverter x:Key="OverdueToColorConverter" />
+            <converters:DateTimeConverter x:Key="DateTimeConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

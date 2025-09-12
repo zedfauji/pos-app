@@ -9,128 +9,411 @@
     mc:Ignorable="d">
     <Page.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:OccupiedToColorConverter x:Key="OccupiedToColorConverter"/>
+        
+        <!-- Modern Color Palette - Dark Theme Optimized -->
+        <SolidColorBrush x:Key="AvailableBrush" Color="#00C851"/>
+        <SolidColorBrush x:Key="OccupiedBrush" Color="#FF4444"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
+        
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+        
+        <!-- Status Indicator Style -->
+        <Style x:Key="StatusIndicatorStyle" TargetType="Border">
+            <Setter Property="Width" Value="12"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        
+        <!-- Badge Style -->
+        <Style x:Key="BadgeStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Easing Functions -->
+        <CubicEase x:Key="CubicEase" EasingMode="EaseOut"/>
     </Page.Resources>
-    <ScrollViewer>
-        <StackPanel Padding="24" Spacing="24">
-            <!-- Legend -->
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="14" Height="14" Fill="#1faa59"/>
-                    <TextBlock Text="Available"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="14" Height="14" Fill="#c62828"/>
-                    <TextBlock Text="Occupied"/>
-                </StackPanel>
-            </StackPanel>
-
-            <!-- Controls: Filter + Live updates -->
-            <StackPanel Orientation="Horizontal" Spacing="16">
-                <StackPanel>
-                    <TextBlock Text="Filter"/>
-                    <ComboBox x:Name="FilterCombo" Width="180" SelectionChanged="FilterCombo_SelectionChanged">
-                        <ComboBoxItem Content="All"/>
-                        <ComboBoxItem Content="Available"/>
-                        <ComboBoxItem Content="Occupied"/>
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Live updates"/>
-                    <ToggleSwitch x:Name="LiveToggle" Toggled="LiveToggle_Toggled"/>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Source"/>
-                    <TextBlock x:Name="SourceText"/>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Text="Counts"/>
-                    <TextBlock x:Name="CountsText"/>
-                </StackPanel>
-            </StackPanel>
-
-            <TextBlock Text="Billiard Tables" FontSize="20" FontWeight="SemiBold"/>
-            <GridView ItemsSource="{Binding FilteredBilliardTables}" IsItemClickEnabled="False" SelectionMode="None">
-                <GridView.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <ItemsWrapGrid Orientation="Horizontal" ItemWidth="220" ItemHeight="150"/>
-                    </ItemsPanelTemplate>
-                </GridView.ItemsPanel>
-                <GridView.ItemContainerStyle>
-                    <Style TargetType="GridViewItem">
-                        <Setter Property="Margin" Value="8"/>
-                    </Style>
-                </GridView.ItemContainerStyle>
-                <GridView.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Width="200" Height="150" Spacing="6">
-                            <StackPanel.ContextFlyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutItem Text="Start" Click="StartMenu_Click" Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Stop" Click="StopMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutSeparator/>
-                                    <MenuFlyoutItem Text="Set Threshold (minutes)" Click="SetThreshold_Click"/>
-                                    <MenuFlyoutItem Text="Clear Threshold" Click="ClearThreshold_Click"/>
-                                </MenuFlyout>
-                            </StackPanel.ContextFlyout>
-                            <Grid Width="200" Height="110">
-                                <Border Background="{Binding BackgroundBrush}" CornerRadius="8" BorderBrush="#0a2a16" BorderThickness="4"/>
-                                <!-- pockets -->
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"/>
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2"/>
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Top"/>
-                                <Ellipse Fill="#0a2a16" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
-                                <!-- Timer Chip (only when occupied with start time) -->
-                                <Border CornerRadius="10" Padding="6,2" Background="{Binding ChipBackground}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
-                                        Visibility="{Binding HasTimer, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Text="{Binding ElapsedMinutesText}" Foreground="White" FontSize="12"/>
-                                </Border>
-                            </Grid>
-                            <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
-                            <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" Opacity="0.8"/>
-                            <TextBlock Text="{Binding ItemsSummary}" HorizontalAlignment="Center" Opacity="0.8" TextWrapping="Wrap"/>
+    
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                      VerticalScrollMode="Auto"
+                      Padding="24">
+            <StackPanel Spacing="32">
+                <!-- Modern Top Bar -->
+                <Border Background="{StaticResource CardBackgroundBrush}" 
+                        CornerRadius="16" 
+                        Padding="24" 
+                        Margin="0,0,0,16">
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Left Side: Controls -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="32">
+                            <!-- Filter Control -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Filter Tables" 
+                                           FontSize="14" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <ComboBox x:Name="FilterCombo" 
+                                          Width="200" 
+                                          SelectionChanged="FilterCombo_SelectionChanged"
+                                          CornerRadius="8"
+                                          Background="{StaticResource CardBackgroundBrush}"
+                                          BorderBrush="{StaticResource BorderBrush}">
+                                    <ComboBoxItem Content="All Tables"/>
+                                    <ComboBoxItem Content="Available Only"/>
+                                    <ComboBoxItem Content="Occupied Only"/>
+                                </ComboBox>
+                            </StackPanel>
+                            
+                            <!-- Live Updates Toggle -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Live Updates" 
+                                           FontSize="14" FontWeight="SemiBold" 
+                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                <ToggleSwitch x:Name="LiveToggle" 
+                                              Toggled="LiveToggle_Toggled"
+                                              OnContent="Enabled"
+                                              OffContent="Disabled"/>
+                            </StackPanel>
                         </StackPanel>
-                    </DataTemplate>
-                </GridView.ItemTemplate>
-            </GridView>
-
-            <TextBlock Text="Bar Tables" FontSize="20" FontWeight="SemiBold"/>
-            <GridView ItemsSource="{Binding FilteredBarTables}" IsItemClickEnabled="False" SelectionMode="None">
-                <GridView.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <ItemsWrapGrid Orientation="Horizontal" ItemWidth="160" ItemHeight="160"/>
-                    </ItemsPanelTemplate>
-                </GridView.ItemsPanel>
-                <GridView.ItemContainerStyle>
-                    <Style TargetType="GridViewItem">
-                        <Setter Property="Margin" Value="8"/>
-                    </Style>
-                </GridView.ItemContainerStyle>
-                <GridView.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Width="140" Height="160" Spacing="6">
-                            <StackPanel.ContextFlyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutItem Text="Start" Click="StartMenu_Click" Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                    <MenuFlyoutItem Text="Stop" Click="StopMenu_Click" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"/>
-                                </MenuFlyout>
-                            </StackPanel.ContextFlyout>
-                            <Grid Width="120" Height="120">
-                                <Ellipse Fill="{Binding BackgroundBrush}"/>
-                                <Ellipse Width="110" Height="110" Fill="#777" Opacity="0.35"/>
-                                <Ellipse Width="100" Height="100" Fill="#aaa" Opacity="0.25"/>
-                            </Grid>
-                            <TextBlock Text="{Binding Label}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" Opacity="0.8"/>
+                        
+                        <!-- Right Side: Status Info -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                            <!-- Source Badge -->
+                            <Border Style="{StaticResource BadgeStyle}">
+                                <TextBlock x:Name="SourceText" 
+                                           Foreground="White" 
+                                           FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                            
+                            <!-- Counts Badge -->
+                            <Border Style="{StaticResource BadgeStyle}">
+                                <TextBlock x:Name="CountsText" 
+                                           Foreground="White" 
+                                           FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
                         </StackPanel>
-                    </DataTemplate>
-                </GridView.ItemTemplate>
-            </GridView>
-        </StackPanel>
-    </ScrollViewer>
+                    </Grid>
+                </Border>
+                
+                <!-- Legend -->
+                <Border Background="{StaticResource CardBackgroundBrush}" 
+                        CornerRadius="12" 
+                        Padding="16" 
+                        HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Border Style="{StaticResource StatusIndicatorStyle}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#00C851"/>
+                                </Border.Background>
+                            </Border>
+                            <TextBlock Text="Available" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Border Style="{StaticResource StatusIndicatorStyle}">
+                                <Border.Background>
+                                    <SolidColorBrush Color="#FF4444"/>
+                                </Border.Background>
+                            </Border>
+                            <TextBlock Text="Occupied" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Billiard Tables Section -->
+                <Border Background="{StaticResource CardBackgroundBrush}" 
+                        CornerRadius="16" 
+                        Padding="24">
+                    
+                    <StackPanel Spacing="20">
+                        <!-- Section Header -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7F7;" FontSize="24" Foreground="{StaticResource AccentBrush}"/>
+                            <TextBlock Text="Billiard Tables" 
+                                       FontSize="24" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <Border Style="{StaticResource BadgeStyle}" Margin="12,0,0,0">
+                                <TextBlock Text="{Binding FilteredBilliardTables.Count}" 
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                        
+                        <!-- Tables Grid -->
+                        <GridView ItemsSource="{Binding FilteredBilliardTables}" 
+                                  IsItemClickEnabled="False" 
+                                  SelectionMode="None"
+                                  HorizontalAlignment="Stretch">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid Orientation="Horizontal" 
+                                                   ItemWidth="256" 
+                                                   ItemHeight="212"
+                                                   HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </GridView.ItemContainerStyle>
+                            <GridView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ModernCardStyle}" 
+                                            Width="240" Height="180"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <CompositeTransform/>
+                                        </Border.RenderTransform>
+                                        <Border.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Start Session" Click="StartMenu_Click" 
+                                                                Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Play"/>
+                                                <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Add"/>
+                                                <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Forward"/>
+                                                <MenuFlyoutItem Text="Stop Session" Click="StopMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Cancel"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
+                                                                Icon="Repair"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Set Threshold" Click="SetThreshold_Click" Icon="Clock"/>
+                                                <MenuFlyoutItem Text="Clear Threshold" Click="ClearThreshold_Click" Icon="Clear"/>
+                                            </MenuFlyout>
+                                        </Border.ContextFlyout>
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StatusText}" Opacity="0.8"/>
+                                                    <TextBlock Text="{Binding ItemsSummary}" Opacity="0.8" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ToolTipService.ToolTip>
+                                        
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <!-- Header with Status -->
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                                <Border Style="{StaticResource StatusIndicatorStyle}"
+                                                        Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
+                                                    <TextBlock Text="{Binding Label}" 
+                                                               FontSize="16" FontWeight="SemiBold" 
+                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Table Visual -->
+                                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                                <Border Background="{Binding BackgroundBrush}" 
+                                                        CornerRadius="8" 
+                                                        BorderBrush="#0a2a16" 
+                                                        BorderThickness="3"
+                                                        Width="200" Height="110"
+                                                        HorizontalAlignment="Center">
+                                                    <!-- Billiard Table Pockets -->
+                                                    <Grid>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                                                        
+                                                        <!-- Timer Chip -->
+                                                        <Border CornerRadius="10" Padding="6,2" 
+                                                                Background="{Binding ChipBackground}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                                                                Visibility="{Binding HasTimer, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="{Binding ElapsedMinutesText}" 
+                                                                       Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                            
+                                            <!-- Footer Info -->
+                                            <StackPanel Grid.Row="2" Spacing="4">
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           FontSize="12"/>
+                                                <TextBlock Text="{Binding ItemsSummary}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           FontSize="11" 
+                                                           TextWrapping="Wrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxHeight="32"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Bar Tables Section -->
+                <Border Background="{StaticResource CardBackgroundBrush}" 
+                        CornerRadius="16" 
+                        Padding="24">
+                    
+                    <StackPanel Spacing="20">
+                        <!-- Section Header -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7F8;" FontSize="24" Foreground="{StaticResource AccentBrush}"/>
+                            <TextBlock Text="Bar Tables" 
+                                       FontSize="24" FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <Border Style="{StaticResource BadgeStyle}" Margin="12,0,0,0">
+                                <TextBlock Text="{Binding FilteredBarTables.Count}" 
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                        
+                        <!-- Tables Grid -->
+                        <GridView ItemsSource="{Binding FilteredBarTables}" 
+                                  IsItemClickEnabled="False" 
+                                  SelectionMode="None"
+                                  HorizontalAlignment="Stretch">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid Orientation="Horizontal" 
+                                                   ItemWidth="216" 
+                                                   ItemHeight="212"
+                                                   HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </GridView.ItemContainerStyle>
+                            <GridView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource ModernCardStyle}" 
+                                            Width="200" Height="180"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <CompositeTransform/>
+                                        </Border.RenderTransform>
+                                        <Border.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Start Session" Click="StartMenu_Click" 
+                                                                Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Play"/>
+                                                <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Add"/>
+                                                <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Forward"/>
+                                                <MenuFlyoutItem Text="Stop Session" Click="StopMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Cancel"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
+                                                                Icon="Repair"/>
+                                            </MenuFlyout>
+                                        </Border.ContextFlyout>
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StatusText}" Opacity="0.8"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ToolTipService.ToolTip>
+                                        
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <!-- Header with Status -->
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                                <Border Style="{StaticResource StatusIndicatorStyle}"
+                                                        Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
+                                                    <TextBlock Text="{Binding Label}" 
+                                                               FontSize="16" FontWeight="SemiBold" 
+                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Table Visual -->
+                                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                                <Grid Width="120" Height="120" HorizontalAlignment="Center">
+                                                    <Ellipse Fill="{Binding BackgroundBrush}" Width="120" Height="120"/>
+                                                    <Ellipse Width="110" Height="110" Fill="#777" Opacity="0.35"/>
+                                                    <Ellipse Width="100" Height="100" Fill="#aaa" Opacity="0.25"/>
+                                                </Grid>
+                                            </Grid>
+                                            
+                                            <!-- Footer Info -->
+                                            <StackPanel Grid.Row="2" Spacing="4">
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           FontSize="12"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Page>

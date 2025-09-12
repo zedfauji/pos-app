@@ -1,0 +1,50 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.MenuItemCrudDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Menu Item"
+    PrimaryButtonText="Save"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <ScrollViewer MaxHeight="400">
+        <StackPanel Spacing="16" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- SKU -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="SKU:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Sku}" Margin="8,0,0,0"/>
+
+                <!-- Name -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Name:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"/>
+
+                <!-- Price -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Price:" VerticalAlignment="Center"/>
+                <NumberBox Grid.Row="2" Grid.Column="1" Value="{Binding Price}" Margin="8,0,0,0"/>
+
+                <!-- Picture URL -->
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Picture URL:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PictureUrl}" Margin="8,0,0,0"/>
+
+                <!-- Checkboxes -->
+                <CheckBox Grid.Row="4" Grid.Column="0" Content="Is Available" IsChecked="{Binding IsAvailable}"/>
+                <CheckBox Grid.Row="4" Grid.Column="1" Content="Is Discountable" IsChecked="{Binding IsDiscountable}" Margin="8,0,0,0"/>
+
+                <CheckBox Grid.Row="5" Grid.Column="0" Content="Is Part of Combo" IsChecked="{Binding IsPartOfCombo}"/>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

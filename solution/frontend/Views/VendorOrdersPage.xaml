@@ -4,38 +4,162 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ct="using:CommunityToolkit.WinUI.UI.Controls"
-    mc:Ignorable="d">
+    xmlns:viewmodels="using:MagiDesk.Frontend.ViewModels"
+    xmlns:services="using:MagiDesk.Frontend.Services"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=viewmodels:VendorOrdersViewModel, Is='True'}">
+
     <Grid Padding="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar -->
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock x:Name="Title" Text="Orders" FontSize="20" FontWeight="SemiBold"/>
-            <Button x:Name="BtnRefresh" Content="Refresh" Click="Refresh_Click"/>
+        <!-- Header with Actions -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="Vendor Orders" FontSize="24" FontWeight="SemiBold"/>
+            <Button Content="Create Purchase Order" Click="CreatePurchaseOrder_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
+            <Button Content="Import Orders" Click="ImportOrders_Click" Background="{ThemeResource SystemAccentColor}"/>
+            <Button Content="Export Orders" Click="ExportOrders_Click"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <TextBox x:Name="SearchBox" Width="200" PlaceholderText="Search orders..." TextChanged="SearchBox_TextChanged"/>
+            <ComboBox x:Name="StatusFilter" PlaceholderText="Filter by Status" Width="150" SelectionChanged="StatusFilter_SelectionChanged">
+                <ComboBoxItem Content="All" Tag=""/>
+                <ComboBoxItem Content="Draft" Tag="Draft"/>
+                <ComboBoxItem Content="Sent" Tag="Sent"/>
+                <ComboBoxItem Content="Confirmed" Tag="Confirmed"/>
+                <ComboBoxItem Content="Shipped" Tag="Shipped"/>
+                <ComboBoxItem Content="Delivered" Tag="Delivered"/>
+                <ComboBoxItem Content="Cancelled" Tag="Cancelled"/>
+            </ComboBox>
         </StackPanel>
 
-        <!-- Orders History Grid -->
-        <ct:DataGrid Grid.Row="1"
-                     x:Name="OrdersGrid"
-                     AutoGenerateColumns="False"
-                     IsReadOnly="True"
-                     ItemsSource="{Binding Orders}">
-            <ct:DataGrid.Columns>
-                <ct:DataGridTextColumn Header="orderId" Binding="{Binding OrderId}" Width="2*"/>
-                <ct:DataGridTextColumn Header="vendorName" Binding="{Binding VendorName}" Width="2*"/>
-                <ct:DataGridTextColumn Header="itemsCount" Binding="{Binding Items.Count}" Width="*"/>
-                <ct:DataGridTextColumn Header="totalAmount" Binding="{Binding TotalAmount}" Width="*"/>
-                <ct:DataGridTextColumn Header="status" Binding="{Binding Status}" Width="*"/>
-                <ct:DataGridTextColumn Header="createdAt" Binding="{Binding CreatedAt}" Width="2*"/>
-            </ct:DataGrid.Columns>
-        </ct:DataGrid>
+        <!-- Statistics Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- Notifications Panel (on demand via button) -->
-        <InfoBar Grid.Row="2" x:Name="Info" IsOpen="False"/>
+            <!-- Total Orders -->
+            <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Total Orders" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.TotalOrders}" FontSize="20" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Pending Orders -->
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Pending Orders" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.PendingOrders}" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource SystemAccentColor}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Total Value -->
+            <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Total Value" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.TotalOrderValue}" FontSize="20" FontWeight="SemiBold" Foreground="Green"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Overdue Orders -->
+            <Border Grid.Column="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Overdue Orders" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.OverdueOrders}" FontSize="20" FontWeight="SemiBold" Foreground="Red"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Avg Delivery Time -->
+            <Border Grid.Column="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="12" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Avg Delivery" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.AverageDeliveryDays}" FontSize="20" FontWeight="SemiBold" Foreground="Blue"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Vendor Orders List -->
+        <ListView Grid.Row="2"
+                  x:Name="OrdersList"
+                  ItemsSource="{x:Bind _vm.FilteredOrders, Mode=OneWay}"
+                  SelectionMode="Single"
+                  SelectionChanged="OrdersList_SelectionChanged">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Order ID" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="Vendor" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="Order Date" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="Items" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="Total Value" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Grid.Column="5" Text="Expected Delivery" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="6" Text="Status" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="7" Text="Priority" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="8" Text="Actions" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="services:VendorOrderDto">
+                    <Grid Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBlock Grid.Column="0" Text="{x:Bind OrderId}" VerticalAlignment="Center" FontFamily="Consolas"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind VendorName}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="2" Text="{x:Bind OrderDate}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{x:Bind ItemCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="4" Text="{x:Bind TotalValue}" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="5" Text="{x:Bind ExpectedDeliveryDate}" VerticalAlignment="Center"/>
+                        
+                        <Border Grid.Column="6" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Background="{x:Bind StatusColor}" CornerRadius="4" Padding="4,2">
+                            <TextBlock Text="{x:Bind Status}" FontSize="10" Foreground="White"/>
+                        </Border>
+                        
+                        <Border Grid.Column="7" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Background="{x:Bind PriorityColor}" CornerRadius="4" Padding="4,2">
+                            <TextBlock Text="{x:Bind Priority}" FontSize="10" Foreground="White"/>
+                        </Border>
+                        
+                        <StackPanel Grid.Column="8" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Content="View" Click="ViewOrder_Click" Tag="{x:Bind OrderId}" FontSize="10" Padding="4,2" Background="Blue" Foreground="White"/>
+                            <Button Content="Edit" Click="EditOrder_Click" Tag="{x:Bind OrderId}" FontSize="10" Padding="4,2" Background="Green" Foreground="White" Visibility="{x:Bind CanEdit}"/>
+                            <Button Content="Send" Click="SendOrder_Click" Tag="{x:Bind OrderId}" FontSize="10" Padding="4,2" Background="Purple" Foreground="White" Visibility="{x:Bind CanSend}"/>
+                            <Button Content="Receive" Click="ReceiveOrder_Click" Tag="{x:Bind OrderId}" FontSize="10" Padding="4,2" Background="Orange" Foreground="White" Visibility="{x:Bind CanReceive}"/>
+                            <Button Content="Cancel" Click="CancelOrder_Click" Tag="{x:Bind OrderId}" FontSize="10" Padding="4,2" Background="Red" Foreground="White" Visibility="{x:Bind CanCancel}"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </Grid>
 </Page>

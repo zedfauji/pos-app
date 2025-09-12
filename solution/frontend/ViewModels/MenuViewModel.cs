@@ -17,6 +17,9 @@ public sealed class MenuItemVm
     public bool IsDiscountable { get; init; }
     public bool IsPartOfCombo { get; init; }
     public bool IsAvailable { get; set; }
+    public string Category { get; init; } = "";
+    public string? GroupName { get; init; }
+    public string? Description { get; init; }
 }
 
 public sealed class MenuViewModel : INotifyPropertyChanged
@@ -44,10 +47,10 @@ public sealed class MenuViewModel : INotifyPropertyChanged
 
     public MenuViewModel()
     {
-        RefreshCommand = new RelayCommand(async _ => await RefreshAsync());
-        SelectCategoryCommand = new RelayCommand(async c => { SelectedCategory = c as string; await RefreshAsync(); });
-        SelectGroupCommand = new RelayCommand(async g => { SelectedGroup = g as string; await RefreshAsync(); });
-        AddToOrderCommand = new RelayCommand(async o => await AddToOrderAsync(o as MenuItemVm));
+        RefreshCommand = new Services.RelayCommand(async _ => await RefreshAsync());
+        SelectCategoryCommand = new Services.RelayCommand(async c => { SelectedCategory = c as string; await RefreshAsync(); });
+        SelectGroupCommand = new Services.RelayCommand(async g => { SelectedGroup = g as string; await RefreshAsync(); });
+        AddToOrderCommand = new Services.RelayCommand(async o => await AddToOrderAsync(o as MenuItemVm));
         _ = InitializeAsync();
     }
 
@@ -99,7 +102,98 @@ public sealed class MenuViewModel : INotifyPropertyChanged
     private async Task AddToOrderAsync(MenuItemVm? item)
     {
         if (item is null) return;
-        // Integrate with Orders flow (e.g., App.OrdersApi.AddItemsAsync on current order)
-        await Task.CompletedTask;
+        
+        try
+        {
+            // Check if we have an active order/session
+            if (App.OrdersApi == null)
+            {
+                // Show error dialog
+                var dialog = new ContentDialog
+                {
+                    Title = "Error",
+                    Content = "Orders service is not available. Please restart the application.",
+                    CloseButtonText = "OK",
+                    XamlRoot = App.MainWindow?.Content.XamlRoot
+                };
+                await dialog.ShowAsync();
+                return;
+            }
+
+            // Get current session/table context - need to implement proper session management
+            // This requires implementing GetCurrentSession() method in ApiService
+            var currentSessionId = MagiDesk.Frontend.Services.OrderContext.CurrentSessionId;
+            if (string.IsNullOrEmpty(currentSessionId))
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "No Active Session",
+                    Content = "Please select a table first before adding items to order.",
+                    CloseButtonText = "OK",
+                    XamlRoot = App.MainWindow?.Content.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+                return;
+            }
+
+            // Add item to current order using the correct OrderApiService method
+            // First, we need to get or create an order for the current session
+            var orders = await App.OrdersApi.GetOrdersBySessionAsync(Guid.Parse(currentSessionId));
+            var currentOrder = orders.FirstOrDefault();
+            
+            if (currentOrder == null)
+            {
+                // Create a new order for this session
+                var createOrderRequest = new OrderApiService.CreateOrderRequestDto(
+                    SessionId: Guid.Parse(currentSessionId),
+                    BillingId: null,
+                    TableId: "Unknown", // TODO: Get actual table ID
+                    ServerId: "Unknown", // TODO: Get actual server ID
+                    ServerName: null,
+                    Items: new List<OrderApiService.CreateOrderItemDto>
+                    {
+                        new OrderApiService.CreateOrderItemDto(
+                            MenuItemId: item.MenuItemId,
+                            ComboId: null,
+                            Quantity: 1,
+                            Modifiers: new List<OrderApiService.ModifierSelectionDto>()
+                        )
+                    }
+                );
+                currentOrder = await App.OrdersApi.CreateOrderAsync(createOrderRequest);
+            }
+            else
+            {
+                // Add item to existing order
+                var newItem = new OrderApiService.CreateOrderItemDto(
+                    MenuItemId: item.MenuItemId,
+                    ComboId: null,
+                    Quantity: 1,
+                    Modifiers: new List<OrderApiService.ModifierSelectionDto>()
+                );
+                currentOrder = await App.OrdersApi.AddItemsAsync(currentOrder.Id, new List<OrderApiService.CreateOrderItemDto> { newItem });
+            }
+            
+            // Show success feedback
+            var successDialog = new ContentDialog
+            {
+                Title = "Item Added",
+                Content = $"{item.Name} has been added to the order.",
+                CloseButtonText = "OK",
+                XamlRoot = App.MainWindow?.Content.XamlRoot
+            };
+            await successDialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            var errorDialog = new ContentDialog
+            {
+                Title = "Error",
+                Content = $"Failed to add item to order: {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = App.MainWindow?.Content.XamlRoot
+            };
+            await errorDialog.ShowAsync();
+        }
     }
 }

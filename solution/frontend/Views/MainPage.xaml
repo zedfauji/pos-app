@@ -33,7 +33,10 @@
                         ItemInvoked="NavView_ItemInvoked"
                         IsSettingsVisible="False"
                         IsBackButtonVisible="Auto"
-                        PaneDisplayMode="Left">
+                        PaneDisplayMode="Left"
+                        IsPaneOpen="True"
+                        OpenPaneLength="280"
+                        CompactPaneLength="48">
             <NavigationView.MenuItems>
                 <!-- Always on top -->
                 <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
@@ -41,6 +44,7 @@
 
                 <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
+                <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="List"/>
                 <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="Link"/>
                 <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
                 <NavigationViewItem Content="Payments" Tag="PaymentPage" Icon="Shop">
@@ -55,14 +59,8 @@
 
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
-                <NavigationViewItem Content="Menu" Tag="MenuPage" Icon="Shop"/>
-                <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People">
-                    <NavigationViewItem.MenuItems>
-                        <NavigationViewItem Content="Vendor-Orders" Tag="VendorOrdersPage" Icon="List"/>
-                    </NavigationViewItem.MenuItems>
-                </NavigationViewItem>
-                <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
-                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
+                <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
 
                 <NavigationViewItemSeparator/>
 
@@ -70,8 +68,20 @@
                 <NavigationViewItemHeader Content="Administration"/>
                 <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
                 <NavigationViewItem Content="Settings" Tag="SettingsPage" Icon="Setting"/>
+                
+                <NavigationViewItemSeparator/>
+                
+                <!-- Development/Testing Group -->
+                <NavigationViewItemHeader Content="Development"/>
+                <!-- PaymentPaneTestPage removed - no longer using panes -->
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>
         </NavigationView>
+
+        <!-- Invisible printing panel for CommunityToolkit PrintHelper -->
+        <Grid x:Name="PrintingContainer" 
+              Opacity="0" 
+              IsHitTestVisible="False"
+              Grid.RowSpan="2"/>
     </Grid>
 </Page>

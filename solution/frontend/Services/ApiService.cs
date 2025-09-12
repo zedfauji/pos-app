@@ -31,235 +31,7 @@ public class ApiService
         Log.Info($"ApiService Backend: {_backendHttp.BaseAddress} | Inventory: {_inventoryHttp.BaseAddress}");
     }
 
-    // Vendors
-    public async Task<List<VendorDto>> GetVendorsAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info("[InventoryApi] GET api/vendors");
-            var result = await _inventoryHttp.GetFromJsonAsync<List<VendorDto>>("api/vendors", ct);
-            return result ?? new();
-        }
-        catch (Exception ex)
-        {
-            Log.Error("GET vendors failed", ex);
-            return new();
-        }
-    }
-
-    public async Task<VendorDto?> CreateVendorAsync(VendorDto dto, CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info("[InventoryApi] POST api/vendors");
-            var res = await _inventoryHttp.PostAsJsonAsync("api/vendors", dto, ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"POST vendors HTTP {(int)res.StatusCode}: {msg}");
-                return null;
-            }
-            return await res.Content.ReadFromJsonAsync<VendorDto>(cancellationToken: ct);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("POST vendors failed", ex);
-            return null;
-        }
-    }
-
-    public async Task<VendorDto?> UpdateVendorAsync(VendorDto dto, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Id)) return null;
-        try
-        {
-            Log.Info($"[InventoryApi] PUT api/vendors/{dto.Id}");
-            var res = await _inventoryHttp.PutAsJsonAsync($"api/vendors/{dto.Id}", dto, ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"PUT vendor HTTP {(int)res.StatusCode}: {msg}");
-                return null;
-            }
-            // Many backends return no content; attempt to get latest list entry after update
-            return dto;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("PUT vendor failed", ex);
-            return null;
-        }
-    }
-
-    public async Task<bool> DeleteVendorAsync(string id, CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info($"[InventoryApi] DELETE api/vendors/{id}");
-            var res = await _inventoryHttp.DeleteAsync($"api/vendors/{id}", ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"DELETE vendor HTTP {(int)res.StatusCode}: {msg}");
-            }
-            return res.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("DELETE vendor failed", ex);
-            return false;
-        }
-    }
-
-    // Items
-    public async Task<List<ItemDto>> GetItemsAsync(string vendorId, CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info($"[InventoryApi] GET api/vendors/{vendorId}/items");
-            var result = await _inventoryHttp.GetFromJsonAsync<List<ItemDto>>($"api/vendors/{vendorId}/items", ct);
-            return result ?? new();
-        }
-        catch (Exception ex)
-        {
-            Log.Error("GET items failed", ex);
-            return new();
-        }
-    }
-
-    public async Task<ItemDto?> CreateItemAsync(string vendorId, ItemDto dto, CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info($"[InventoryApi] POST api/vendors/{vendorId}/items");
-            var res = await _inventoryHttp.PostAsJsonAsync($"api/vendors/{vendorId}/items", dto, ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"POST item HTTP {(int)res.StatusCode}: {msg}");
-                return null;
-            }
-            return await res.Content.ReadFromJsonAsync<ItemDto>(cancellationToken: ct);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("POST item failed", ex);
-            return null;
-        }
-    }
-
-    public async Task<ItemDto?> UpdateItemAsync(string vendorId, ItemDto dto, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Id)) return null;
-        try
-        {
-            Log.Info($"[InventoryApi] PUT api/vendors/{vendorId}/items/{dto.Id}");
-            var res = await _inventoryHttp.PutAsJsonAsync($"api/vendors/{vendorId}/items/{dto.Id}", dto, ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"PUT item HTTP {(int)res.StatusCode}: {msg}");
-                return null;
-            }
-            return dto;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("PUT item failed", ex);
-            return null;
-        }
-    }
-
-    public async Task<bool> DeleteItemAsync(string vendorId, string itemId, CancellationToken ct = default)
-    {
-        try
-        {
-            Log.Info($"[InventoryApi] DELETE api/vendors/{vendorId}/items/{itemId}");
-            var res = await _inventoryHttp.DeleteAsync($"api/vendors/{vendorId}/items/{itemId}", ct);
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"DELETE item HTTP {(int)res.StatusCode}: {msg}");
-            }
-            return res.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("DELETE item failed", ex);
-            return false;
-        }
-    }
-
-    // Counts for dashboard
-    public async Task<(int vendors, int items)> GetCountsAsync(CancellationToken ct = default)
-    {
-        try
-        {
-            var vendors = await GetVendorsAsync(ct);
-            int itemCount = 0;
-            foreach (var v in vendors)
-            {
-                if (!string.IsNullOrWhiteSpace(v.Id))
-                {
-                    var items = await GetItemsAsync(v.Id!, ct);
-                    itemCount += items.Count;
-                }
-            }
-            return (vendors.Count, itemCount);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("GetCounts failed", ex);
-            return (0, 0);
-        }
-    }
-
-    // Import vendor items
-    public async Task<bool> ImportVendorItemsAsync(string vendorId, string format, Stream content, CancellationToken ct = default)
-    {
-        try
-        {
-            var url = $"api/vendors/{vendorId}/import?format={format}";
-            using var sc = new StreamContent(content);
-            var res = await _inventoryHttp.PostAsync(url, sc, ct);
-
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"Import items HTTP {(int)res.StatusCode}: {msg}");
-            }
-            return res.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("ImportVendorItems failed", ex);
-            return false;
-        }
-    }
-
-    // Export vendor items
-    public async Task<string?> ExportVendorItemsAsync(string vendorId, string format, CancellationToken ct = default)
-    {
-        try
-        {
-            var url = $"api/vendors/{vendorId}/export?format={format}";
-            Log.Info($"GET {url}");
-            var res = await _inventoryHttp.GetAsync(url, ct);
-
-            if (!res.IsSuccessStatusCode)
-            {
-                var msg = await res.Content.ReadAsStringAsync(ct);
-                Log.Error($"Export items HTTP {(int)res.StatusCode}: {msg}");
-                return null;
-            }
-            return await res.Content.ReadAsStringAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("ExportVendorItems failed", ex);
-            return null;
-        }
-    }
+    // Legacy vendor endpoints removed - using new inventory system
 
     // Cash Flow
     public async Task<List<CashFlow>> GetCashFlowHistoryAsync(CancellationToken ct = default)
@@ -332,7 +104,7 @@ public class ApiService
     {
         try
         {
-            var res = await _backendHttp.PostAsync("api/inventory/syncProductNames/launch", content: null, ct);
+            var res = await _backendHttp.PostAsync("api/inventory/syncProductNames/launch", content: new StringContent(""), ct);
             if (!res.IsSuccessStatusCode) return (false, string.Empty);
             var doc = await res.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct) ?? new();
             var success = doc.TryGetValue("success", out var s) && s is bool b && b;
@@ -469,20 +241,7 @@ public class ApiService
         return await res.Content.ReadFromJsonAsync<List<OrderNotificationDto>>(cancellationToken: ct) ?? new();
     }
 
-    public async Task<List<ItemDto>> GetItemsByVendorAsync(string vendorId, CancellationToken ct = default)
-    {
-        try
-        {
-            var res = await _inventoryHttp.GetAsync($"api/items?vendorId={Uri.EscapeDataString(vendorId)}", ct);
-            if (!res.IsSuccessStatusCode) return new();
-            return await res.Content.ReadFromJsonAsync<List<ItemDto>>(cancellationToken: ct) ?? new();
-        }
-        catch (Exception ex)
-        {
-            Log.Error("GetItemsByVendor failed", ex);
-            return new();
-        }
-    }
+    // Legacy vendor items endpoint removed - using new inventory system
 
     // Drafts
     public async Task<List<CartDraftDto>> GetDraftsAsync(int limit = 20, CancellationToken ct = default)
@@ -496,6 +255,34 @@ public class ApiService
         catch (Exception ex)
         {
             Log.Error("GetDrafts failed", ex);
+            return new();
+        }
+    }
+
+    // Session Recovery - Get all active sessions from TablesApi
+    public async Task<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>> GetActiveSessionsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            // Get TablesApi base URL from configuration
+            var tablesApiUrl = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL") ?? "https://magidesk-tables-904541739138.northamerica-south1.run.app";
+            
+            using var tablesHttp = new HttpClient(new HttpClientHandler 
+            { 
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator 
+            })
+            {
+                BaseAddress = new Uri(tablesApiUrl.TrimEnd('/') + "/"),
+                Timeout = TimeSpan.FromSeconds(10)
+            };
+
+            Log.Info("[TablesApi] GET sessions/active");
+            var result = await tablesHttp.GetFromJsonAsync<List<MagiDesk.Shared.DTOs.Tables.SessionOverview>>("sessions/active", ct);
+            return result ?? new();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GET active sessions failed", ex);
             return new();
         }
     }

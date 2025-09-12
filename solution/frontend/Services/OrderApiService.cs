@@ -14,20 +14,36 @@ public sealed class OrderApiService
     // DTOs minimal mirror of backend
     public sealed record ModifierSelectionDto(long ModifierId, long OptionId);
     public sealed record CreateOrderItemDto(long? MenuItemId, long? ComboId, int Quantity, IReadOnlyList<ModifierSelectionDto> Modifiers);
-    public sealed record CreateOrderRequestDto(string SessionId, string? BillingId, string TableId, string ServerId, string? ServerName, IReadOnlyList<CreateOrderItemDto> Items);
+    public sealed record CreateOrderRequestDto(Guid SessionId, Guid? BillingId, string TableId, string ServerId, string? ServerName, IReadOnlyList<CreateOrderItemDto> Items);
     public sealed record UpdateOrderItemDto(long OrderItemId, int? Quantity, IReadOnlyList<ModifierSelectionDto>? Modifiers);
 
-    public sealed record OrderItemDto(long Id, long? MenuItemId, long? ComboId, int Quantity, decimal BasePrice, decimal PriceDelta, decimal LineTotal, decimal Profit);
-    public sealed record OrderDto(long Id, string SessionId, string TableId, string Status, decimal Subtotal, decimal DiscountTotal, decimal TaxTotal, decimal Total, decimal ProfitTotal, IReadOnlyList<OrderItemDto> Items);
+    public sealed record OrderItemDto(long Id, long? MenuItemId, long? ComboId, int Quantity, int DeliveredQuantity, decimal BasePrice, decimal PriceDelta, decimal LineTotal, decimal Profit);
+    public sealed record OrderDto(long Id, Guid SessionId, string TableId, string Status, string DeliveryStatus, decimal Subtotal, decimal DiscountTotal, decimal TaxTotal, decimal Total, decimal ProfitTotal, IReadOnlyList<OrderItemDto> Items);
+
+    public sealed record ItemDeliveryDto(long OrderItemId, int DeliveredQuantity);
+    public sealed record MarkDeliveredRequestDto(IReadOnlyList<ItemDeliveryDto> ItemDeliveries);
 
     public sealed record OrderLogDto(long Id, long OrderId, string Action, object? OldValue, object? NewValue, string? ServerId, DateTimeOffset CreatedAt);
     public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
 
     public async Task<OrderDto?> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct = default)
     {
-        var res = await _http.PostAsJsonAsync("api/orders", req, ct);
-        if (!res.IsSuccessStatusCode) return null;
-        return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
+        try
+        {
+            var res = await _http.PostAsJsonAsync("api/orders", req, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                System.Diagnostics.Debug.WriteLine($"CreateOrderAsync failed: HTTP {(int)res.StatusCode} - {errorContent}");
+                return null;
+            }
+            return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CreateOrderAsync exception: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct = default)
@@ -35,9 +51,9 @@ public sealed class OrderApiService
         return await _http.GetFromJsonAsync<OrderDto>($"api/orders/{orderId}", ct);
     }
 
-    public async Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(string sessionId, bool includeHistory = false, CancellationToken ct = default)
+    public async Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory = false, CancellationToken ct = default)
     {
-        var url = $"api/orders/by-session/{Uri.EscapeDataString(sessionId)}?includeHistory={(includeHistory ? "true" : "false")}";
+        var url = $"api/orders/by-session/{sessionId}?includeHistory={(includeHistory ? "true" : "false")}";
         var list = await _http.GetFromJsonAsync<IReadOnlyList<OrderDto>>(url, ct);
         return list ?? Array.Empty<OrderDto>();
     }
@@ -65,7 +81,22 @@ public sealed class OrderApiService
 
     public async Task<OrderDto?> CloseOrderAsync(long orderId, CancellationToken ct = default)
     {
-        var res = await _http.PostAsync($"api/orders/{orderId}/close", content: null, ct);
+        var res = await _http.PostAsync($"api/orders/{orderId}/close", content: new StringContent(""), ct);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
+    }
+
+    public async Task<OrderDto?> MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct = default)
+    {
+        var request = new MarkDeliveredRequestDto(itemDeliveries);
+        var res = await _http.PostAsJsonAsync($"api/orders/{orderId}/mark-delivered", request, ct);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
+    }
+
+    public async Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct = default)
+    {
+        var res = await _http.PostAsync($"api/orders/{orderId}/mark-waiting", content: new StringContent(""), ct);
         if (!res.IsSuccessStatusCode) return null;
         return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
     }
