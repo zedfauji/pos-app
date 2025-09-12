@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="using:MagiDesk.Frontend.Services"
     mc:Ignorable="d">
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -12,64 +13,121 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="Title" Text="Vendors" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="Vendors Management" FontSize="24" FontWeight="SemiBold"/>
+            <Button Content="Add New Vendor" Click="AddVendor_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <TextBox x:Name="SearchBox" Width="200" PlaceholderText="Search vendors..." TextChanged="SearchBox_TextChanged"/>
+            <ComboBox x:Name="StatusFilter" PlaceholderText="Filter by Status" Width="150" SelectionChanged="StatusFilter_SelectionChanged">
+                <ComboBoxItem Content="All" Tag=""/>
+                <ComboBoxItem Content="Active" Tag="Active"/>
+                <ComboBoxItem Content="Inactive" Tag="Inactive"/>
+                <ComboBoxItem Content="Suspended" Tag="Suspended"/>
+            </ComboBox>
+        </StackPanel>
 
-        <InfoBar x:Name="FeedbackBar" Grid.Row="1" IsOpen="False" Severity="Informational" Margin="0,0,0,8"/>
+        <!-- Stats Cards -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    CornerRadius="8" Padding="16" Margin="0,0,8,0">
+                <StackPanel>
+                    <TextBlock Text="Total Vendors" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.TotalVendors, Mode=OneWay}" FontSize="24" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    CornerRadius="8" Padding="16" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Active Vendors" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.ActiveVendors, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" Foreground="Green"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    CornerRadius="8" Padding="16" Margin="4,0">
+                <StackPanel>
+                    <TextBlock Text="Pending Orders" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.PendingOrders, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" Foreground="Orange"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    CornerRadius="8" Padding="16" Margin="8,0,0,0">
+                <StackPanel>
+                    <TextBlock Text="Avg. Delivery Time" FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="{x:Bind _vm.AverageDeliveryTime, Mode=OneWay}" FontSize="24" FontWeight="SemiBold" Foreground="Blue"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
-        <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
-        <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
-        <ListView Grid.Row="2"
-                  x:Name="VendorsGrid"
-                  ItemsSource="{Binding Vendors}"
-                  SelectionMode="Single"
-                  DoubleTapped="VendorsGrid_DoubleTapped">
-            <ListView.ItemTemplate>
+        <!-- Vendors List -->
+        <ListView Grid.Row="2" x:Name="VendorsList"
+                  ItemsSource="{x:Bind _vm.FilteredVendors, Mode=OneWay}"
+                  SelectionMode="Single">
+            <ListView.HeaderTemplate>
                 <DataTemplate>
+                    <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Vendor ID" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="Company Name" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="Contact Person" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="Phone" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="4" Text="Status" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="Orders" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        <TextBlock Grid.Column="6" Text="Actions" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="services:ExtendedVendorDto">
                     <Grid Padding="8">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
                             <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="3*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="200"/>
                         </Grid.ColumnDefinitions>
                         
-                        <!-- Name -->
-                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="0" Text="{x:Bind Id}" VerticalAlignment="Center" FontFamily="Consolas"/>
+                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="{x:Bind ContactPerson}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="3" Text="{x:Bind Phone}" VerticalAlignment="Center"/>
                         
-                        <!-- Contact -->
-                        <TextBlock Grid.Column="1" Text="{Binding ContactInfo}" VerticalAlignment="Center"/>
+                        <Border Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                Background="{x:Bind StatusColor}" CornerRadius="4" Padding="4,2">
+                            <TextBlock Text="{x:Bind Status}" FontSize="10" Foreground="White"/>
+                        </Border>
                         
-                        <!-- Status -->
-                        <TextBlock Grid.Column="2" Text="{Binding Status}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="5" Text="{x:Bind OrderCount}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         
-                        <!-- Budget -->
-                        <TextBlock Grid.Column="3" Text="{Binding Budget}" VerticalAlignment="Center"/>
-                        
-                        <!-- Reminder -->
-                        <TextBlock Grid.Column="4" Text="{Binding Reminder}" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Content="Edit" Click="EditVendor_Click" Tag="{x:Bind Id}" FontSize="10" Padding="4,2"/>
+                            <Button Content="Orders" Click="ViewOrders_Click" Tag="{x:Bind Id}" FontSize="10" Padding="4,2" Background="Blue" Foreground="White"/>
+                            <Button Content="Delete" Click="DeleteVendor_Click" Tag="{x:Bind Id}" FontSize="10" Padding="4,2" Background="Red" Foreground="White"/>
+                        </StackPanel>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
-            <ListView.ContextFlyout>
-                <MenuFlyout>
-                    <MenuFlyoutItem Text="Edit" Click="Vendor_Edit_Click" Tag="{Binding}"/>
-                    <MenuFlyoutItem Text="Delete" Click="Vendor_Delete_Click" Tag="{Binding}"/>
-                    <MenuFlyoutSeparator/>
-                    <MenuFlyoutItem Text="View Items" Click="Vendor_ViewItems_Click" Tag="{Binding}"/>
-                    <MenuFlyoutSeparator/>
-                    <MenuFlyoutSubItem Text="Export Items">
-                        <MenuFlyoutItem Text="CSV" Click="Vendor_ExportCsv_Click" Tag="{Binding}"/>
-                        <MenuFlyoutItem Text="JSON" Click="Vendor_ExportJson_Click" Tag="{Binding}"/>
-                        <MenuFlyoutItem Text="YAML" Click="Vendor_ExportYaml_Click" Tag="{Binding}"/>
-                    </MenuFlyoutSubItem>
-                    <MenuFlyoutSubItem Text="Import Items">
-                        <MenuFlyoutItem Text="CSV" Click="Vendor_ImportCsv_Click" Tag="{Binding}"/>
-                        <MenuFlyoutItem Text="JSON" Click="Vendor_ImportJson_Click" Tag="{Binding}"/>
-                        <MenuFlyoutItem Text="YAML" Click="Vendor_ImportYaml_Click" Tag="{Binding}"/>
-                    </MenuFlyoutSubItem>
-                </MenuFlyout>
-            </ListView.ContextFlyout>
         </ListView>
     </Grid>
 </Page>

@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.ViewModels;
-using MagiDesk.Frontend.Dialogs;
+using MagiDesk.Frontend.Services;
 using MagiDesk.Shared.DTOs;
+using Microsoft.Extensions.Logging;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -14,352 +14,146 @@ public sealed partial class VendorsPage : Page, IToolbarConsumer
     public VendorsPage()
     {
         this.InitializeComponent();
-        _vm = new VendorsViewModel(App.Api!);
-        DataContext = _vm;
+        
+        if (App.Api == null)
+        {
+            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+        }
+        
+        // Create services
+        var vendorService = new VendorService(new HttpClient(), new SimpleLogger<VendorService>());
+        var vendorOrderService = new VendorOrderService(new HttpClient(), new SimpleLogger<VendorOrderService>());
+        
+        _vm = new VendorsViewModel(vendorService, vendorOrderService);
+        this.DataContext = _vm;
+        
         Loaded += VendorsPage_Loaded;
-        App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
-        ApplyLanguage();
     }
 
     private async void VendorsPage_Loaded(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            ApplyLanguage();
-            await CheckConnectivityAsync();
-            await _vm.LoadAsync();
-            ShowInfo("Loaded vendors.");
-        }
-        catch (Exception ex)
-        {
-            ShowError($"Failed to load vendors: {ex.Message}");
-        }
+        await _vm.LoadDataAsync();
     }
 
-    public async void OnAdd()
+    private async void AddVendor_Click(object sender, RoutedEventArgs e)
     {
-        var dto = new VendorDto();
-        var dlg = new VendorDialog(dto) { XamlRoot = this.XamlRoot };
-        var result = await dlg.ShowAsync();
+        var dialog = new VendorDialog();
+        var result = await dialog.ShowAsync();
+        
         if (result == ContentDialogResult.Primary)
         {
-            try
-            {
-                var created = await _vm.CreateAsync(dto);
-                if (created != null)
-                {
-                    await _vm.LoadAsync();
-                    ShowInfo("Vendor created.");
-                }
-                else ShowError("Failed to create vendor.");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Create failed: {ex.Message}");
-            }
+            await _vm.AddVendorAsync(dialog.Vendor);
         }
     }
 
-    public async void OnEdit()
+    private async void EditVendor_Click(object sender, RoutedEventArgs e)
     {
-        var v = VendorsGrid.SelectedItem as VendorDto;
-        if (v is VendorDto)
+        if (sender is Button button && button.Tag is string vendorId)
         {
-            var dto = new VendorDto { Id = v.Id, Name = v.Name, ContactInfo = v.ContactInfo, Status = v.Status };
-            var dlg = new VendorDialog(dto) { XamlRoot = this.XamlRoot };
-            var result = await dlg.ShowAsync();
-            if (result == ContentDialogResult.Primary)
+            var vendor = await _vm.GetVendorAsync(vendorId);
+            if (vendor != null)
             {
-                try
-                {
-                    var updated = await _vm.UpdateAsync(dto);
-                    if (updated != null)
-                    {
-                        await _vm.LoadAsync();
-                        ShowInfo("Vendor updated.");
-                    }
-                    else ShowError("Failed to update vendor.");
-                }
-                catch (Exception ex)
-                {
-                    ShowError($"Update failed: {ex.Message}");
-                }
-            }
-        }
-    }
-
-    public async void OnDelete()
-    {
-        if (VendorsGrid.SelectedItem is VendorDto v)
-        {
-            try
-            {
-                var confirm = await ConfirmDeleteVendorAsync(v);
-                if (!confirm) return;
-                var ok = await _vm.DeleteAsync(v);
-                if (ok)
-                {
-                    await _vm.LoadAsync();
-                    ShowInfo("Vendor deleted.");
-                }
-                else ShowError("Failed to delete vendor.");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Delete failed: {ex.Message}");
-            }
-        }
-    }
-
-    public async void OnRefresh()
-    {
-        await CheckConnectivityAsync();
-        await _vm.LoadAsync();
-    }
-
-    private async void Vendor_Edit_Click(object sender, RoutedEventArgs e)
-    {
-        var v = (sender as FrameworkElement)?.Tag as VendorDto
-                ?? VendorsGrid.SelectedItem as VendorDto
-                ?? (sender as FrameworkElement)?.DataContext as VendorDto;
-        if (v is null) { ShowError("No vendor selected."); return; }
-        var dto = new VendorDto { Id = v.Id, Name = v.Name, ContactInfo = v.ContactInfo, Status = v.Status };
-        var dlg = new VendorDialog(dto) { XamlRoot = this.XamlRoot };
-        var result = await dlg.ShowAsync();
-        if (result == ContentDialogResult.Primary)
-        {
-            try
-            {
-                var updated = await _vm.UpdateAsync(dto);
-                if (updated != null)
-                {
-                    await _vm.LoadAsync();
-                    ShowInfo("Vendor updated.");
-                }
-                else ShowError("Failed to update vendor.");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Update failed: {ex.Message}");
-            }
-        }
-    }
-
-    private async void Vendor_Delete_Click(object sender, RoutedEventArgs e)
-    {
-        var v = (sender as FrameworkElement)?.Tag as VendorDto
-                ?? VendorsGrid.SelectedItem as VendorDto
-                ?? (sender as FrameworkElement)?.DataContext as VendorDto;
-        if (v is VendorDto)
-        {
-            var confirm = await ConfirmDeleteVendorAsync(v);
-            if (!confirm) return;
-            var ok = await _vm.DeleteAsync(v);
-            if (ok)
-            {
-                await _vm.LoadAsync();
-                ShowInfo("Vendor deleted.");
-            }
-            else ShowError("Failed to delete vendor.");
-        }
-    }
-
-    private void Vendor_ViewItems_Click(object sender, RoutedEventArgs e)
-    {
-        var v = (sender as FrameworkElement)?.Tag as VendorDto
-                ?? VendorsGrid.SelectedItem as VendorDto
-                ?? (sender as FrameworkElement)?.DataContext as VendorDto;
-        if (v is null) { ShowError("No vendor selected."); return; }
-        Frame.Navigate(typeof(ItemsPage), v);
-    }
-
-    private void VendorsGrid_DoubleTapped(object sender, Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
-    {
-        try
-        {
-            var fe = e.OriginalSource as FrameworkElement;
-            var v = fe?.DataContext as VendorDto ?? VendorsGrid.SelectedItem as VendorDto;
-            if (v is null) { return; }
-            Frame.Navigate(typeof(ItemsPage), v);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("DoubleTap navigation failed", ex);
-            ShowError($"Open items failed: {ex.Message}");
-        }
-    }
-
-    private async void Vendor_ExportCsv_Click(object sender, RoutedEventArgs e)
-        => await ExportVendorAsync(sender, "csv");
-
-    private async void Vendor_ExportJson_Click(object sender, RoutedEventArgs e)
-        => await ExportVendorAsync(sender, "json");
-
-    private async void Vendor_ExportYaml_Click(object sender, RoutedEventArgs e)
-        => await ExportVendorAsync(sender, "yaml");
-
-    private async Task ExportVendorAsync(object sender, string format)
-    {
-        try
-        {
-            var v = (sender as FrameworkElement)?.Tag as VendorDto
-                    ?? VendorsGrid.SelectedItem as VendorDto
-                    ?? (sender as FrameworkElement)?.DataContext as VendorDto;
-            if (v is null || string.IsNullOrWhiteSpace(v.Id)) { ShowError("No vendor selected."); return; }
-
-            var content = await App.Api!.ExportVendorItemsAsync(v.Id!, format);
-            if (content is null) { ShowError("Export failed."); return; }
-
-            // CRITICAL FIX: Use .NET file operations instead of Windows Runtime COM interop
-            // FileSavePicker causes "No installed components were detected" errors in WinUI 3 Desktop Apps
-            try
-            {
-                var fileName = $"{v.Name}-items.{format}";
-                var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                var filePath = Path.Combine(downloadsPath, fileName);
+                var dialog = new VendorDialog(vendor);
+                var result = await dialog.ShowAsync();
                 
-                await File.WriteAllTextAsync(filePath, content);
-                ShowInfo($"Exported {format.ToUpper()} for {v.Name} to Downloads folder.");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Export failed: {ex.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Export failed", ex);
-            ShowError($"Export failed: {ex.Message}");
-        }
-    }
-
-    private async void Vendor_ImportCsv_Click(object sender, RoutedEventArgs e)
-        => await ImportVendorAsync(sender, new[] { ".csv" }, "csv");
-
-    private async void Vendor_ImportJson_Click(object sender, RoutedEventArgs e)
-        => await ImportVendorAsync(sender, new[] { ".json" }, "json");
-
-    private async void Vendor_ImportYaml_Click(object sender, RoutedEventArgs e)
-        => await ImportVendorAsync(sender, new[] { ".yml", ".yaml" }, "yaml");
-
-    private async Task ImportVendorAsync(object sender, string[] extensions, string format)
-    {
-        try
-        {
-            var v = (sender as FrameworkElement)?.Tag as VendorDto
-                    ?? VendorsGrid.SelectedItem as VendorDto
-                    ?? (sender as FrameworkElement)?.DataContext as VendorDto;
-            if (v is null || string.IsNullOrWhiteSpace(v.Id)) { ShowError("No vendor selected."); return; }
-
-            // CRITICAL FIX: Use .NET file operations instead of Windows Runtime COM interop
-            // FileOpenPicker causes "No installed components were detected" errors in WinUI 3 Desktop Apps
-            try
-            {
-                var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-                var files = Directory.GetFiles(downloadsPath, "*.*", SearchOption.TopDirectoryOnly)
-                    .Where(f => extensions.Any(ext => f.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
-                    .ToArray();
-                
-                if (files.Length == 0)
+                if (result == ContentDialogResult.Primary)
                 {
-                    ShowError($"No {format.ToUpper()} files found in Downloads folder.");
-                    return;
+                    await _vm.UpdateVendorAsync(vendorId, dialog.Vendor);
                 }
-                
-                // Use the first matching file
-                var filePath = files[0];
-                using var stream = File.OpenRead(filePath);
-                var ok = await App.Api!.ImportVendorItemsAsync(v.Id!, format, stream);
-                if (ok)
+            }
+        }
+    }
+
+    private async void DeleteVendor_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string vendorId)
+        {
+            var vendor = await _vm.GetVendorAsync(vendorId);
+            if (vendor != null)
+            {
+                var dialog = new ContentDialog
                 {
-                    ShowInfo($"Imported items for {v.Name} from {Path.GetFileName(filePath)}.");
+                    Title = "Delete Vendor",
+                    Content = $"Are you sure you want to delete vendor '{vendor.Name}'?",
+                    PrimaryButtonText = "Delete",
+                    CloseButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Close
+                };
+                
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    await _vm.DeleteVendorAsync(vendorId);
                 }
-                else ShowError("Import failed.");
             }
-            catch (Exception ex)
+        }
+    }
+
+    private async void ViewOrders_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string vendorId)
+        {
+            // TODO: Navigate to vendor orders page
+            var dialog = new ContentDialog
             {
-                ShowError($"Import failed: {ex.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Import failed", ex);
-            ShowError($"Import failed: {ex.Message}");
+                Title = "Vendor Orders",
+                Content = $"Orders for vendor {vendorId} will be shown here.",
+                CloseButtonText = "Close"
+            };
+            await dialog.ShowAsync();
         }
     }
 
-    private void ShowInfo(string message)
+    private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
-        FeedbackBar.Severity = InfoBarSeverity.Success;
-        FeedbackBar.Message = message;
-        FeedbackBar.IsOpen = true;
+        await _vm.LoadDataAsync();
     }
 
-    private void ShowError(string message)
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        FeedbackBar.Severity = InfoBarSeverity.Error;
-        FeedbackBar.Message = message;
-        FeedbackBar.IsOpen = true;
-    }
-
-    private async Task CheckConnectivityAsync()
-    {
-        try
+        if (sender is TextBox textBox)
         {
-            var ok = await App.UsersApi!.PingAsync();
-            if (!ok)
-            {
-                FeedbackBar.Severity = InfoBarSeverity.Warning;
-                FeedbackBar.Message = "Backend is unavailable. Data may be limited.";
-                FeedbackBar.IsOpen = true;
-            }
-        }
-        catch
-        {
-            FeedbackBar.Severity = InfoBarSeverity.Warning;
-            FeedbackBar.Message = "Backend is unavailable. Data may be limited.";
-            FeedbackBar.IsOpen = true;
+            _vm.Search(textBox.Text);
         }
     }
 
-    private void ApplyLanguage()
+    private void StatusFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        try
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
         {
-            Title.Text = App.I18n.T("vendors_title");
+            _vm.FilterByStatus(item.Tag?.ToString() ?? string.Empty);
         }
-        catch { }
     }
 
-    private async Task<bool> ConfirmDeleteVendorAsync(VendorDto v)
+    private void VendorsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var tb = new TextBox { PlaceholderText = "Type vendor name to confirm", Margin = new Thickness(0,8,0,0) };
-        var panel = new StackPanel { Spacing = 6 };
-        panel.Children.Add(new TextBlock
-        {
-            Text = $"Are you sure you want to delete vendor '{v.Name}'? This action cannot be undone.",
-            TextWrapping = TextWrapping.Wrap
-        });
-        panel.Children.Add(new TextBlock { Text = "Confirmation:", Opacity = 0.8 });
-        panel.Children.Add(tb);
+        // Handle selection if needed
+    }
 
-        var dlg = new ContentDialog
-        {
-            Title = "Delete Vendor",
-            Content = panel,
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Close,
-            XamlRoot = this.XamlRoot,
-            IsPrimaryButtonEnabled = false
-        };
+    // IToolbarConsumer implementation
+    public void OnAdd()
+    {
+        AddVendor_Click(this, new RoutedEventArgs());
+    }
 
-        tb.TextChanged += (s, e) =>
+    public void OnEdit()
+    {
+        if (VendorsList.SelectedItem is ExtendedVendorDto vendor)
         {
-            dlg.IsPrimaryButtonEnabled = string.Equals(tb.Text?.Trim(), v.Name?.Trim(), StringComparison.OrdinalIgnoreCase);
-        };
+            EditVendor_Click(this, new RoutedEventArgs());
+        }
+    }
 
-        var res = await dlg.ShowAsync();
-        return res == ContentDialogResult.Primary;
+    public void OnDelete()
+    {
+        if (VendorsList.SelectedItem is ExtendedVendorDto vendor)
+        {
+            DeleteVendor_Click(this, new RoutedEventArgs());
+        }
+    }
+
+    public void OnRefresh()
+    {
+        Refresh_Click(this, new RoutedEventArgs());
     }
 }
