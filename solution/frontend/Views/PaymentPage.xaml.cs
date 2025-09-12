@@ -26,11 +26,13 @@ public sealed partial class PaymentPage : Page
     private async void PaymentPage_Loaded(object sender, RoutedEventArgs e)
     {
         await ViewModel.LoadUnsettledBillsAsync();
+        PopulateFilterOptions();
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
     {
         await ViewModel.LoadUnsettledBillsAsync();
+        PopulateFilterOptions();
     }
 
     private async void ProcessPayment_Click(object sender, RoutedEventArgs e)
@@ -114,19 +116,156 @@ public sealed partial class PaymentPage : Page
         // No action needed for cancellation
     }
 
+    private async void ExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var exportDialog = new ContentDialog
+            {
+                Title = "Export Unsettled Bills",
+                Content = "Choose export format:",
+                PrimaryButtonText = "CSV",
+                SecondaryButtonText = "Excel",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await exportDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                await ViewModel.ExportToCsvAsync();
+                ShowSuccessMessage("Bills exported to CSV successfully!");
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                await ViewModel.ExportToExcelAsync();
+                ShowSuccessMessage("Bills exported to Excel successfully!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorMessage($"Export failed: {ex.Message}");
+        }
+    }
+
+    private void ViewAllPayments_Click(object sender, RoutedEventArgs e)
+    {
+        Frame.Navigate(typeof(AllPaymentsPage));
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            ViewModel.SearchTerm = textBox.Text;
+        }
+    }
+
+    private void TableFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.TableFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
+    private void ServerFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.ServerFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
+    private void AmountRangeFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            ViewModel.AmountRangeFilter = item.Tag?.ToString() ?? "";
+        }
+    }
+
     private async void ViewDetails_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.Tag is BillResult bill)
         {
-            var dialog = new ContentDialog()
+            try
             {
-                Title = "Bill Details",
-                Content = $"Bill ID: {bill.BillId}\nTable: {bill.TableLabel}\nAmount: {bill.TotalAmount:C}\nServer: {bill.ServerName}\nStart Time: {bill.StartTime}",
-                CloseButtonText = "Close",
-                XamlRoot = this.XamlRoot
-            };
-            
-            await dialog.ShowAsync();
+                var detailsDialog = new BillDetailsDialog(bill)
+                {
+                    XamlRoot = this.XamlRoot
+                };
+                await detailsDialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowErrorMessage($"Failed to load bill details: {ex.Message}");
+            }
         }
+    }
+
+    private async void PrintBill_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is BillResult bill)
+        {
+            try
+            {
+                await ViewModel.PrintBillAsync(bill);
+                ShowSuccessMessage($"Bill {bill.BillId} sent to printer successfully!");
+            }
+            catch (Exception ex)
+            {
+                ShowErrorMessage($"Failed to print bill: {ex.Message}");
+            }
+        }
+    }
+
+    private void PopulateFilterOptions()
+    {
+        // Populate table filter
+        var tableItems = TableFilter.Items.Cast<ComboBoxItem>().ToList();
+        tableItems.Clear();
+        tableItems.Add(new ComboBoxItem { Content = "All Tables", Tag = "" });
+        
+        var uniqueTables = ViewModel.UnsettledBills.Select(b => b.TableLabel).Distinct().OrderBy(t => t);
+        foreach (var table in uniqueTables)
+        {
+            tableItems.Add(new ComboBoxItem { Content = table, Tag = table });
+        }
+
+        // Populate server filter
+        var serverItems = ServerFilter.Items.Cast<ComboBoxItem>().ToList();
+        serverItems.Clear();
+        serverItems.Add(new ComboBoxItem { Content = "All Servers", Tag = "" });
+        
+        var uniqueServers = ViewModel.UnsettledBills.Select(b => b.ServerName).Distinct().OrderBy(s => s);
+        foreach (var server in uniqueServers)
+        {
+            serverItems.Add(new ComboBoxItem { Content = server, Tag = server });
+        }
+    }
+
+    private async void ShowSuccessMessage(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Success",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
+    }
+
+    private async void ShowErrorMessage(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Error",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
     }
 }

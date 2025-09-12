@@ -518,7 +518,7 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
 
     var sessionId = Guid.NewGuid();
     var billingId = Guid.NewGuid();
-    var now = DateTime.UtcNow;
+    var now = DateTimeOffset.UtcNow; // Use DateTimeOffset for consistency
     const string insertSql = @"INSERT INTO public.table_sessions(session_id, table_label, server_id, server_name, start_time, status, billing_id)
                                VALUES(@sid, @label, @srvId, @srvName, @start, 'active', @bid)";
     await using (var ins = new NpgsqlCommand(insertSql, conn))
@@ -550,9 +550,11 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
 // Stop a table session and generate bill
 app.MapPost("/tables/{label}/stop", async (string label) =>
 {
-    await using var conn = new NpgsqlConnection(connString);
-    await conn.OpenAsync();
-    await EnsureSchemaAsync(conn);
+    try
+    {
+        await using var conn = new NpgsqlConnection(connString);
+        await conn.OpenAsync();
+        await EnsureSchemaAsync(conn);
 
     // Find active session
     const string findSql = @"SELECT session_id, server_id, server_name, start_time, billing_id FROM public.table_sessions
@@ -560,7 +562,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     Guid sessionId; Guid? billingGuid = null;
     string serverId;
     string serverName;
-    DateTime startTime;
+    DateTimeOffset startTime;
     await using (var find = new NpgsqlCommand(findSql, conn))
     {
         find.Parameters.AddWithValue("@label", label);
@@ -569,11 +571,11 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         sessionId = rdr.GetFieldValue<Guid>(0);
         serverId = rdr.GetString(1);
         serverName = rdr.GetString(2);
-        startTime = rdr.GetFieldValue<DateTime>(3);
+        startTime = rdr.GetFieldValue<DateTimeOffset>(3);
         if (!rdr.IsDBNull(4)) billingGuid = rdr.GetFieldValue<Guid>(4);
     }
 
-    var end = DateTime.UtcNow;
+    var end = DateTimeOffset.UtcNow; // Use DateTimeOffset for consistency
     var minutes = (int)Math.Max(0, (end - startTime).TotalMinutes);
 
     // Close session
@@ -615,7 +617,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
     {
         bill.Parameters.AddWithValue("@bid", billId);
         bill.Parameters.AddWithValue("@billingId", (object?)billingGuid ?? DBNull.Value);
-        bill.Parameters.AddWithValue("@sid", sessionId.ToString());
+        bill.Parameters.AddWithValue("@sid", sessionId);
         bill.Parameters.AddWithValue("@label", label);
         bill.Parameters.AddWithValue("@srvId", serverId);
         bill.Parameters.AddWithValue("@srvName", serverName);
@@ -644,14 +646,24 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         TableLabel = label,
         ServerId = serverId,
         ServerName = serverName,
-        StartTime = startTime,
-        EndTime = end,
+        StartTime = startTime.DateTime,
+        EndTime = end.DateTime,
         TotalTimeMinutes = minutes,
         Items = items,
         TimeCost = timeCost,
         ItemsCost = itemsCost,
         TotalAmount = total
     });
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Failed to stop session for table '{Label}'", label);
+        return Results.Problem(
+            title: "Failed to stop session",
+            detail: $"Error stopping session for table '{label}': {ex.Message}",
+            statusCode: 500
+        );
+    }
 });
 
 app.MapPost("/tables/reset", async () =>
@@ -1009,7 +1021,7 @@ app.MapPost("/sessions/{sessionId}/heartbeat", async (Guid sessionId) =>
     
     await using var cmd = new NpgsqlCommand(heartbeatSql, conn);
     cmd.Parameters.AddWithValue("@sid", sessionId);
-    cmd.Parameters.AddWithValue("@now", DateTime.UtcNow);
+    cmd.Parameters.AddWithValue("@now", DateTimeOffset.UtcNow);
     
     var rowsAffected = await cmd.ExecuteNonQueryAsync();
     
@@ -1087,7 +1099,7 @@ app.MapPost("/sessions/cleanup-stale", async ([FromQuery] int? timeoutMinutes) =
             {
                 billCmd.Parameters.AddWithValue("@bid", Guid.NewGuid());
                 billCmd.Parameters.AddWithValue("@billingId", (object?)session.billingId ?? DBNull.Value);
-                billCmd.Parameters.AddWithValue("@sid", session.sid.ToString());
+                billCmd.Parameters.AddWithValue("@sid", session.sid);
                 billCmd.Parameters.AddWithValue("@table", session.table);
                 billCmd.Parameters.AddWithValue("@serverId", session.serverId);
                 billCmd.Parameters.AddWithValue("@serverName", session.serverName);
@@ -1303,7 +1315,7 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         updated_at timestamptz NOT NULL DEFAULT now()
     );
     ALTER TABLE public.table_sessions ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]';
-    ALTER TABLE public.table_sessions ADD COLUMN IF NOT EXISTS last_heartbeat timestamp NULL;
+    ALTER TABLE public.table_sessions ADD COLUMN IF NOT EXISTS last_heartbeat timestamptz NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS order_id text NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS start_time timestamptz NULL;
     ALTER TABLE public.table_status ADD COLUMN IF NOT EXISTS server text NULL;
@@ -1313,12 +1325,12 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         table_label text NOT NULL,
         server_id text NOT NULL,
         server_name text NOT NULL,
-        start_time timestamp NOT NULL,
-        end_time timestamp NULL,
+        start_time timestamptz NOT NULL,
+        end_time timestamptz NULL,
         status text NOT NULL CHECK (status IN ('active','closed')) DEFAULT 'active',
         items jsonb NOT NULL DEFAULT '[]',
         billing_id uuid NULL,
-        last_heartbeat timestamp NULL
+        last_heartbeat timestamptz NULL
     );
 
     CREATE TABLE IF NOT EXISTS public.bills (
@@ -1328,8 +1340,8 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         table_label text NOT NULL,
         server_id text NOT NULL,
         server_name text NOT NULL,
-        start_time timestamp NOT NULL,
-        end_time timestamp NOT NULL,
+        start_time timestamptz NOT NULL,
+        end_time timestamptz NOT NULL,
         total_time_minutes int NOT NULL,
         items jsonb NOT NULL DEFAULT '[]',
         time_cost numeric NOT NULL DEFAULT 0,
@@ -1338,9 +1350,36 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
         status text NOT NULL DEFAULT 'awaiting_payment' CHECK (status IN ('awaiting_payment','closed')),
         is_settled boolean NOT NULL DEFAULT false,
         payment_state text NOT NULL DEFAULT 'not-paid' CHECK (payment_state IN ('not-paid','partial-paid','paid','partial-refunded','refunded','cancelled')),
-        closed_at timestamp NULL,
-        created_at timestamp NOT NULL DEFAULT now()
+        closed_at timestamptz NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
     );";
+    
+    // Migration: Update existing timestamp columns to timestamptz
+    const string migrationSql = @"
+        -- Update table_sessions columns to timestamptz
+        ALTER TABLE public.table_sessions ALTER COLUMN start_time TYPE timestamptz USING start_time AT TIME ZONE 'UTC';
+        ALTER TABLE public.table_sessions ALTER COLUMN end_time TYPE timestamptz USING end_time AT TIME ZONE 'UTC';
+        ALTER TABLE public.table_sessions ALTER COLUMN last_heartbeat TYPE timestamptz USING last_heartbeat AT TIME ZONE 'UTC';
+        
+        -- Update bills columns to timestamptz
+        ALTER TABLE public.bills ALTER COLUMN start_time TYPE timestamptz USING start_time AT TIME ZONE 'UTC';
+        ALTER TABLE public.bills ALTER COLUMN end_time TYPE timestamptz USING end_time AT TIME ZONE 'UTC';
+        ALTER TABLE public.bills ALTER COLUMN closed_at TYPE timestamptz USING closed_at AT TIME ZONE 'UTC';
+        ALTER TABLE public.bills ALTER COLUMN created_at TYPE timestamptz USING created_at AT TIME ZONE 'UTC';
+    ";
+    
+    try
+    {
+        await using var migrationCmd = new NpgsqlCommand(migrationSql, conn);
+        await migrationCmd.ExecuteNonQueryAsync();
+    }
+    catch (Exception ex)
+    {
+        // Migration might fail if columns are already timestamptz or don't exist
+        // This is expected and safe to ignore
+        System.Diagnostics.Debug.WriteLine($"Migration warning: {ex.Message}");
+    }
+    
     // Ensure new columns for bills
     const string sql2 = @"ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS items jsonb NOT NULL DEFAULT '[]';
                          ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS time_cost numeric NOT NULL DEFAULT 0;

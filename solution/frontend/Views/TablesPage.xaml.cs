@@ -102,6 +102,95 @@ public sealed partial class TablesPage : Page
         item.Tick();
     }
 
+    private async void DiagnosticsMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        
+        try
+        {
+            // Run comprehensive diagnostics
+            var diagnostics = await DiagnoseTableIssuesAsync(item.Label);
+            var diagnosticsDialog = new ContentDialog
+            {
+                Title = $"Table Diagnostics - {item.Label}",
+                Content = new ScrollViewer
+                {
+                    Content = new TextBlock
+                    {
+                        Text = diagnostics,
+                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                        FontSize = 12,
+                        TextWrapping = TextWrapping.Wrap
+                    },
+                    MaxHeight = 500
+                },
+                PrimaryButtonText = "Copy to Clipboard",
+                SecondaryButtonText = "Refresh Data",
+                CloseButtonText = "Close",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
+            };
+            var choice = await diagnosticsDialog.ShowAsync();
+            if (choice == ContentDialogResult.Primary)
+            {
+                // Copy diagnostics to clipboard
+                var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                dataPackage.SetText(diagnostics);
+                Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
+                
+                await new ContentDialog
+                {
+                    Title = "Copied",
+                    Content = "Diagnostics copied to clipboard.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                }.ShowAsync();
+            }
+            else if (choice == ContentDialogResult.Secondary)
+            {
+                // Refresh data and run diagnostics again
+                await RefreshFromStoreAsync();
+                var refreshedDiagnostics = await DiagnoseTableIssuesAsync(item.Label);
+                var refreshedDialog = new ContentDialog
+                {
+                    Title = $"Table Diagnostics - {item.Label} (Refreshed)",
+                    Content = new ScrollViewer
+                    {
+                        Content = new TextBlock
+                        {
+                            Text = refreshedDiagnostics,
+                            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                            FontSize = 12,
+                            TextWrapping = TextWrapping.Wrap
+                        },
+                        MaxHeight = 500
+                    },
+                    PrimaryButtonText = "Copy to Clipboard",
+                    CloseButtonText = "Close",
+                    DefaultButton = ContentDialogButton.Close,
+                    XamlRoot = this.XamlRoot
+                };
+                var refreshChoice = await refreshedDialog.ShowAsync();
+                if (refreshChoice == ContentDialogResult.Primary)
+                {
+                    var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                    dataPackage.SetText(refreshedDiagnostics);
+                    Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await new ContentDialog
+            {
+                Title = "Diagnostics Error",
+                Content = $"Failed to run diagnostics: {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+        }
+    }
+
     private async void MoveMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
@@ -277,8 +366,8 @@ public class AddItemRow : INotifyPropertyChanged
     {
         FilteredBilliardTables.Clear();
         FilteredBarTables.Clear();
-        string mode = (FilterCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All";
-        bool include(TableItem t) => mode == "All" || (mode == "Available" && !t.Occupied) || (mode == "Occupied" && t.Occupied);
+        string mode = (FilterCombo.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All Tables";
+        bool include(TableItem t) => mode == "All Tables" || (mode == "Available Only" && !t.Occupied) || (mode == "Occupied Only" && t.Occupied);
         foreach (var t in BilliardTables) if (include(t)) FilteredBilliardTables.Add(t);
         foreach (var t in BarTables) if (include(t)) FilteredBarTables.Add(t);
         UpdateStatus();
@@ -318,6 +407,10 @@ public class AddItemRow : INotifyPropertyChanged
         try
         {
             foreach (var t in FilteredBilliardTables)
+            {
+                t.Tick();
+            }
+            foreach (var t in FilteredBarTables)
             {
                 t.Tick();
             }
@@ -401,17 +494,373 @@ public class AddItemRow : INotifyPropertyChanged
         catch { }
     }
 
+    // Comprehensive diagnostic method for table management issues
+    private async Task<string> DiagnoseTableIssuesAsync(string tableLabel)
+    {
+        var diagnostics = new System.Text.StringBuilder();
+        diagnostics.AppendLine($"=== Table Diagnostics for '{tableLabel}' ===");
+        diagnostics.AppendLine($"Timestamp: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        diagnostics.AppendLine();
+
+        try
+        {
+            // Check local table state
+            var localTable = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == tableLabel);
+            if (localTable != null)
+            {
+                diagnostics.AppendLine("Local Table State:");
+                diagnostics.AppendLine($"  Label: {localTable.Label}");
+                diagnostics.AppendLine($"  Occupied: {localTable.Occupied}");
+                diagnostics.AppendLine($"  StartTime: {localTable.StartTime}");
+                diagnostics.AppendLine($"  Server: {localTable.Server}");
+                diagnostics.AppendLine($"  OrderId: {localTable.OrderId}");
+                diagnostics.AppendLine($"  ThresholdMinutes: {localTable.ThresholdMinutes}");
+            }
+            else
+            {
+                diagnostics.AppendLine("Local Table State: NOT FOUND");
+            }
+            diagnostics.AppendLine();
+
+            // Check API connectivity
+            diagnostics.AppendLine("API Connectivity:");
+            diagnostics.AppendLine($"  TablesApi BaseUrl: {_repo.SourceLabel}");
+            diagnostics.AppendLine($"  OrdersApi Available: {App.OrdersApi != null}");
+            diagnostics.AppendLine();
+
+            // Check active sessions
+            try
+            {
+                var (sessionId, billingId) = await _repo.GetActiveSessionForTableAsync(tableLabel);
+                diagnostics.AppendLine("Active Session Check:");
+                diagnostics.AppendLine($"  SessionId: {sessionId}");
+                diagnostics.AppendLine($"  BillingId: {billingId}");
+                
+                // Additional detailed check
+                var allActiveSessions = await _repo.GetActiveSessionsAsync();
+                diagnostics.AppendLine($"  Total Active Sessions in API: {allActiveSessions.Count}");
+                foreach (var session in allActiveSessions)
+                {
+                    diagnostics.AppendLine($"    - Table: '{session.TableId}', SessionId: {session.SessionId}, BillingId: {session.BillingId}");
+                }
+                diagnostics.AppendLine();
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AppendLine($"Active Session Check: ERROR - {ex.Message}");
+                diagnostics.AppendLine();
+            }
+
+            // Check open orders
+            try
+            {
+                var ordersSvc = App.OrdersApi;
+                if (ordersSvc != null)
+                {
+                    var (sessionId, _) = await _repo.GetActiveSessionForTableAsync(tableLabel);
+                    if (sessionId.HasValue)
+                    {
+                        var orders = await ordersSvc.GetOrdersBySessionAsync(sessionId.Value, includeHistory: false);
+                        var openOrders = orders.Where(o => o.Status == "open").ToList();
+                        diagnostics.AppendLine("Open Orders Check:");
+                        diagnostics.AppendLine($"  Total Orders: {orders.Count}");
+                        diagnostics.AppendLine($"  Open Orders: {openOrders.Count}");
+                        foreach (var order in openOrders)
+                        {
+                            diagnostics.AppendLine($"    Order {order.Id}: {order.Status} (Total: {order.Total:C2})");
+                        }
+                    }
+                    else
+                    {
+                        diagnostics.AppendLine("Open Orders Check: No active session found");
+                    }
+                }
+                else
+                {
+                    diagnostics.AppendLine("Open Orders Check: OrdersApi not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AppendLine($"Open Orders Check: ERROR - {ex.Message}");
+            }
+            diagnostics.AppendLine();
+
+            // Check database schema
+            try
+            {
+                await _repo.EnsureSchemaAsync();
+                diagnostics.AppendLine("Database Schema: OK");
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AppendLine($"Database Schema: ERROR - {ex.Message}");
+            }
+            diagnostics.AppendLine();
+
+            // Check table status consistency
+            try
+            {
+                var allTables = await _repo.GetAllAsync();
+                var apiTableState = allTables.FirstOrDefault(t => string.Equals(t.Label, tableLabel, StringComparison.OrdinalIgnoreCase));
+                if (apiTableState != null)
+                {
+                    diagnostics.AppendLine("API Table State:");
+                    diagnostics.AppendLine($"  Label: {apiTableState.Label}");
+                    diagnostics.AppendLine($"  Occupied: {apiTableState.Occupied}");
+                    diagnostics.AppendLine($"  StartTime: {apiTableState.StartTime}");
+                    diagnostics.AppendLine($"  Server: {apiTableState.Server}");
+                    diagnostics.AppendLine($"  OrderId: {apiTableState.OrderId}");
+                    
+                    // Compare with local state
+                    if (localTable != null)
+                    {
+                        diagnostics.AppendLine("State Comparison:");
+                        diagnostics.AppendLine($"  Occupied Match: {localTable.Occupied == apiTableState.Occupied}");
+                        diagnostics.AppendLine($"  StartTime Match: {localTable.StartTime == apiTableState.StartTime}");
+                        diagnostics.AppendLine($"  Server Match: {localTable.Server == apiTableState.Server}");
+                    }
+                }
+                else
+                {
+                    diagnostics.AppendLine("API Table State: NOT FOUND");
+                }
+            }
+            catch (Exception ex)
+            {
+                diagnostics.AppendLine($"API Table State Check: ERROR - {ex.Message}");
+            }
+            diagnostics.AppendLine();
+
+            // Provide recovery recommendations
+            diagnostics.AppendLine("=== RECOVERY RECOMMENDATIONS ===");
+            if (localTable != null)
+            {
+                var (sessionId, billingId) = await _repo.GetActiveSessionForTableAsync(tableLabel);
+                if (localTable.Occupied && !sessionId.HasValue)
+                {
+                    diagnostics.AppendLine("🚨 ISSUE DETECTED: Table shows as occupied but no active session found");
+                    diagnostics.AppendLine("📋 RECOMMENDED ACTION: Use automatic session state repair");
+                    diagnostics.AppendLine("💡 EXPLANATION: This happens when:");
+                    diagnostics.AppendLine("   • Session was started but session tracking failed");
+                    diagnostics.AppendLine("   • Database connectivity issues occurred during session start");
+                    diagnostics.AppendLine("   • Session was manually cleared from database");
+                    diagnostics.AppendLine("   • Race condition between table status and session creation");
+                    diagnostics.AppendLine("   • Time synchronization issues between frontend and backend");
+                    diagnostics.AppendLine();
+                    diagnostics.AppendLine("🔧 AUTOMATIC RECOVERY STEPS:");
+                    diagnostics.AppendLine("   1. Right-click the table → 'Stop Session'");
+                    diagnostics.AppendLine("   2. System will automatically detect the inconsistency");
+                    diagnostics.AppendLine("   3. Choose 'Repair' when prompted for automatic recovery");
+                    diagnostics.AppendLine("   4. System will attempt to recreate the session");
+                    diagnostics.AppendLine("   5. If recreation fails, table will be safely freed");
+                    diagnostics.AppendLine("   6. Table will be available for new sessions");
+                    diagnostics.AppendLine();
+                    diagnostics.AppendLine("✅ BENEFITS:");
+                    diagnostics.AppendLine("   • No manual intervention required");
+                    diagnostics.AppendLine("   • Maintains session integrity");
+                    diagnostics.AppendLine("   • Automatic retry with proper session handling");
+                    diagnostics.AppendLine("   • Detailed diagnostics if repair fails");
+                }
+                else if (localTable.Occupied && sessionId.HasValue)
+                {
+                    diagnostics.AppendLine("✅ STATUS: Table and session are properly synchronized");
+                    diagnostics.AppendLine("📋 ACTION: Normal stop session should work");
+                }
+                else if (!localTable.Occupied)
+                {
+                    diagnostics.AppendLine("✅ STATUS: Table is available");
+                    diagnostics.AppendLine("📋 ACTION: No recovery needed");
+                }
+            }
+            diagnostics.AppendLine();
+
+        }
+        catch (Exception ex)
+        {
+            diagnostics.AppendLine($"Diagnostic Error: {ex.Message}");
+        }
+
+        return diagnostics.ToString();
+    }
+
+    // Session State Management - Robust synchronization
+    private async Task<bool> EnsureSessionStateConsistencyAsync(string tableLabel)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Starting consistency check for '{tableLabel}'");
+            
+            // Step 1: Get current table state
+            var allTables = await _repo.GetAllAsync();
+            var tableState = allTables.FirstOrDefault(t => string.Equals(t.Label, tableLabel, StringComparison.OrdinalIgnoreCase));
+            
+            if (tableState == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Table '{tableLabel}' not found in API");
+                return false;
+            }
+            
+            // Step 2: Get active session for this table
+            var (sessionId, billingId) = await _repo.GetActiveSessionForTableAsync(tableLabel);
+            
+            // Step 3: Check consistency
+            bool isConsistent = true;
+            string issueDescription = "";
+            
+            if (tableState.Occupied && !sessionId.HasValue)
+            {
+                isConsistent = false;
+                issueDescription = "Table marked as occupied but no active session found";
+            }
+            else if (!tableState.Occupied && sessionId.HasValue)
+            {
+                isConsistent = false;
+                issueDescription = "Table marked as available but active session exists";
+            }
+            
+            if (!isConsistent)
+            {
+                System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Inconsistency detected for '{tableLabel}': {issueDescription}");
+                
+                // Step 4: Attempt automatic repair
+                bool repairSuccess = await AttemptSessionStateRepairAsync(tableLabel, tableState, sessionId, issueDescription);
+                if (repairSuccess)
+                {
+                    System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Successfully repaired state for '{tableLabel}'");
+                    return true;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Failed to repair state for '{tableLabel}'");
+                    return false;
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: State is consistent for '{tableLabel}'");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Error for '{tableLabel}': {ex.Message}");
+            return false;
+        }
+    }
+    
+    private async Task<bool> AttemptSessionStateRepairAsync(string tableLabel, TableStatusDto tableState, Guid? sessionId, string issueDescription)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Attempting repair for '{tableLabel}' - {issueDescription}");
+            
+            if (tableState.Occupied && !sessionId.HasValue)
+            {
+                // Case 1: Table shows occupied but no session - try to recreate session
+                System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Attempting to recreate session for '{tableLabel}'");
+                
+                // Get server info from table state
+                var serverName = tableState.Server ?? "SYSTEM";
+                var serverId = "SYSTEM"; // Default server ID
+                
+                // Attempt to start session again
+                var (ok, newSessionId, newBillingId, message) = await _repo.StartSessionAsync(tableLabel, serverId, serverName);
+                if (ok)
+                {
+                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Successfully recreated session for '{tableLabel}' - SessionId: {newSessionId}");
+                    return true;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Failed to recreate session for '{tableLabel}': {message}");
+                    
+                    // If session recreation fails, we need to free the table
+                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Freeing table '{tableLabel}' as fallback");
+                    await _repo.UpsertAsync(new TableStatusDto 
+                    { 
+                        Label = tableLabel, 
+                        Type = tableState.Type, 
+                        Occupied = false, 
+                        StartTime = null, 
+                        Server = null,
+                        OrderId = null
+                    });
+                    return true;
+                }
+            }
+            else if (!tableState.Occupied && sessionId.HasValue)
+            {
+                // Case 2: Table shows available but session exists - clean up orphaned session
+                System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Cleaning up orphaned session for '{tableLabel}'");
+                
+                // This is a backend issue - the session should be cleaned up by the API
+                // For now, we'll mark the table as occupied to match the session
+                await _repo.UpsertAsync(new TableStatusDto 
+                { 
+                    Label = tableLabel, 
+                    Type = tableState.Type, 
+                    Occupied = true, 
+                    StartTime = tableState.StartTime ?? DateTimeOffset.UtcNow, 
+                    Server = tableState.Server ?? "SYSTEM",
+                    OrderId = tableState.OrderId
+                });
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Error repairing '{tableLabel}': {ex.Message}");
+            return false;
+        }
+    }
+
     // Context menu handlers
     private async void StartMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
-        // Prompt for server
+        
+        // Step 1: Check if table is already occupied
+        if (item.Occupied)
+        {
+            await new ContentDialog
+            {
+                Title = "Table Already Occupied",
+                Content = $"Table '{item.Label}' is already occupied. Please stop the current session before starting a new one.",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+            return;
+        }
+        
+        // Step 2: Ensure session state consistency before starting
+        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Ensuring session state consistency for table '{item.Label}'");
+        var consistencyResult = await EnsureSessionStateConsistencyAsync(item.Label);
+        if (!consistencyResult)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Session state consistency check failed for '{item.Label}'");
+            await new ContentDialog
+            {
+                Title = "Session State Issue",
+                Content = $"Unable to resolve session state inconsistency for table '{item.Label}'.\n\n" +
+                         $"Please run diagnostics to get detailed information about the issue.",
+                PrimaryButtonText = "Run Diagnostics",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+            return;
+        }
+        
+        // Step 3: Prompt for server
         var (ok, user) = await PromptSelectEmployeeAsync();
         if (!ok || user == null) return;
 
+        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Starting session for table '{item.Label}' with server '{user.Username}'");
         var startResult = await _repo.StartSessionAsync(item.Label, user.UserId ?? string.Empty, user.Username ?? string.Empty);
         if (!startResult.ok)
         {
+            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Failed to start session for table '{item.Label}': {startResult.message}");
             await new ContentDialog
             {
                 Title = "Unable to start",
@@ -420,6 +869,26 @@ public class AddItemRow : INotifyPropertyChanged
                 XamlRoot = this.XamlRoot
             }.ShowAsync();
             return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Successfully started session for table '{item.Label}' - SessionId: {startResult.sessionId}");
+        
+        // Step 4: Verify session was created properly
+        var (verifySessionId, verifyBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
+        if (!verifySessionId.HasValue)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: WARNING - Session not found after start for table '{item.Label}'");
+            await new ContentDialog
+            {
+                Title = "Session Warning",
+                Content = $"Session started for table '{item.Label}' but session tracking may have failed.\n\n" +
+                         $"The table is marked as occupied but no session record was found.\n\n" +
+                         $"This may cause issues when trying to stop the session.",
+                PrimaryButtonText = "Run Diagnostics",
+                CloseButtonText = "OK",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
         }
         // Set context and auto-create/find order
         try
@@ -457,92 +926,241 @@ public class AddItemRow : INotifyPropertyChanged
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
         
-        // First, close any open orders for this table's session
+        // Show progress dialog
+        var progressDialog = new ContentDialog
+        {
+            Title = "Stopping Session",
+            Content = $"Stopping session for table {item.Label}...",
+            CloseButtonText = "Cancel",
+            XamlRoot = this.XamlRoot
+        };
+        progressDialog.ShowAsync(); // Don't await, just show
+        
         try
         {
-            var ordersSvc = App.OrdersApi;
-            if (ordersSvc != null)
+            // Step 1: Validate table state
+            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Starting stop process for table '{item.Label}'");
+            
+            if (!item.Occupied)
             {
-                // Get the current session ID for this table
-                var (activeSessionId, activeBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
-                if (activeSessionId.HasValue)
-                {
-                    // Get all open orders for this session
-                    var openOrders = await ordersSvc.GetOrdersBySessionAsync(activeSessionId.Value, includeHistory: false);
-                    var ordersToClose = openOrders.Where(o => o.Status == "open").ToList();
-                    
-                    // Close each open order
-                    foreach (var order in ordersToClose)
-                    {
-                        try
-                        {
-                            await ordersSvc.CloseOrderAsync(order.Id);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log the error but continue closing other orders
-                            System.Diagnostics.Debug.WriteLine($"Failed to close order {order.Id}: {ex.Message}");
-                        }
-                    }
-                    
-                    if (ordersToClose.Count > 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Closed {ordersToClose.Count} orders for session {activeSessionId.Value}");
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log the error but continue with table stopping
-            System.Diagnostics.Debug.WriteLine($"Error closing orders: {ex.Message}");
-        }
-        
-        // Now proceed with normal table stopping
-        var stopResult = await _repo.StopSessionAsync(item.Label);
-        if (!stopResult.ok)
-        {
-            // Offer recovery if there is no active session in DB
-            bool canRecover = (stopResult.message ?? string.Empty).IndexOf("no active session", StringComparison.OrdinalIgnoreCase) >= 0;
-            if (canRecover)
-            {
-                var dlg = new ContentDialog
-                {
-                    Title = "No active session",
-                    Content = "The table shows as occupied but there is no active session. Force free this table?",
-                    PrimaryButtonText = "Force Free",
-                    CloseButtonText = "Cancel",
-                    DefaultButton = ContentDialogButton.Primary,
-                    XamlRoot = this.XamlRoot
-                };
-                var choice = await dlg.ShowAsync();
-                if (choice == ContentDialogResult.Primary)
-                {
-                    var freed = await _repo.ForceFreeAsync(item.Label);
-                    if (!freed)
-                    {
-                        await new ContentDialog { Title = "Failed", Content = "Could not force free this table.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
-                    }
-                    await RefreshFromStoreAsync();
-                }
-            }
-            else
-            {
+                progressDialog.Hide();
                 await new ContentDialog
                 {
-                    Title = "Unable to stop",
-                    Content = stopResult.message,
+                    Title = "Table Not Occupied",
+                    Content = $"Table {item.Label} is not currently occupied.",
                     CloseButtonText = "OK",
                     XamlRoot = this.XamlRoot
                 }.ShowAsync();
+                return;
             }
-            return;
-        }
+            
+            // Step 2: Close any open orders for this table's session
+            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Closing open orders for table '{item.Label}'");
+            var ordersClosed = 0;
+            try
+            {
+                var ordersSvc = App.OrdersApi;
+                if (ordersSvc != null)
+                {
+                    // Get the current session ID for this table
+                    var (activeSessionId, activeBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
+                    System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Active session for '{item.Label}': SessionId={activeSessionId}, BillingId={activeBillingId}");
+                    
+                    if (activeSessionId.HasValue)
+                    {
+                        // Get all open orders for this session
+                        var openOrders = await ordersSvc.GetOrdersBySessionAsync(activeSessionId.Value, includeHistory: false);
+                        var ordersToClose = openOrders.Where(o => o.Status == "open").ToList();
+                        
+                        System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Found {ordersToClose.Count} open orders to close");
+                        
+                        // Close each open order
+                        foreach (var order in ordersToClose)
+                        {
+                            try
+                            {
+                                await ordersSvc.CloseOrderAsync(order.Id);
+                                ordersClosed++;
+                                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully closed order {order.Id}");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Failed to close order {order.Id}: {ex.Message}");
+                            }
+                        }
+                        
+                        if (ordersClosed > 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Closed {ordersClosed} orders for session {activeSessionId.Value}");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"StopMenu_Click: No active session found for table '{item.Label}'");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"StopMenu_Click: OrdersApi service is not available");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Error closing orders: {ex.Message}");
+                // Continue with table stopping even if order closing fails
+            }
+            
+               // Step 3: Ensure session state consistency before stopping
+               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Ensuring session state consistency for table '{item.Label}'");
+               var consistencyResult = await EnsureSessionStateConsistencyAsync(item.Label);
+               if (!consistencyResult)
+               {
+                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Session state consistency check failed for '{item.Label}'");
+                   progressDialog.Hide();
+                   
+                   await new ContentDialog
+                   {
+                       Title = "Session State Issue",
+                       Content = $"Unable to resolve session state inconsistency for table '{item.Label}'.\n\n" +
+                                $"Please run diagnostics to get detailed information about the issue.",
+                       PrimaryButtonText = "Run Diagnostics",
+                       CloseButtonText = "Cancel",
+                       DefaultButton = ContentDialogButton.Primary,
+                       XamlRoot = this.XamlRoot
+                   }.ShowAsync();
+                   return;
+               }
 
-        await RefreshFromStoreAsync();
+               // Step 4: Stop the table session
+               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Calling StopSessionAsync for table '{item.Label}'");
+               var stopResult = await _repo.StopSessionAsync(item.Label);
 
-        if (stopResult.bill != null)
-        {
+               progressDialog.Hide(); // Hide progress dialog
+
+               if (!stopResult.ok)
+               {
+                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: StopSessionAsync failed for '{item.Label}': {stopResult.message}");
+
+                   // Enhanced error handling with automatic recovery
+                   var errorMessage = stopResult.message ?? "Unknown error occurred";
+                   var canRecover = errorMessage.IndexOf("no active session", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  errorMessage.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                  errorMessage.IndexOf("404", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                   if (canRecover)
+                   {
+                       var dlg = new ContentDialog
+                       {
+                           Title = "Automatic Recovery",
+                           Content = $"The table '{item.Label}' shows as occupied but there is no active session in the database.\n\n" +
+                                    $"The system will attempt to automatically repair the session state.\n\n" +
+                                    $"This can happen when:\n" +
+                                    $"• Session tracking failed during start\n" +
+                                    $"• Database connectivity issues occurred\n" +
+                                    $"• Session was manually cleared\n\n" +
+                                    $"Would you like to attempt automatic repair?",
+                           PrimaryButtonText = "Repair",
+                           CloseButtonText = "Cancel",
+                           DefaultButton = ContentDialogButton.Primary,
+                           XamlRoot = this.XamlRoot
+                       };
+                       var choice = await dlg.ShowAsync();
+                       if (choice == ContentDialogResult.Primary)
+                       {
+                           System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Attempting automatic repair for table '{item.Label}'");
+                           
+                           // Try to repair the session state
+                           var repairResult = await EnsureSessionStateConsistencyAsync(item.Label);
+                           if (repairResult)
+                           {
+                               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully repaired session state for '{item.Label}'");
+                               
+                               // Try stopping again after repair
+                               var retryStopResult = await _repo.StopSessionAsync(item.Label);
+                               if (retryStopResult.ok)
+                               {
+                                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully stopped session after repair for '{item.Label}'");
+                                   await RefreshFromStoreAsync();
+                                   return;
+                               }
+                           }
+                           
+                           // If repair failed, show diagnostics option
+                           await new ContentDialog
+                           {
+                               Title = "Repair Failed",
+                               Content = $"Could not automatically repair the session state for table '{item.Label}'.\n\n" +
+                                        $"Please run diagnostics to get detailed information about the issue.",
+                               PrimaryButtonText = "Run Diagnostics",
+                               CloseButtonText = "OK",
+                               DefaultButton = ContentDialogButton.Primary,
+                               XamlRoot = this.XamlRoot
+                           }.ShowAsync();
+                       }
+                   }
+                else
+                {
+                    // Show detailed error information
+                    var errorDialog = new ContentDialog
+                    {
+                        Title = "Unable to Stop Session",
+                        Content = $"Failed to stop session for table '{item.Label}'.\n\n" +
+                                 $"Error: {errorMessage}\n\n" +
+                                 $"Possible causes:\n" +
+                                 $"• Database connection issues\n" +
+                                 $"• API service unavailable\n" +
+                                 $"• Network connectivity problems\n" +
+                                 $"• Server-side processing error\n\n" +
+                                 $"Please check your connection and try again.",
+                        PrimaryButtonText = "Run Diagnostics",
+                        CloseButtonText = "OK",
+                        DefaultButton = ContentDialogButton.Close,
+                        XamlRoot = this.XamlRoot
+                    };
+                    var errorChoice = await errorDialog.ShowAsync();
+                    if (errorChoice == ContentDialogResult.Primary)
+                    {
+                        // Run comprehensive diagnostics
+                        var diagnostics = await DiagnoseTableIssuesAsync(item.Label);
+                        var diagnosticsDialog = new ContentDialog
+                        {
+                            Title = "Table Diagnostics",
+                            Content = new ScrollViewer
+                            {
+                                Content = new TextBlock
+                                {
+                                    Text = diagnostics,
+                                    FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                                    FontSize = 12,
+                                    TextWrapping = TextWrapping.Wrap
+                                },
+                                MaxHeight = 400
+                            },
+                            PrimaryButtonText = "Copy to Clipboard",
+                            CloseButtonText = "Close",
+                            DefaultButton = ContentDialogButton.Close,
+                            XamlRoot = this.XamlRoot
+                        };
+                        var diagChoice = await diagnosticsDialog.ShowAsync();
+                        if (diagChoice == ContentDialogResult.Primary)
+                        {
+                            // Copy diagnostics to clipboard
+                            var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                            dataPackage.SetText(diagnostics);
+                            Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
+                        }
+                    }
+                }
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully stopped session for table '{item.Label}'");
+            
+            // Step 4: Refresh the UI
+            await RefreshFromStoreAsync();
+
+            if (stopResult.bill != null)
+            {
             var bill = stopResult.bill;
             var itemsText = bill.Items != null && bill.Items.Count > 0
                 ? ("\nItems:\n" + string.Join("\n", bill.Items.Select(i => $" - {i.name} x{i.quantity} @ {i.price:C2}")))
@@ -594,6 +1212,19 @@ public class AddItemRow : INotifyPropertyChanged
                     await ShowSafeContentDialog("Print Error", $"Failed to print receipt: {ex.Message}", "Close");
                 }
             }
+            }
+        }
+        catch (Exception ex)
+        {
+            progressDialog.Hide();
+            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Unexpected error for table '{item.Label}': {ex.Message}");
+            await new ContentDialog
+            {
+                Title = "Unexpected Error",
+                Content = $"An unexpected error occurred while stopping table '{item.Label}':\n\n{ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
         }
     }
 

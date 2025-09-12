@@ -1,0 +1,292 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.OrdersManagementPage"
+    x:Name="Root"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:MagiDesk.Frontend.ViewModels"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Converters -->
+        <converters:StringToBrushConverter x:Key="StringToBrushConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+
+        <!-- Table Group Card Style -->
+        <Style x:Key="TableGroupCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="8,4"/>
+        </Style>
+
+        <!-- Order Card Style -->
+        <Style x:Key="OrderCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
+
+        <!-- Status Badge Style -->
+        <Style x:Key="StatusBadgeStyle" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Button Styles -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="SuccessButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SuccessBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <Style x:Key="WarningButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Header Text Style -->
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Label Text Style -->
+        <Style x:Key="LabelTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        </Style>
+
+        <!-- Value Text Style -->
+        <Style x:Key="ValueTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{StaticResource SurfaceBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16" Margin="0,0,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Orders by Table" FontSize="24" FontWeight="Bold" 
+                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Text="View and manage orders grouped by table" FontSize="14" 
+                             Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <Button Content="Refresh" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Orders by Table -->
+        <ScrollViewer Grid.Row="1" VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="8" Padding="8">
+                <ItemsControl ItemsSource="{Binding TableGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource TableGroupCardStyle}">
+                                <StackPanel>
+                                    <!-- Table Header -->
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding TableLabel}" FontSize="20" FontWeight="Bold"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding OrderCountText}" FontSize="14"
+                                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Margin="16,0">
+                                            <TextBlock Text="Revenue" FontSize="12" HorizontalAlignment="Center"
+                                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding TotalRevenueFormatted}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        </StackPanel>
+
+                                        <Border Grid.Column="2" Background="{Binding HasActiveOrders, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                CornerRadius="8" Padding="8,4">
+                                            <TextBlock Text="Active" FontSize="12" FontWeight="SemiBold" Foreground="White"
+                                                     Visibility="{Binding HasActiveOrders, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Orders List -->
+                                    <ItemsControl ItemsSource="{Binding Orders}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Style="{StaticResource OrderCardStyle}">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto"/>
+                                                            <RowDefinition Height="Auto"/>
+                                                        </Grid.RowDefinitions>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <!-- Order Info -->
+                                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                                            <TextBlock Text="{Binding OrderId}" FontSize="16" FontWeight="SemiBold"
+                                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                            <TextBlock Text="{Binding ServerName}" FontSize="12"
+                                                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                        </StackPanel>
+
+                                                        <!-- Order Status -->
+                                                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                                            <Border Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}"
+                                                                    CornerRadius="6" Padding="6,3">
+                                                                <TextBlock Text="{Binding Status}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                                            </Border>
+                                                            <Border Background="{Binding DeliveryStatusColor, Converter={StaticResource StringToBrushConverter}}"
+                                                                    CornerRadius="6" Padding="6,3">
+                                                                <TextBlock Text="{Binding DeliveryStatus}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                                            </Border>
+                                                        </StackPanel>
+
+                                                        <!-- Order Details and Actions -->
+                                                        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel Grid.Column="0">
+                                                                <TextBlock Text="Items" Style="{StaticResource LabelTextStyle}"/>
+                                                                <TextBlock Text="{Binding ItemCount}" Style="{StaticResource ValueTextStyle}"/>
+                                                            </StackPanel>
+
+                                                            <StackPanel Grid.Column="1">
+                                                                <TextBlock Text="Total" Style="{StaticResource LabelTextStyle}"/>
+                                                                <TextBlock Text="{Binding TotalFormatted}" Style="{StaticResource ValueTextStyle}" FontWeight="SemiBold"/>
+                                                            </StackPanel>
+
+                                                            <StackPanel Grid.Column="2">
+                                                                <TextBlock Text="Time" Style="{StaticResource LabelTextStyle}"/>
+                                                                <TextBlock Text="{Binding CreatedAtFormatted}" Style="{StaticResource ValueTextStyle}"/>
+                                                            </StackPanel>
+
+                                                            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                                                                <Button Content="View" Style="{StaticResource SecondaryButtonStyle}"
+                                                                        Click="ViewOrder_Click" Tag="{Binding}"/>
+                                                                <Button Content="Waiting" Style="{StaticResource WarningButtonStyle}"
+                                                                        Click="MarkWaiting_Click" Tag="{Binding}"/>
+                                                                <Button Content="Delivered" Style="{StaticResource SuccessButtonStyle}"
+                                                                        Click="MarkDelivered_Click" Tag="{Binding}"/>
+                                                                <Button Content="Close" Style="{StaticResource SecondaryButtonStyle}"
+                                                                        Click="CloseOrder_Click" Tag="{Binding}"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="3" Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressRing IsActive="True" Width="40" Height="40" 
+                            Foreground="{StaticResource PrimaryBrush}"/>
+                <TextBlock Text="Loading orders..." Foreground="White" 
+                         Margin="0,16,0,0" FontSize="16"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Error Message -->
+        <InfoBar Grid.Row="2" x:Name="ErrorInfoBar"
+               IsOpen="{Binding HasError}"
+               Message="{Binding ErrorMessage}"
+               Severity="Error"
+               Margin="8"/>
+    </Grid>
+</Page>

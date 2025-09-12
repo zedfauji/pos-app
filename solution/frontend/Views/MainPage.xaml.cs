@@ -76,6 +76,13 @@ namespace MagiDesk.Frontend.Views
         {
             try
             {
+                // Ensure navigation pane is always visible and anchored
+                NavView.IsPaneOpen = true;
+                NavView.PaneDisplayMode = Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode.Left;
+                
+                // Force refresh the navigation pane layout
+                NavView.UpdateLayout();
+                
                 // ReceiptService is already initialized in constructor
                 // Just do the initial setup here
                 
@@ -101,12 +108,12 @@ namespace MagiDesk.Frontend.Views
                 {
                     NavView.SelectedItem = NavView.MenuItems[0];
                 }
-                Log.Info("Navigating to DashboardPage on load");
+                Log.Info("Navigating to ModernDashboardPage on load");
 #if XAML_ONLY_MAIN
                 // In isolation builds, avoid referencing other pages
                 // Optionally, navigate to self-hosted placeholder
 #else
-                ContentFrame.Navigate(typeof(DashboardPage));
+                ContentFrame.Navigate(typeof(ModernDashboardPage));
 #endif
             }
             catch (Exception ex)
@@ -193,7 +200,7 @@ namespace MagiDesk.Frontend.Views
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation
 #else
-                            ContentFrame.Navigate(typeof(DashboardPage));
+                            ContentFrame.Navigate(typeof(ModernDashboardPage));
 #endif
                             break;
                         case "VendorOrdersPage":
@@ -218,6 +225,12 @@ namespace MagiDesk.Frontend.Views
 #if XAML_ONLY_MAIN
 #else
                             ContentFrame.Navigate(typeof(TablesPage));
+#endif
+                            break;
+                        case "OrdersManagementPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(OrdersManagementPage));
 #endif
                             break;
                         case "OrdersPage":

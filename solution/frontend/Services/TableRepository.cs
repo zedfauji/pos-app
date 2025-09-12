@@ -358,7 +358,10 @@ public class TableRepository
             if (!res.IsSuccessStatusCode)
             {
                 var body = await res.Content.ReadAsStringAsync(ct);
-                return (false, null, body);
+                var errorMessage = string.IsNullOrWhiteSpace(body) 
+                    ? $"HTTP {res.StatusCode}: {res.ReasonPhrase}" 
+                    : body;
+                return (false, null, errorMessage);
             }
             var bill = await res.Content.ReadFromJsonAsync<BillResult>(cancellationToken: ct);
             return (true, bill, "");

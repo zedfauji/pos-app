@@ -69,7 +69,18 @@ namespace MagiDesk.Frontend
             // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
             // This prevents race conditions with InitializeApiAsync
             // Note: ReceiptService will be properly initialized in MainPage constructor
-            ReceiptService = new Services.ReceiptService(null, null);
+            try
+            {
+                var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<Services.ReceiptService>();
+                var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+                ReceiptService = new Services.ReceiptService(logger, config);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ReceiptService initialization failed: {ex.Message}");
+                // Fallback to null - will be properly initialized later
+                ReceiptService = null;
+            }
             
             _ = InitializeApiAsync();
             ApplyThemeFromConfig();
@@ -129,6 +140,9 @@ namespace MagiDesk.Frontend
             window ??= new Window();
             window.Title = "MagiDesk";
             MainWindow = window;
+            
+            // Set minimum window size to ensure navigation pane is visible
+            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
             
             // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
             // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors

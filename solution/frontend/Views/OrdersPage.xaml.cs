@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
+using MagiDesk.Frontend.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -188,23 +189,68 @@ namespace MagiDesk.Frontend.Views
             try
             {
                 var orderApi = App.OrdersApi;
-                if (orderApi != null && Vm.OrderId > 0)
+                if (orderApi == null)
                 {
-                    var itemDeliveries = new List<OrderApiService.ItemDeliveryDto>
-                    {
-                        new OrderApiService.ItemDeliveryDto(line.OrderItemId, line.Quantity)
-                    };
+                    await ShowErrorDialog("Orders API is not available. Please restart the application.");
+                    return;
+                }
+
+                if (Vm.OrderId <= 0)
+                {
+                    await ShowErrorDialog("No order selected. Please load an order first.");
+                    return;
+                }
+
+                // Show confirmation dialog
+                var confirmDialog = new ContentDialog()
+                {
+                    Title = "Mark Item Delivered",
+                    Content = $"Are you sure you want to mark '{line.Name}' (Qty: {line.Quantity}) as delivered?",
+                    PrimaryButtonText = "Yes, Mark Delivered",
+                    CloseButtonText = "Cancel",
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await confirmDialog.ShowAsync();
+                if (result != ContentDialogResult.Primary)
+                    return;
+
+                // Show loading indicator
+                // Vm.IsLoading = true; // This property has a private setter
+
+                var itemDeliveries = new List<OrderApiService.ItemDeliveryDto>
+                {
+                    new OrderApiService.ItemDeliveryDto(line.OrderItemId, line.Quantity)
+                };
+                
+                var updatedOrder = await orderApi.MarkItemsDeliveredAsync(Vm.OrderId, itemDeliveries);
+                if (updatedOrder != null)
+                {
+                    await Vm.InitializeAsync(Vm.OrderId);
                     
-                    var updatedOrder = await orderApi.MarkItemsDeliveredAsync(Vm.OrderId, itemDeliveries);
-                    if (updatedOrder != null)
+                    // Show success message
+                    var successDialog = new ContentDialog()
                     {
-                        await Vm.InitializeAsync(Vm.OrderId);
-                    }
+                        Title = "Success",
+                        Content = $"Item '{line.Name}' has been marked as delivered.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    };
+                    await successDialog.ShowAsync();
+                }
+                else
+                {
+                    await ShowErrorDialog("Failed to mark item as delivered. Please try again.");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error marking item delivered: {ex.Message}");
+                Log.Error($"Error marking item delivered: {ex.Message}", ex);
+                await ShowErrorDialog($"Error marking item delivered: {ex.Message}");
+            }
+            finally
+            {
+                // Vm.IsLoading = false; // This property has a private setter
             }
         }
     }
@@ -248,22 +294,73 @@ namespace MagiDesk.Frontend.Views
         try
         {
             var orderApi = App.OrdersApi;
-            if (orderApi != null && Vm.OrderId > 0)
+            if (orderApi == null)
             {
-                // Mark all items as fully delivered
-                var itemDeliveries = Vm.Items.Select(item => 
-                    new OrderApiService.ItemDeliveryDto(item.OrderItemId, item.Quantity)).ToList();
+                await ShowErrorDialog("Orders API is not available. Please restart the application.");
+                return;
+            }
+
+            if (Vm.OrderId <= 0)
+            {
+                await ShowErrorDialog("No order selected. Please load an order first.");
+                return;
+            }
+
+            if (Vm.Items.Count == 0)
+            {
+                await ShowErrorDialog("No items in this order to mark as delivered.");
+                return;
+            }
+
+            // Show confirmation dialog
+            var confirmDialog = new ContentDialog()
+            {
+                Title = "Mark All Items Delivered",
+                Content = $"Are you sure you want to mark all {Vm.Items.Count} items in this order as delivered?",
+                PrimaryButtonText = "Yes, Mark All Delivered",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await confirmDialog.ShowAsync();
+            if (result != ContentDialogResult.Primary)
+                return;
+
+            // Show loading indicator
+            // Vm.IsLoading = true; // This property has a private setter
+
+            // Mark all items as fully delivered
+            var itemDeliveries = Vm.Items.Select(item => 
+                new OrderApiService.ItemDeliveryDto(item.OrderItemId, item.Quantity)).ToList();
+            
+            var updatedOrder = await orderApi.MarkItemsDeliveredAsync(Vm.OrderId, itemDeliveries);
+            if (updatedOrder != null)
+            {
+                await Vm.InitializeAsync(Vm.OrderId);
                 
-                var updatedOrder = await orderApi.MarkItemsDeliveredAsync(Vm.OrderId, itemDeliveries);
-                if (updatedOrder != null)
+                // Show success message
+                var successDialog = new ContentDialog()
                 {
-                    await Vm.InitializeAsync(Vm.OrderId);
-                }
+                    Title = "Success",
+                    Content = $"All items in order #{Vm.OrderId} have been marked as delivered.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await successDialog.ShowAsync();
+            }
+            else
+            {
+                await ShowErrorDialog("Failed to mark order as delivered. Please try again.");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error marking order as delivered: {ex.Message}");
+            Log.Error($"Error marking order as delivered: {ex.Message}", ex);
+            await ShowErrorDialog($"Error marking order as delivered: {ex.Message}");
+        }
+        finally
+        {
+            // Vm.IsLoading = false; // This property has a private setter
         }
     }
 
@@ -282,6 +379,18 @@ namespace MagiDesk.Frontend.Views
         {
             System.Diagnostics.Debug.WriteLine($"Error closing order: {ex.Message}");
         }
+    }
+
+    private async Task ShowErrorDialog(string message)
+    {
+        var errorDialog = new ContentDialog()
+        {
+            Title = "Error",
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await errorDialog.ShowAsync();
     }
 }
 }

@@ -206,6 +206,7 @@ public sealed class OrderService : IOrderService
             if (allItemsDelivered)
             {
                 await _repo.UpdateOrderDeliveryStatusAsync(orderId, "delivered", ct);
+                await _repo.UpdateOrderStatusAsync(orderId, "delivered", ct);
             }
             else
             {

@@ -33,7 +33,10 @@
                         ItemInvoked="NavView_ItemInvoked"
                         IsSettingsVisible="False"
                         IsBackButtonVisible="Auto"
-                        PaneDisplayMode="Left">
+                        PaneDisplayMode="Left"
+                        IsPaneOpen="True"
+                        OpenPaneLength="280"
+                        CompactPaneLength="48">
             <NavigationView.MenuItems>
                 <!-- Always on top -->
                 <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
@@ -41,6 +44,7 @@
 
                 <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
+                <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="List"/>
                 <NavigationViewItem Content="Orders" Tag="OrdersPage" Icon="Link"/>
                 <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
                 <NavigationViewItem Content="Payments" Tag="PaymentPage" Icon="Shop">
@@ -57,7 +61,6 @@
                 <NavigationViewItemHeader Content="Management"/>
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
-                <NavigationViewItem Content="Inventory Management" Tag="InventoryManagementPage" Icon="AllApps"/>
 
                 <NavigationViewItemSeparator/>
 
