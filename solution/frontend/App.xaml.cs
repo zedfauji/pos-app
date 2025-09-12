@@ -43,6 +43,7 @@ namespace MagiDesk.Frontend
         public static Services.ReceiptService? ReceiptService { get; private set; }
         public static Services.SettingsApiService? SettingsApi { get; private set; }
         public static Services.HeartbeatService? HeartbeatService { get; private set; }
+        public static Services.InventorySettingsService? InventorySettingsService { get; private set; }
         public static IServiceProvider? Services { get; private set; }
 
         /// <summary>
@@ -225,6 +226,12 @@ namespace MagiDesk.Frontend
                 // Initialize HeartbeatService
                 HeartbeatService = new Services.HeartbeatService();
                 
+                // Initialize Inventory Settings Service
+                var innerInventorySettings = new HttpClientHandler();
+                innerInventorySettings.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logInventorySettings = new Services.HttpLoggingHandler(innerInventorySettings);
+                InventorySettingsService = new Services.InventorySettingsService(new HttpClient(logInventorySettings) { BaseAddress = new Uri(inventoryBase.TrimEnd('/') + "/") }, new Services.SimpleLogger<Services.InventorySettingsService>());
+                
                 // ReceiptService is already initialized in constructor
             }
             catch
@@ -257,6 +264,12 @@ namespace MagiDesk.Frontend
                 
                 // Initialize HeartbeatService
                 HeartbeatService = new Services.HeartbeatService();
+                
+                // Initialize Inventory Settings Service (fallback)
+                var innerInventorySettingsFallback = new HttpClientHandler();
+                innerInventorySettingsFallback.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logInventorySettingsFallback = new Services.HttpLoggingHandler(innerInventorySettingsFallback);
+                InventorySettingsService = new Services.InventorySettingsService(new HttpClient(logInventorySettingsFallback) { BaseAddress = new Uri("https://localhost:7016/") }, new Services.SimpleLogger<Services.InventorySettingsService>());
                 
                 // ReceiptService is already initialized in constructor
             }

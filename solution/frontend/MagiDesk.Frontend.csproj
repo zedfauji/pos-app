@@ -99,10 +99,6 @@
         <Page Include="Views\UsersPage.xaml" />
         <Compile Include="Views\UsersPage.xaml.cs" />
     </ItemGroup>
-    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeItems)'=='true'">
-        <Page Include="Views\ItemsPage.xaml" />
-        <Compile Include="Views\ItemsPage.xaml.cs" />
-    </ItemGroup>
     <!-- Legacy VendorsPage removed - using new inventory system -->
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrders)'=='true'">
         <Page Include="Views\VendorOrdersPage.xaml" />

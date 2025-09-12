@@ -56,7 +56,7 @@
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
-                <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
+                <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory Management" Tag="InventoryManagementPage" Icon="AllApps"/>
 
                 <NavigationViewItemSeparator/>

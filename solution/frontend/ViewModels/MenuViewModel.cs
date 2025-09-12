@@ -17,6 +17,9 @@ public sealed class MenuItemVm
     public bool IsDiscountable { get; init; }
     public bool IsPartOfCombo { get; init; }
     public bool IsAvailable { get; set; }
+    public string Category { get; init; } = "";
+    public string? GroupName { get; init; }
+    public string? Description { get; init; }
 }
 
 public sealed class MenuViewModel : INotifyPropertyChanged

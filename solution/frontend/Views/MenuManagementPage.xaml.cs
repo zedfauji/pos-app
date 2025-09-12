@@ -9,10 +9,12 @@ using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.ViewModels;
 using Windows.Foundation.Collections;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MagiDesk.Frontend.Views;
 
-// Simple wrapper class for XAML binding without init-only properties
+// Enhanced wrapper class for XAML binding with category support
 public sealed class MenuItemDisplay
 {
     public long MenuItemId { get; set; }
@@ -23,12 +25,33 @@ public sealed class MenuItemDisplay
     public bool IsDiscountable { get; set; }
     public bool IsPartOfCombo { get; set; }
     public bool IsAvailable { get; set; }
+    public string Category { get; set; } = "";
+    public string? GroupName { get; set; }
+    public string? Description { get; set; }
+}
+
+// Category group for organizing menu items
+public sealed class CategoryGroup
+{
+    public string CategoryName { get; set; } = "";
+    public ObservableCollection<MenuItemDisplay> Items { get; } = new();
+    public int ItemCount => Items.Count;
+    public bool IsExpanded { get; set; } = true;
+    public object? Tag { get; set; }
 }
 
 public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
 {
-    public ObservableCollection<MenuItemDisplay> MenuItems { get; } = new();
+    // Collections
+    public ObservableCollection<MenuItemDisplay> AllMenuItems { get; } = new();
     public ObservableCollection<ModifierManagementViewModel> Modifiers { get; } = new();
+    public ObservableCollection<CategoryGroup> CategoryGroups { get; } = new();
+    
+    // Filtering and search state
+    private string _currentSearchQuery = "";
+    private string? _selectedCategory = null;
+    private string? _selectedAvailability = null;
+    private string? _selectedSortOption = null;
     
     private MenuItemVm? _selectedMenuItem;
     public MenuItemVm? SelectedMenuItem
@@ -41,6 +64,7 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                 _selectedMenuItem = value;
                 OnPropertyChanged(nameof(SelectedMenuItem));
                 MenuItemDetailsPanel.Visibility = value != null ? Visibility.Visible : Visibility.Collapsed;
+                UpdateButtonStates();
             }
         }
     }
@@ -85,6 +109,8 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
             {
                 await LoadMenuItemsAsync();
                 await LoadModifiersAsync();
+                await PopulateCategoryFilterAsync();
+                ApplyFiltersAndRefreshUI();
             };
             UpdateButtonStates();
         }
@@ -100,14 +126,14 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         
         try
         {
-            MenuItems.Clear();
-            System.Diagnostics.Debug.WriteLine("MenuManagementPage: Loading menu items...");
+            AllMenuItems.Clear();
+            Debug.WriteLine("MenuManagementPage: Loading menu items...");
             var items = await _menuService.ListItemsAsync(new MenuApiService.ItemsQuery(Q: null, Category: null, GroupName: null, AvailableOnly: null));
-            System.Diagnostics.Debug.WriteLine($"MenuManagementPage: Retrieved {items.Count()} items from API");
+            Debug.WriteLine($"MenuManagementPage: Retrieved {items.Count()} items from API");
             
             foreach (var item in items)
             {
-                MenuItems.Add(new MenuItemDisplay
+                AllMenuItems.Add(new MenuItemDisplay
                 {
                     MenuItemId = item.Id,
                     Name = item.Name,
@@ -116,22 +142,362 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                     Sku = item.Sku,
                     IsAvailable = item.IsAvailable,
                     IsDiscountable = item.IsDiscountable,
-                    IsPartOfCombo = item.IsPartOfCombo
+                    IsPartOfCombo = item.IsPartOfCombo,
+                    Category = item.Category,
+                    GroupName = item.GroupName,
+                    Description = item.Description
                 });
             }
             
-            System.Diagnostics.Debug.WriteLine($"MenuManagementPage: Added {MenuItems.Count} items to collection");
+            Debug.WriteLine($"MenuManagementPage: Added {AllMenuItems.Count} items to collection");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"MenuManagementPage: Error loading menu items: {ex.Message}");
+            Debug.WriteLine($"MenuManagementPage: Error loading menu items: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to load menu items: {ex.Message}");
         }
     }
 
-    private async void LoadMenuItems()
+    private async Task PopulateCategoryFilterAsync()
     {
-        await LoadMenuItemsAsync();
+        try
+        {
+            CategoryFilter.Items.Clear();
+            CategoryFilter.Items.Add(new ComboBoxItem { Content = "All Categories", Tag = null });
+            
+            var categories = AllMenuItems.Select(x => x.Category).Distinct().OrderBy(x => x).ToList();
+            foreach (var category in categories)
+            {
+                if (!string.IsNullOrEmpty(category))
+                {
+                    CategoryFilter.Items.Add(new ComboBoxItem { Content = category, Tag = category });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error populating category filter: {ex.Message}");
+        }
+    }
+
+    private void ApplyFiltersAndRefreshUI()
+    {
+        try
+        {
+            // Apply filters
+            var filteredItems = AllMenuItems.AsEnumerable();
+
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(_currentSearchQuery))
+            {
+                filteredItems = filteredItems.Where(x => 
+                    x.Name.Contains(_currentSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    x.Sku.Contains(_currentSearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    (x.Description?.Contains(_currentSearchQuery, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            // Category filter
+            if (!string.IsNullOrEmpty(_selectedCategory))
+            {
+                filteredItems = filteredItems.Where(x => x.Category == _selectedCategory);
+            }
+
+            // Availability filter
+            if (!string.IsNullOrEmpty(_selectedAvailability))
+            {
+                switch (_selectedAvailability)
+                {
+                    case "Available":
+                        filteredItems = filteredItems.Where(x => x.IsAvailable);
+                        break;
+                    case "Unavailable":
+                        filteredItems = filteredItems.Where(x => !x.IsAvailable);
+                        break;
+                }
+            }
+
+            // Sort
+            if (!string.IsNullOrEmpty(_selectedSortOption))
+            {
+                switch (_selectedSortOption)
+                {
+                    case "NameAsc":
+                        filteredItems = filteredItems.OrderBy(x => x.Name);
+                        break;
+                    case "NameDesc":
+                        filteredItems = filteredItems.OrderByDescending(x => x.Name);
+                        break;
+                    case "PriceAsc":
+                        filteredItems = filteredItems.OrderBy(x => x.Price);
+                        break;
+                    case "PriceDesc":
+                        filteredItems = filteredItems.OrderByDescending(x => x.Price);
+                        break;
+                    case "Category":
+                        filteredItems = filteredItems.OrderBy(x => x.Category).ThenBy(x => x.Name);
+                        break;
+                }
+            }
+            else
+            {
+                // Default sort by category then name
+                filteredItems = filteredItems.OrderBy(x => x.Category).ThenBy(x => x.Name);
+            }
+
+            // Group by category
+            RefreshCategoryGroups(filteredItems.ToList());
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error applying filters: {ex.Message}");
+            ShowErrorDialog("Error", $"Failed to apply filters: {ex.Message}");
+        }
+    }
+
+    private void RefreshCategoryGroups(List<MenuItemDisplay> items)
+    {
+        try
+        {
+            CategoryGroups.Clear();
+            CategoriesContainer.Children.Clear();
+
+            var groupedItems = items.GroupBy(x => x.Category ?? "Uncategorized")
+                                  .OrderBy(g => g.Key);
+
+            foreach (var group in groupedItems)
+            {
+                var categoryGroup = new CategoryGroup
+                {
+                    CategoryName = group.Key,
+                    IsExpanded = true
+                };
+
+                foreach (var item in group.OrderBy(x => x.Name))
+                {
+                    categoryGroup.Items.Add(item);
+                }
+
+                CategoryGroups.Add(categoryGroup);
+
+                // Create UI for this category
+                CreateCategoryUI(categoryGroup);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error refreshing category groups: {ex.Message}");
+            ShowErrorDialog("Error", $"Failed to refresh category groups: {ex.Message}");
+        }
+    }
+
+    private void CreateCategoryUI(CategoryGroup categoryGroup)
+    {
+        try
+        {
+            // Category header
+            var headerGrid = new Grid();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var headerButton = new Button
+            {
+                Content = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = categoryGroup.IsExpanded ? "▼" : "▶",
+                            FontSize = 12,
+                            Margin = new Thickness(0, 0, 8, 0),
+                            VerticalAlignment = VerticalAlignment.Center
+                        },
+                        new TextBlock
+                        {
+                            Text = $"{categoryGroup.CategoryName} ({categoryGroup.ItemCount})",
+                            FontSize = 18,
+                            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                            VerticalAlignment = VerticalAlignment.Center
+                        }
+                    }
+                },
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                AllowDrop = true
+            };
+
+            headerButton.Click += (s, e) => ToggleCategoryExpansion(categoryGroup, headerButton);
+            headerButton.DragOver += CategoryHeader_DragOver;
+            headerButton.Drop += CategoryHeader_Drop;
+
+            Grid.SetColumn(headerButton, 0);
+            headerGrid.Children.Add(headerButton);
+
+            // Add item button
+            var addButton = new Button
+            {
+                Content = "Add Item",
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            addButton.Click += (s, e) => AddMenuItemToCategory(categoryGroup.CategoryName);
+
+            Grid.SetColumn(addButton, 1);
+            headerGrid.Children.Add(addButton);
+
+            CategoriesContainer.Children.Add(headerGrid);
+
+            // Items grid (initially visible)
+            var itemsGrid = new GridView
+            {
+                ItemsSource = categoryGroup.Items,
+                SelectionMode = ListViewSelectionMode.Single,
+                Margin = new Thickness(20, 12, 0, 0)
+            };
+
+            // Use a simple template defined in XAML
+            var template = (DataTemplate)this.Resources["MenuItemTemplate"];
+            if (template != null)
+            {
+                itemsGrid.ItemTemplate = template;
+            }
+            
+            itemsGrid.SelectionChanged += (s, e) => GridView_SelectionChanged(s, e);
+
+            CategoriesContainer.Children.Add(itemsGrid);
+
+            // Store reference for expansion toggle
+            categoryGroup.Tag = itemsGrid;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error creating category UI: {ex.Message}");
+        }
+    }
+
+
+    private void ToggleCategoryExpansion(CategoryGroup categoryGroup, Button headerButton)
+    {
+        try
+        {
+            categoryGroup.IsExpanded = !categoryGroup.IsExpanded;
+            
+            if (headerButton.Content is StackPanel headerPanel && headerPanel.Children[0] is TextBlock arrow)
+            {
+                arrow.Text = categoryGroup.IsExpanded ? "▼" : "▶";
+            }
+
+            if (categoryGroup.Tag is GridView itemsGrid)
+            {
+                itemsGrid.Visibility = categoryGroup.IsExpanded ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error toggling category expansion: {ex.Message}");
+        }
+    }
+
+    private async void AddMenuItemToCategory(string categoryName)
+    {
+        try
+        {
+            var newItem = new MenuItemVm
+            {
+                MenuItemId = 0,
+                Sku = "",
+                Name = "",
+                PictureUrl = null,
+                Price = 0,
+                IsDiscountable = false,
+                IsPartOfCombo = false,
+                IsAvailable = true,
+                Category = categoryName
+            };
+            
+            var dialog = new Dialogs.MenuItemCrudDialog(newItem);
+            dialog.XamlRoot = this.XamlRoot;
+            var result = await dialog.ShowAsync();
+            
+            if (result == ContentDialogResult.Primary)
+            {
+                await LoadMenuItemsAsync();
+                await PopulateCategoryFilterAsync();
+                ApplyFiltersAndRefreshUI();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorDialog("Error", $"Failed to add menu item: {ex.Message}");
+        }
+    }
+
+    // Event handlers for new UI controls
+    private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        _currentSearchQuery = args.QueryText;
+        ApplyFiltersAndRefreshUI();
+    }
+
+    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        _currentSearchQuery = sender.Text;
+        ApplyFiltersAndRefreshUI();
+    }
+
+    private void CategoryFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            _selectedCategory = item.Tag?.ToString();
+            ApplyFiltersAndRefreshUI();
+        }
+    }
+
+    private void AvailabilityFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            _selectedAvailability = item.Tag?.ToString();
+            ApplyFiltersAndRefreshUI();
+        }
+    }
+
+    private void SortOptions_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item)
+        {
+            _selectedSortOption = item.Tag?.ToString();
+            ApplyFiltersAndRefreshUI();
+        }
+    }
+
+    private async void ToggleAvailability_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedMenuItem == null || _menuService == null) return;
+
+        try
+        {
+            var newAvailability = !SelectedMenuItem.IsAvailable;
+            var success = await _menuService.SetItemAvailabilityAsync(SelectedMenuItem.MenuItemId, newAvailability);
+            
+            if (success)
+            {
+                SelectedMenuItem.IsAvailable = newAvailability;
+                await LoadMenuItemsAsync();
+                ApplyFiltersAndRefreshUI();
+                ShowErrorDialog("Success", $"Item availability updated to {(newAvailability ? "Available" : "Unavailable")}");
+            }
+            else
+            {
+                ShowErrorDialog("Error", "Failed to update item availability");
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorDialog("Error", $"Failed to toggle availability: {ex.Message}");
+        }
     }
 
     private async void AddMenuItem_Click(object sender, RoutedEventArgs e)
@@ -147,7 +513,8 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                 Price = 0,
                 IsDiscountable = false,
                 IsPartOfCombo = false,
-                IsAvailable = true
+                IsAvailable = true,
+                Category = "Appetizers" // Default category
             };
             var dialog = new Dialogs.MenuItemCrudDialog(newItem);
             dialog.XamlRoot = this.XamlRoot;
@@ -155,7 +522,9 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
             
             if (result == ContentDialogResult.Primary)
             {
-                LoadMenuItems(); // Refresh the list
+                await LoadMenuItemsAsync();
+                await PopulateCategoryFilterAsync();
+                ApplyFiltersAndRefreshUI();
             }
         }
         catch (Exception ex)
@@ -164,26 +533,28 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
     }
 
-        private async void EditMenuItem_Click(object sender, RoutedEventArgs e)
+    private async void EditMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedMenuItem == null) return;
+        
+        try
         {
-            if (SelectedMenuItem == null) return;
+            var dialog = new Dialogs.MenuItemCrudDialog(SelectedMenuItem);
+            dialog.XamlRoot = this.XamlRoot;
+            var result = await dialog.ShowAsync();
             
-            try
+            if (result == ContentDialogResult.Primary)
             {
-                var dialog = new Dialogs.MenuItemCrudDialog(SelectedMenuItem);
-                dialog.XamlRoot = this.XamlRoot;
-                var result = await dialog.ShowAsync();
-                
-                if (result == ContentDialogResult.Primary)
-                {
-                    await LoadMenuItemsAsync(); // Refresh the list
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowErrorDialog("Error", $"Failed to edit menu item: {ex.Message}");
+                await LoadMenuItemsAsync();
+                await PopulateCategoryFilterAsync();
+                ApplyFiltersAndRefreshUI();
             }
         }
+        catch (Exception ex)
+        {
+            ShowErrorDialog("Error", $"Failed to edit menu item: {ex.Message}");
+        }
+    }
 
     private async void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
     {
@@ -220,7 +591,9 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
 
     private async void RefreshMenuItems_Click(object sender, RoutedEventArgs e)
     {
-        LoadMenuItems();
+        await LoadMenuItemsAsync();
+        await PopulateCategoryFilterAsync();
+        ApplyFiltersAndRefreshUI();
     }
 
     private void GridView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -236,7 +609,10 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                 Sku = display.Sku,
                 IsAvailable = display.IsAvailable,
                 IsDiscountable = display.IsDiscountable,
-                IsPartOfCombo = display.IsPartOfCombo
+                IsPartOfCombo = display.IsPartOfCombo,
+                Category = display.Category,
+                GroupName = display.GroupName,
+                Description = display.Description
             };
             UpdateButtonStates();
         }
@@ -526,9 +902,148 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
     }
 
+    // Drag and Drop Event Handlers
+    private void MenuItem_DragStarting(object sender, DragStartingEventArgs e)
+    {
+        try
+        {
+            if (sender is Border border && border.DataContext is MenuItemDisplay item)
+            {
+                e.Data.SetText($"MenuItem:{item.MenuItemId}");
+                e.Data.Properties.Add("MenuItem", item);
+                e.DragUI.SetContentFromDataPackage();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error in MenuItem_DragStarting: {ex.Message}");
+        }
+    }
+
+    private void CategoryHeader_DragOver(object sender, DragEventArgs e)
+    {
+        try
+        {
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+            e.DragUIOverride.Caption = "Move to this category";
+            e.DragUIOverride.IsCaptionVisible = true;
+            e.DragUIOverride.IsContentVisible = true;
+            e.DragUIOverride.IsGlyphVisible = true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error in CategoryHeader_DragOver: {ex.Message}");
+        }
+    }
+
+    private async void CategoryHeader_Drop(object sender, DragEventArgs e)
+    {
+        try
+        {
+            if (sender is Button button && e.Data.Properties.TryGetValue("MenuItem", out var itemObj) && itemObj is MenuItemDisplay item)
+            {
+                // Extract category name from button content
+                string targetCategory = ExtractCategoryNameFromButton(button);
+                
+                if (!string.IsNullOrEmpty(targetCategory) && targetCategory != item.Category)
+                {
+                    // Update the item's category
+                    await UpdateMenuItemCategoryAsync(item, targetCategory);
+                    
+                    // Refresh the UI
+                    await LoadMenuItemsAsync();
+                    await PopulateCategoryFilterAsync();
+                    ApplyFiltersAndRefreshUI();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error in CategoryHeader_Drop: {ex.Message}");
+            ShowErrorDialog("Error", $"Failed to move item to category: {ex.Message}");
+        }
+    }
+
+    private string ExtractCategoryNameFromButton(Button button)
+    {
+        try
+        {
+            if (button.Content is StackPanel stackPanel && stackPanel.Children.Count >= 2)
+            {
+                if (stackPanel.Children[1] is TextBlock textBlock)
+                {
+                    string text = textBlock.Text;
+                    // Extract category name from "CategoryName (count)" format
+                    int parenIndex = text.IndexOf('(');
+                    if (parenIndex > 0)
+                    {
+                        return text.Substring(0, parenIndex).Trim();
+                    }
+                    return text.Trim();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error extracting category name: {ex.Message}");
+        }
+        return string.Empty;
+    }
+
+    private async Task UpdateMenuItemCategoryAsync(MenuItemDisplay item, string newCategory)
+    {
+        try
+        {
+            // Get the MenuApiService from DI container
+            var menuApiService = App.Services.GetService(typeof(MenuApiService)) as MenuApiService;
+            if (menuApiService != null)
+            {
+                // Create update DTO with only the category field changed
+                var updateDto = new MenuApiService.UpdateMenuItemDto(
+                    Name: null,
+                    Description: null,
+                    Category: newCategory,
+                    GroupName: null,
+                    VendorPrice: null,
+                    SellingPrice: null,
+                    Price: null,
+                    PictureUrl: null,
+                    IsDiscountable: null,
+                    IsPartOfCombo: null,
+                    IsAvailable: null
+                );
+
+                await menuApiService.UpdateMenuItemAsync(item.MenuItemId, updateDto);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error updating menu item category: {ex.Message}");
+            throw;
+        }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+// Converter for availability display
+public sealed class AvailabilityConverter : Microsoft.UI.Xaml.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, string language)
+    {
+        if (value is bool isAvailable)
+        {
+            return isAvailable ? "✓ Available" : "✗ Unavailable";
+        }
+        return "Unknown";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, string language)
+    {
+        throw new NotImplementedException();
     }
 }

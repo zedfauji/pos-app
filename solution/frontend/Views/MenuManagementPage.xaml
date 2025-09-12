@@ -4,7 +4,43 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:MagiDesk.Frontend.Views"
     mc:Ignorable="d">
+    
+    <Page.Resources>
+        <local:AvailabilityConverter x:Key="AvailabilityConverter"/>
+        <DataTemplate x:Key="MenuItemTemplate">
+            <Grid Width="200" Height="160">
+                <Border CornerRadius="8" 
+                        Padding="8" 
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CanDrag="True"
+                        DragStarting="MenuItem_DragStarting">
+                    <StackPanel Spacing="4">
+                        <Border Height="80" 
+                                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                CornerRadius="4">
+                            <TextBlock Text="📷" 
+                                       FontSize="24"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" 
+                                   TextWrapping="Wrap" 
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Price}" 
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="{Binding Sku}" 
+                                   FontSize="12" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding IsAvailable, Converter={StaticResource AvailabilityConverter}}" 
+                                   FontSize="10" 
+                                   HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
     
     <Grid Padding="12">
         <Grid.RowDefinitions>
@@ -12,11 +48,77 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Menu Management" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
-            <TextBlock Text="Manage menu items and their modifiers" FontSize="14" Opacity="0.7"/>
-        </StackPanel>
+        <!-- Header with Search and Filters -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Title -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="Menu Management" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
+                <TextBlock Text="Organize and manage menu items by categories with advanced filtering" FontSize="14" Opacity="0.7"/>
+            </StackPanel>
+
+            <!-- Search and Filter Controls -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Search Box -->
+                <AutoSuggestBox Grid.Column="0" 
+                                x:Name="SearchBox"
+                                PlaceholderText="Search menu items..."
+                                QuerySubmitted="SearchBox_QuerySubmitted"
+                                TextChanged="SearchBox_TextChanged"
+                                Margin="0,0,12,0"/>
+
+                <!-- Category Filter -->
+                <ComboBox Grid.Column="1" 
+                          x:Name="CategoryFilter"
+                          PlaceholderText="All Categories"
+                          SelectionChanged="CategoryFilter_SelectionChanged"
+                          Margin="0,0,12,0"
+                          Width="200"/>
+
+                <!-- Availability Filter -->
+                <ComboBox Grid.Column="2" 
+                          x:Name="AvailabilityFilter"
+                          PlaceholderText="All Items"
+                          SelectionChanged="AvailabilityFilter_SelectionChanged"
+                          Margin="0,0,12,0"
+                          Width="150">
+                    <ComboBoxItem Content="All Items" Tag="All"/>
+                    <ComboBoxItem Content="Available Only" Tag="Available"/>
+                    <ComboBoxItem Content="Unavailable Only" Tag="Unavailable"/>
+                </ComboBox>
+
+                <!-- Sort Options -->
+                <ComboBox Grid.Column="3" 
+                          x:Name="SortOptions"
+                          PlaceholderText="Sort by..."
+                          SelectionChanged="SortOptions_SelectionChanged"
+                          Margin="0,0,12,0"
+                          Width="150">
+                    <ComboBoxItem Content="Name A-Z" Tag="NameAsc"/>
+                    <ComboBoxItem Content="Name Z-A" Tag="NameDesc"/>
+                    <ComboBoxItem Content="Price Low-High" Tag="PriceAsc"/>
+                    <ComboBoxItem Content="Price High-Low" Tag="PriceDesc"/>
+                    <ComboBoxItem Content="Category" Tag="Category"/>
+                </ComboBox>
+
+                <!-- Refresh Button -->
+                <Button Grid.Column="4" 
+                        Content="Refresh" 
+                        Click="RefreshMenuItems_Click"/>
+            </Grid>
+        </Grid>
 
         <!-- TabView for Menu Items and Modifiers -->
         <TabView Grid.Row="1" x:Name="MainTabView">
@@ -26,125 +128,133 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="8"/>
-                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="350"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Menu Items List -->
-                    <Grid Grid.Column="0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Toolbar -->
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                            <Button Content="Add Menu Item" 
-                                    Click="AddMenuItem_Click"
-                                    Style="{StaticResource AccentButtonStyle}"/>
-                            <Button Content="Edit" 
-                                    Click="EditMenuItem_Click"
-                                    x:Name="EditButton"/>
-                            <Button Content="Delete" 
-                                    Click="DeleteMenuItem_Click"
-                                    x:Name="DeleteButton"/>
-                            <Button Content="Refresh" 
-                                    Click="RefreshMenuItems_Click"/>
-                            <TextBlock Text="{Binding MenuItems.Count}" 
-                                       FontWeight="Bold" 
-                                       Foreground="Red"
-                                       VerticalAlignment="Center"
-                                       Margin="20,0,0,0"/>
+                    <!-- Menu Items by Category -->
+                    <ScrollViewer Grid.Column="0" x:Name="MenuItemsScrollViewer">
+                        <StackPanel x:Name="CategoriesContainer" Spacing="24">
+                            <!-- Categories will be dynamically generated here -->
                         </StackPanel>
-
-                        <!-- Menu Items Grid -->
-                        <GridView Grid.Row="1"
-                                  ItemsSource="{Binding MenuItems}"
-                                  SelectionMode="Single"
-                                  SelectionChanged="GridView_SelectionChanged">
-                            <GridView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Width="200" Height="120">
-                                        <Border CornerRadius="8" 
-                                                Padding="8" 
-                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                            <StackPanel Spacing="4">
-                                                <Border Height="60" 
-                                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                                        CornerRadius="4">
-                                                    <TextBlock Text="📷" 
-                                                               FontSize="24"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
-                                                </Border>
-                                                <TextBlock Text="{Binding Name}" 
-                                                           TextWrapping="Wrap" 
-                                                           FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding Price}" 
-                                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding Sku}" 
-                                                           FontSize="12" 
-                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </GridView.ItemTemplate>
-                        </GridView>
-                    </Grid>
+                    </ScrollViewer>
 
                     <!-- Separator -->
                     <Border Grid.Column="1" 
                             Background="{ThemeResource ControlStrokeColorDefaultBrush}"/>
 
-                    <!-- Details Panel -->
+                    <!-- Enhanced Details Panel -->
                     <Grid Grid.Column="2" 
                           x:Name="MenuItemDetailsPanel"
                           Visibility="Collapsed">
                         <ScrollViewer>
-                            <StackPanel Spacing="12">
-                                <TextBlock Text="Menu Item Details" 
-                                           FontSize="18" 
-                                           FontWeight="SemiBold"/>
-                                
+                            <StackPanel Spacing="16">
+                                <!-- Header -->
                                 <StackPanel Spacing="8">
-                                    <TextBlock Text="ID:" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedMenuItem.MenuItemId}"/>
+                                    <TextBlock Text="Menu Item Details" 
+                                               FontSize="20" 
+                                               FontWeight="SemiBold"/>
+                                    <Border Height="2" 
+                                            Background="{ThemeResource AccentTextFillColorPrimaryBrush}" 
+                                            HorizontalAlignment="Left" 
+                                            Width="60"/>
                                 </StackPanel>
                                 
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Name:" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedMenuItem.Name}"/>
+                                <!-- Quick Actions -->
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Edit" 
+                                            Click="EditMenuItem_Click"
+                                            x:Name="EditButton"
+                                            Style="{StaticResource AccentButtonStyle}"/>
+                                    <Button Content="Delete" 
+                                            Click="DeleteMenuItem_Click"
+                                            x:Name="DeleteButton"/>
+                                    <Button Content="Toggle Availability" 
+                                            Click="ToggleAvailability_Click"
+                                            x:Name="ToggleAvailabilityButton"/>
                                 </StackPanel>
+
+                                <!-- Item Image -->
+                                <Border Height="200" 
+                                        Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                        CornerRadius="8"
+                                        x:Name="ItemImageBorder">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="📷" 
+                                                   FontSize="48"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock Text="No Image" 
+                                                   FontSize="12" 
+                                                   Opacity="0.7"
+                                                   HorizontalAlignment="Center"
+                                                   Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </Border>
                                 
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Price:" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedMenuItem.Price}"/>
+                                <!-- Basic Info -->
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Basic Information" 
+                                               FontSize="16" 
+                                               FontWeight="SemiBold"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedMenuItem.MenuItemId}"/>
+                                        
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Name:" FontWeight="SemiBold" Margin="0,8,8,0"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedMenuItem.Name}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                                        
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="SKU:" FontWeight="SemiBold" Margin="0,8,8,0"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedMenuItem.Sku}" Margin="0,8,0,0"/>
+                                        
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Price:" FontWeight="SemiBold" Margin="0,8,8,0"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedMenuItem.Price}" 
+                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Margin="0,8,0,0"/>
+                                        
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Category:" FontWeight="SemiBold" Margin="0,8,8,0"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedMenuItem.Category}" Margin="0,8,0,0"/>
+                                    </Grid>
                                 </StackPanel>
-                                
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="SKU:" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedMenuItem.Sku}"/>
+
+                                <!-- Status Flags -->
+                                <StackPanel Spacing="12">
+                                    <TextBlock Text="Status &amp; Properties" 
+                                               FontSize="16" 
+                                               FontWeight="SemiBold"/>
+                                    
+                                    <StackPanel Spacing="8">
+                                        <CheckBox Content="Available for Sale" 
+                                                  IsChecked="{Binding SelectedMenuItem.IsAvailable}" 
+                                                  IsEnabled="False"/>
+                                        <CheckBox Content="Can Apply Discounts" 
+                                                  IsChecked="{Binding SelectedMenuItem.IsDiscountable}" 
+                                                  IsEnabled="False"/>
+                                        <CheckBox Content="Part of Combo Meals" 
+                                                  IsChecked="{Binding SelectedMenuItem.IsPartOfCombo}" 
+                                                  IsEnabled="False"/>
+                                    </StackPanel>
                                 </StackPanel>
-                                
+
+                                <!-- Picture URL -->
                                 <StackPanel Spacing="8">
-                                    <TextBlock Text="Picture URL:" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Image URL" 
+                                               FontSize="16" 
+                                               FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding SelectedMenuItem.PictureUrl}" 
-                                               TextWrapping="Wrap"/>
-                                </StackPanel>
-                                
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Available:" FontWeight="SemiBold"/>
-                                    <CheckBox IsChecked="{Binding SelectedMenuItem.IsAvailable}" IsEnabled="False"/>
-                                </StackPanel>
-                                
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Discountable:" FontWeight="SemiBold"/>
-                                    <CheckBox IsChecked="{Binding SelectedMenuItem.IsDiscountable}" IsEnabled="False"/>
-                                </StackPanel>
-                                
-                                <StackPanel Spacing="8">
-                                    <TextBlock Text="Part of Combo:" FontWeight="SemiBold"/>
-                                    <CheckBox IsChecked="{Binding SelectedMenuItem.IsPartOfCombo}" IsEnabled="False"/>
+                                               TextWrapping="Wrap"
+                                               FontSize="12"
+                                               Opacity="0.7"/>
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>

@@ -14,6 +14,7 @@ public sealed class MenuApiService
     // DTOs (client-side lightweight)
     public sealed record AvailabilityUpdateDto(bool IsAvailable);
     public sealed record MenuItemDto(long Id, string Sku, string Name, string? Description, string Category, string? GroupName, decimal SellingPrice, decimal? Price, string? PictureUrl, bool IsDiscountable, bool IsPartOfCombo, bool IsAvailable, int Version);
+    public sealed record UpdateMenuItemDto(string? Name, string? Description, string? Category, string? GroupName, decimal? VendorPrice, decimal? SellingPrice, decimal? Price, string? PictureUrl, bool? IsDiscountable, bool? IsPartOfCombo, bool? IsAvailable);
     public sealed record ModifierOptionDto(long Id, string Name, decimal PriceDelta, bool IsAvailable, int SortOrder);
     public sealed record ModifierDto(long Id, string Name, bool IsRequired, bool AllowMultiple, int? MaxSelections, IReadOnlyList<ModifierOptionDto> Options);
     public sealed record MenuItemDetailsDto(MenuItemDto Item, IReadOnlyList<ModifierDto> Modifiers);
@@ -75,6 +76,16 @@ public sealed class MenuApiService
     {
         var res = await _http.PutAsJsonAsync($"api/menu/items/{id}/availability", new AvailabilityUpdateDto(isAvailable), ct);
         return res.IsSuccessStatusCode;
+    }
+
+    public async Task<MenuItemDto?> UpdateMenuItemAsync(long id, UpdateMenuItemDto dto, CancellationToken ct = default)
+    {
+        var res = await _http.PutAsJsonAsync($"api/menu/items/{id}", dto, ct);
+        if (res.IsSuccessStatusCode)
+        {
+            return await res.Content.ReadFromJsonAsync<MenuItemDto>(cancellationToken: ct);
+        }
+        return null;
     }
 
     // Combos

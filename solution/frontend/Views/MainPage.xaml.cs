@@ -139,10 +139,9 @@ namespace MagiDesk.Frontend.Views
                         case "DashboardPage": item.Content = App.I18n.T("dashboard"); break;
                         case "MenuManagementPage": item.Content = "Menu Management"; break;
                         case "VendorOrdersPage": item.Content = App.I18n.T("vendor-orders"); break;
-                        case "ItemsPage": item.Content = App.I18n.T("items"); break;
+                        case "InventoryManagementPage": item.Content = App.I18n.T("inventory"); break;
                         case "CashFlowPage": item.Content = App.I18n.T("cash_flow"); break;
                         case "VendorsInventoryPage": item.Content = "Vendors Inventory"; break;
-                        case "InventoryManagementPage": item.Content = "Inventory Management"; break;
                         case "BillingPage": item.Content = "Billing"; break;
                         case "TablesPage": item.Content = App.I18n.T("tables"); break;
                         case "SettingsPage": item.Content = App.I18n.T("settings"); break;
@@ -201,12 +200,6 @@ namespace MagiDesk.Frontend.Views
 #if XAML_ONLY_MAIN
 #else
                             ContentFrame.Navigate(typeof(VendorOrdersPage));
-#endif
-                            break;
-                        case "ItemsPage":
-#if XAML_ONLY_MAIN
-#else
-                            ContentFrame.Navigate(typeof(ItemsPage));
 #endif
                             break;
                         case "VendorsInventoryPage":

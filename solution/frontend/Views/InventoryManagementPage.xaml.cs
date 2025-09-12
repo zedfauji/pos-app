@@ -87,8 +87,8 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
 
     private void NavigateToSettings_Click(object sender, TappedRoutedEventArgs e)
     {
-        // TODO: Navigate to Settings page
-        ShowComingSoonDialog("Inventory Settings", "Configuration and preferences will be implemented here.");
+        var frame = (Frame)this.Parent;
+        frame.Navigate(typeof(InventorySettingsPage));
     }
 
     private async void ShowComingSoonDialog(string title, string message)
