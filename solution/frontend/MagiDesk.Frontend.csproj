@@ -103,10 +103,7 @@
         <Page Include="Views\ItemsPage.xaml" />
         <Compile Include="Views\ItemsPage.xaml.cs" />
     </ItemGroup>
-    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeVendors)'=='true'">
-        <Page Include="Views\VendorsPage.xaml" />
-        <Compile Include="Views\VendorsPage.xaml.cs" />
-    </ItemGroup>
+    <!-- Legacy VendorsPage removed - using new inventory system -->
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeOrders)'=='true'">
         <Page Include="Views\VendorOrdersPage.xaml" />
         <Compile Include="Views\VendorOrdersPage.xaml.cs" />
@@ -123,14 +120,25 @@
                 <Compile Include="Views\InventoryItemDialog.xaml.cs" />
                 <Page Include="Views\StockAdjustmentDialog.xaml" />
                 <Compile Include="Views\StockAdjustmentDialog.xaml.cs" />
-                <Page Include="Views\VendorsPage.xaml" />
-                <Compile Include="Views\VendorsPage.xaml.cs" />
+                <!-- Legacy VendorsPage removed - using new inventory system -->
                 <Page Include="Views\VendorDialog.xaml" />
                 <Compile Include="Views\VendorDialog.xaml.cs" />
                 <Page Include="Views\RestockPage.xaml" />
                 <Compile Include="Views\RestockPage.xaml.cs" />
                 <Page Include="Views\RestockRequestDialog.xaml" />
                 <Compile Include="Views\RestockRequestDialog.xaml.cs" />
+                <Page Include="Views\VendorOrdersPage.xaml" />
+                <Compile Include="Views\VendorOrdersPage.xaml.cs" />
+                <Page Include="Views\PurchaseOrderDialog.xaml" />
+                <Compile Include="Views\PurchaseOrderDialog.xaml.cs" />
+                <Page Include="Views\OrderDetailsDialog.xaml" />
+                <Compile Include="Views\OrderDetailsDialog.xaml.cs" />
+                <Page Include="Views\OrderReceiptDialog.xaml" />
+                <Compile Include="Views\OrderReceiptDialog.xaml.cs" />
+                <Page Include="Views\AuditReportsPage.xaml" />
+                <Compile Include="Views\AuditReportsPage.xaml.cs" />
+                <Page Include="Views\ReportGenerationDialog.xaml" />
+                <Compile Include="Views\ReportGenerationDialog.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
         <Page Include="Views\CashFlowPage.xaml" />

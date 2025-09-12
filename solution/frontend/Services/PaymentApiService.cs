@@ -78,11 +78,21 @@ public sealed class PaymentApiService
             
             return ledger;
         }
+        catch (HttpRequestException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: HTTP error during RegisterPaymentAsync: {ex.Message}");
+            throw new InvalidOperationException($"Payment API request failed: {ex.Message}", ex);
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Timeout during RegisterPaymentAsync: {ex.Message}");
+            throw new InvalidOperationException("Payment API request timed out", ex);
+        }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Exception during RegisterPaymentAsync: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Unexpected error during RegisterPaymentAsync: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"PaymentApiService: Exception stack trace: {ex.StackTrace}");
-            return null;
+            throw new InvalidOperationException($"Payment processing failed: {ex.Message}", ex);
         }
     }
 

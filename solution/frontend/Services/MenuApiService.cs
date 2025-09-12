@@ -24,6 +24,13 @@ public sealed class MenuApiService
 
     // Query DTOs
     public sealed record ItemsQuery(string? Q, string? Category, string? GroupName, bool? AvailableOnly);
+    public sealed record ModifierQuery(string? Q, int Page = 1, int PageSize = 50);
+
+    // Modifier DTOs
+    public sealed record CreateModifierOptionDto(string Name, decimal PriceDelta, bool IsAvailable, int SortOrder);
+    public sealed record UpdateModifierOptionDto(string Name, decimal PriceDelta, bool IsAvailable, int SortOrder);
+    public sealed record CreateModifierDto(string Name, string? Description, bool IsRequired, bool AllowMultiple, int? MinSelections, int? MaxSelections, IReadOnlyList<CreateModifierOptionDto> Options);
+    public sealed record UpdateModifierDto(string Name, string? Description, bool IsRequired, bool AllowMultiple, int? MinSelections, int? MaxSelections, IReadOnlyList<UpdateModifierOptionDto> Options);
 
     // List/Search Items
     public async Task<IReadOnlyList<MenuItemDto>> ListItemsAsync(ItemsQuery query, CancellationToken ct = default)
@@ -95,5 +102,45 @@ public sealed class MenuApiService
     {
         var res = await _http.PostAsync($"api/menu/combos/{id}/rollback?toVersion={toVersion}", content: new StringContent(""), ct);
         return res.IsSuccessStatusCode || (int)res.StatusCode == 202;
+    }
+
+    // Modifiers CRUD
+    public async Task<IReadOnlyList<ModifierDto>> ListModifiersAsync(ModifierQuery query, CancellationToken ct = default)
+    {
+        var qp = new List<string>();
+        if (!string.IsNullOrWhiteSpace(query.Q)) qp.Add($"q={Uri.EscapeDataString(query.Q)}");
+        qp.Add($"page={query.Page}");
+        qp.Add($"pageSize={query.PageSize}");
+        
+        var url = "api/menu/modifiers?" + string.Join("&", qp);
+        var page = await _http.GetFromJsonAsync<PagedResult<ModifierDto>>(url, ct);
+        return page?.Items ?? Array.Empty<ModifierDto>();
+    }
+
+    public async Task<ModifierDto?> GetModifierAsync(long id, CancellationToken ct = default)
+    {
+        var res = await _http.GetAsync($"api/menu/modifiers/{id}", ct);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<ModifierDto>(cancellationToken: ct);
+    }
+
+    public async Task<ModifierDto?> CreateModifierAsync(CreateModifierDto dto, CancellationToken ct = default)
+    {
+        var res = await _http.PostAsJsonAsync("api/menu/modifiers", dto, ct);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<ModifierDto>(cancellationToken: ct);
+    }
+
+    public async Task<ModifierDto?> UpdateModifierAsync(long id, UpdateModifierDto dto, CancellationToken ct = default)
+    {
+        var res = await _http.PutAsJsonAsync($"api/menu/modifiers/{id}", dto, ct);
+        if (!res.IsSuccessStatusCode) return null;
+        return await res.Content.ReadFromJsonAsync<ModifierDto>(cancellationToken: ct);
+    }
+
+    public async Task<bool> DeleteModifierAsync(long id, CancellationToken ct = default)
+    {
+        var res = await _http.DeleteAsync($"api/menu/modifiers/{id}", ct);
+        return res.IsSuccessStatusCode;
     }
 }

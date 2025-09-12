@@ -16,3 +16,6 @@ public class InventoryItemDto
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
+
+
+

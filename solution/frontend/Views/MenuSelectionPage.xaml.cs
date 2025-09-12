@@ -32,16 +32,37 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
     
     public bool CanAddToOrder => SelectedItems.Count > 0 && SelectedServer != null;
 
-    private readonly MenuApiService _menuService;
-    private readonly OrderApiService _orderService;
+    private readonly MenuApiService? _menuService;
+    private readonly OrderApiService? _orderService;
 
     public MenuSelectionPage()
     {
         this.InitializeComponent();
         this.DataContext = this;
         
-        _menuService = App.Menu ?? throw new InvalidOperationException("Menu service not available");
-        _orderService = App.OrdersApi ?? throw new InvalidOperationException("Order service not available");
+        try
+        {
+            _menuService = App.Menu;
+            _orderService = App.OrdersApi;
+            
+            if (_menuService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Menu service is not available. Please restart the application or contact support.");
+                return;
+            }
+            
+            if (_orderService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Order service is not available. Please restart the application or contact support.");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Show error dialog instead of throwing exception
+            ShowErrorDialog("Initialization Error", $"Failed to initialize Menu Selection page: {ex.Message}");
+            return;
+        }
         
         LoadServers();
         UpdateSummary();
@@ -66,6 +87,12 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
     {
         try
         {
+            if (_menuService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Menu service is not available.");
+                return;
+            }
+            
             var query = new MenuApiService.ItemsQuery(Q: null, Category: null, GroupName: null, AvailableOnly: true);
             var items = await _menuService.ListItemsAsync(query);
             MenuItems.Clear();
@@ -287,6 +314,11 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
             if (OrderId.HasValue)
             {
                 // Add to existing order
+                if (_orderService == null)
+                {
+                    ShowErrorDialog("Service Not Available", "Order service is not available.");
+                    return;
+                }
                 var result = await _orderService.AddItemsAsync(OrderId.Value, orderItems);
                 if (result == null)
                 {
@@ -310,6 +342,11 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                 
                 System.Diagnostics.Debug.WriteLine($"Creating new order: SessionId={SessionId}, TableLabel={TableLabel}, ServerId={SelectedServer.Id}, ServerName={SelectedServer.Name}, ItemCount={orderItems.Count}");
                 
+                if (_orderService == null)
+                {
+                    ShowErrorDialog("Service Not Available", "Order service is not available.");
+                    return;
+                }
                 var newOrder = await _orderService.CreateOrderAsync(createRequest);
                 if (newOrder == null)
                 {
@@ -381,6 +418,26 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
             CloseButtonText = "OK",
             XamlRoot = this.XamlRoot
         }.ShowAsync();
+    }
+
+    private async void ShowErrorDialog(string title, string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new TextBlock { Text = message },
+                PrimaryButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback: Log error if dialog fails
+            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

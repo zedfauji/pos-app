@@ -21,8 +21,8 @@ namespace MagiDesk.Frontend.ViewModels
 
     public sealed class OrderDetailViewModel : INotifyPropertyChanged
     {
-        private readonly OrderApiService _orders;
-        private readonly MenuApiService _menu;
+        private readonly OrderApiService? _orders;
+        private readonly MenuApiService? _menu;
         private readonly Dictionary<long, string> _nameCache = new();
         public long OrderId { get; private set; }
 
@@ -36,6 +36,9 @@ namespace MagiDesk.Frontend.ViewModels
         private decimal _profit; public decimal Profit { get => _profit; private set { _profit = value; OnPropertyChanged(); } }
         public decimal ProfitMargin => Total > 0 ? Profit / Total : 0m;
 
+        public bool HasError { get; private set; }
+        public string? ErrorMessage { get; private set; }
+
         public ICommand IncrementQtyCommand { get; }
         public ICommand DecrementQtyCommand { get; }
         public ICommand DeleteItemCommand { get; }
@@ -44,19 +47,21 @@ namespace MagiDesk.Frontend.ViewModels
 
         public OrderDetailViewModel()
         {
-            // CRITICAL FIX: Ensure OrdersApi and MenuApi are initialized before creating ViewModel
-            // This prevents InvalidOperationException if services are null
-            if (App.OrdersApi == null)
-            {
-                throw new InvalidOperationException("OrdersApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
-            }
-            if (App.Menu == null)
-            {
-                throw new InvalidOperationException("MenuApi not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
-            }
-            
+            // CRITICAL FIX: Handle null services gracefully instead of throwing exception
             _orders = App.OrdersApi;
             _menu = App.Menu;
+            
+            if (_orders == null)
+            {
+                HasError = true;
+                ErrorMessage = "OrdersApi is not available. Please restart the application or contact support.";
+            }
+            
+            if (_menu == null)
+            {
+                HasError = true;
+                ErrorMessage = "MenuApi is not available. Please restart the application or contact support.";
+            }
             
             IncrementQtyCommand = new Services.RelayCommand(async o => { if (o is OrderItemLineVm l) await UpdateQuantityAsync(l, l.Quantity + 1); });
             DecrementQtyCommand = new Services.RelayCommand(async o => { if (o is OrderItemLineVm l && l.Quantity > 1) await UpdateQuantityAsync(l, l.Quantity - 1); });
@@ -74,6 +79,8 @@ namespace MagiDesk.Frontend.ViewModels
         public async Task LoadAsync(CancellationToken ct = default)
         {
             if (OrderId <= 0) return;
+            if (_orders == null) return;
+            
             var dto = await _orders.GetOrderAsync(OrderId, ct);
             if (dto is null) return;
             Items.Clear();
@@ -99,6 +106,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         private async Task EnrichItemNamesAsync(IReadOnlyList<OrderApiService.OrderItemDto> items, CancellationToken ct = default)
         {
+            if (_menu == null) return;
+            
             foreach (var orderItem in items)
             {
                 if (orderItem.MenuItemId is long menuItemId)
@@ -114,7 +123,11 @@ namespace MagiDesk.Frontend.ViewModels
                                 _nameCache[menuItemId] = name;
                             }
                         }
-                        catch { }
+                        catch (Exception ex)
+                        {
+                            // Log the error for debugging but don't crash the enrichment process
+                            System.Diagnostics.Debug.WriteLine($"Failed to get menu item name for ID {menuItemId}: {ex.Message}");
+                        }
                     }
                     if (!string.IsNullOrWhiteSpace(name))
                     {
@@ -127,6 +140,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         private async Task UpdateQuantityAsync(OrderItemLineVm line, int newQty, CancellationToken ct = default)
         {
+            if (_orders == null) return;
+            
             var dto = new OrderApiService.UpdateOrderItemDto(line.OrderItemId, newQty, null);
             var updated = await _orders.UpdateItemAsync(OrderId, dto, ct);
             if (updated is null) return;
@@ -135,6 +150,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         private async Task DeleteItemAsync(OrderItemLineVm line, CancellationToken ct = default)
         {
+            if (_orders == null) return;
+            
             var updated = await _orders.DeleteItemAsync(OrderId, line.OrderItemId, ct);
             if (updated is null) return;
             await LoadAsync(ct);
@@ -143,6 +160,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         public async Task LoadLogsAsync(CancellationToken ct = default)
         {
+            if (_orders == null) return;
+            
             Logs.Clear();
             var pr = await _orders.ListLogsAsync(OrderId, 1, 100, ct);
             foreach (var l in pr.Items) Logs.Add(l);

@@ -1,9 +1,9 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Input;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
-using MagiDesk.Frontend.Dialogs;
+using Microsoft.Extensions.Logging;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -14,118 +14,179 @@ public sealed partial class VendorOrdersPage : Page, IToolbarConsumer
     public VendorOrdersPage()
     {
         this.InitializeComponent();
-        _vm = new VendorOrdersViewModel();
+        
+        // Create services with proper HTTP clients and loggers
+        var vendorOrderService = new VendorOrderService(new HttpClient(), new SimpleLogger<VendorOrderService>());
+        var inventoryService = new InventoryService(new HttpClient(), new SimpleLogger<InventoryService>());
+        
+        _vm = new VendorOrdersViewModel(vendorOrderService, inventoryService);
         this.DataContext = _vm;
-        Loaded += OrdersPage_Loaded;
-        App.I18n.LanguageChanged += (_, __) => ApplyLanguage();
-        ApplyLanguage();
+        
+        Loaded += VendorOrdersPage_Loaded;
     }
 
-    // No navigation parameter required for Vendor Orders.
-
-    private async void OrdersPage_Loaded(object sender, RoutedEventArgs e)
+    private async void VendorOrdersPage_Loaded(object sender, RoutedEventArgs e)
     {
-        ApplyLanguage();
-        await CheckConnectivityAsync();
-        await _vm.LoadAsync();
+        await _vm.LoadDataAsync();
+    }
+
+    private async void CreatePurchaseOrder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new PurchaseOrderDialog();
+        var result = await dialog.ShowAsync();
+        
+        if (result == ContentDialogResult.Primary)
+        {
+            await _vm.CreateOrderAsync(dialog.Order);
+            await _vm.LoadDataAsync();
+        }
+    }
+
+    private async void ImportOrders_Click(object sender, RoutedEventArgs e)
+    {
+        var result = await ShowConfirmDialog("Import Orders", "This will import orders from external systems. Continue?");
+        if (result == ContentDialogResult.Primary)
+        {
+            await _vm.ImportOrdersAsync();
+            await _vm.LoadDataAsync();
+        }
+    }
+
+    private async void ExportOrders_Click(object sender, RoutedEventArgs e)
+    {
+        await _vm.ExportOrdersAsync();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
-        await CheckConnectivityAsync();
-        await _vm.LoadAsync();
+        await _vm.LoadDataAsync();
     }
 
-    private async void Jobs_Click(object sender, RoutedEventArgs e)
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        ShowInfo("Job history not available in this view.");
+        _vm.SearchText = SearchBox.Text;
+        _vm.ApplyFilters();
     }
 
-    private async void Notifications_Click(object sender, RoutedEventArgs e)
+    private void StatusFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ShowInfo("Notifications not available in this view.");
+        var selectedItem = StatusFilter.SelectedItem as ComboBoxItem;
+        _vm.StatusFilter = selectedItem?.Tag?.ToString() ?? string.Empty;
+        _vm.ApplyFilters();
     }
 
-    private async void Start_Click(object sender, RoutedEventArgs e)
+    private void OrdersList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ShowInfo("Start New Order: integrate with order builder flow.");
+        // Handle selection if needed
     }
 
-    private async void OpenDraft_Click(object sender, RoutedEventArgs e)
+    private async void ViewOrder_Click(object sender, RoutedEventArgs e)
     {
-        // Draft picker: list recent drafts and allow selection
-        ShowInfo("Open Draft: integrate with drafts flow.");
-    }
-
-    private async void SaveDraft_Click(object sender, RoutedEventArgs e)
-    {
-        // Use the builder to collect a draft
-        ShowInfo("Save Draft: integrate with builder flow.");
-
-    }
-
-    // Order builder flow removed from Vendor Orders.
-
-    public async void OnAdd() => await _vm.LoadAsync();
-    public async void OnEdit() => await _vm.LoadAsync();
-    public async void OnDelete() => await _vm.LoadAsync();
-    public async void OnRefresh() => await _vm.LoadAsync();
-
-    private void ShowInfo(string msg)
-    {
-        if (this.FindName("Info") is InfoBar bar)
+        if (sender is Button button && button.Tag is string orderId)
         {
-            bar.Message = msg;
-            bar.Severity = InfoBarSeverity.Success;
-            bar.IsOpen = true;
+            var dialog = new OrderDetailsDialog(orderId);
+            await dialog.ShowAsync();
         }
     }
 
-    private void ShowError(string msg)
+    private async void EditOrder_Click(object sender, RoutedEventArgs e)
     {
-        if (this.FindName("Info") is InfoBar bar)
+        if (sender is Button button && button.Tag is string orderId)
         {
-            bar.Message = msg;
-            bar.Severity = InfoBarSeverity.Error;
-            bar.IsOpen = true;
-        }
-    }
-
-    private void ApplyLanguage()
-    {
-        try
-        {
-            if (this.FindName("Title") is TextBlock t) t.Text = App.I18n.T("orders_title");
-            if (this.FindName("BtnStart") is Button b1) b1.Content = App.I18n.T("start_new_order");
-            if (this.FindName("BtnSaveDraft") is Button b2) b2.Content = App.I18n.T("save_draft");
-            if (this.FindName("BtnOpenDraft") is Button b3) b3.Content = App.I18n.T("open_draft");
-            if (this.FindName("BtnRefresh") is Button b4) b4.Content = App.I18n.T("refresh");
-            if (this.FindName("BtnJobs") is Button b5) b5.Content = App.I18n.T("job_history");
-            if (this.FindName("BtnNotifications") is Button b6) b6.Content = App.I18n.T("notifications");
-        }
-        catch { }
-    }
-
-    private async Task CheckConnectivityAsync()
-    {
-        try
-        {
-            var ok = await App.UsersApi!.PingAsync();
-            if (!ok && this.FindName("Info") is InfoBar bar)
+            var order = await _vm.GetOrderAsync(orderId);
+            if (order != null)
             {
-                bar.Message = "Backend is unavailable. Data may be limited.";
-                bar.Severity = InfoBarSeverity.Warning;
-                bar.IsOpen = true;
+                var dialog = new PurchaseOrderDialog(order);
+                var result = await dialog.ShowAsync();
+                
+                if (result == ContentDialogResult.Primary)
+                {
+                    await _vm.UpdateOrderAsync(orderId, dialog.Order);
+                    await _vm.LoadDataAsync();
+                }
             }
         }
-        catch
+    }
+
+    private async void SendOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string orderId)
         {
-            if (this.FindName("Info") is InfoBar bar)
+            var result = await ShowConfirmDialog("Send Order", "Are you sure you want to send this order to the vendor?");
+            if (result == ContentDialogResult.Primary)
             {
-                bar.Message = "Backend is unavailable. Data may be limited.";
-                bar.Severity = InfoBarSeverity.Warning;
-                bar.IsOpen = true;
+                await _vm.SendOrderAsync(orderId);
+                await _vm.LoadDataAsync();
             }
         }
+    }
+
+    private async void ReceiveOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string orderId)
+        {
+            var dialog = new OrderReceiptDialog(orderId);
+            var result = await dialog.ShowAsync();
+            
+            if (result == ContentDialogResult.Primary)
+            {
+                await _vm.ReceiveOrderAsync(orderId, dialog.ReceivedItems);
+                await _vm.LoadDataAsync();
+            }
+        }
+    }
+
+    private async void CancelOrder_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is string orderId)
+        {
+            var result = await ShowConfirmDialog("Cancel Order", "Are you sure you want to cancel this order?");
+            if (result == ContentDialogResult.Primary)
+            {
+                await _vm.CancelOrderAsync(orderId);
+                await _vm.LoadDataAsync();
+            }
+        }
+    }
+
+    private async Task<ContentDialogResult> ShowConfirmDialog(string title, string content)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = content,
+            PrimaryButtonText = "Yes",
+            SecondaryButtonText = "No",
+            XamlRoot = this.XamlRoot
+        };
+        
+        return await dialog.ShowAsync();
+    }
+
+    // IToolbarConsumer implementation
+    public void OnAdd()
+    {
+        CreatePurchaseOrder_Click(this, new RoutedEventArgs());
+    }
+
+    public void OnEdit()
+    {
+        if (OrdersList.SelectedItem is VendorOrderDto order)
+        {
+            EditOrder_Click(this, new RoutedEventArgs());
+        }
+    }
+
+    public void OnDelete()
+    {
+        if (OrdersList.SelectedItem is VendorOrderDto order)
+        {
+            CancelOrder_Click(this, new RoutedEventArgs());
+        }
+    }
+
+    public void OnRefresh()
+    {
+        Refresh_Click(this, new RoutedEventArgs());
     }
 }

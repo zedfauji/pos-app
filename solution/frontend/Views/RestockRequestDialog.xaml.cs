@@ -85,37 +85,46 @@ public sealed partial class RestockRequestDialog : ContentDialog
         }
     }
 
-    private void ItemComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void ItemComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ItemComboBox.SelectedItem is string selectedItem)
         {
             Request.ItemName = selectedItem;
             
-            // Update current stock display (mock data)
-            var mockStock = GetMockCurrentStock(selectedItem);
-            CurrentStockText.Text = mockStock.ToString();
-            Request.CurrentStock = mockStock;
+            try
+            {
+                // Get real current stock from inventory service
+                if (App.Api != null)
+                {
+                    var items = await App.Api.GetInventoryAsync();
+                    var item = items.FirstOrDefault(i => i.productname == selectedItem);
+                    if (item != null)
+                    {
+                        var currentStock = (int)item.saldo;
+                        CurrentStockText.Text = currentStock.ToString();
+                        Request.CurrentStock = currentStock;
+                    }
+                    else
+                    {
+                        CurrentStockText.Text = "0";
+                        Request.CurrentStock = 0;
+                    }
+                }
+                else
+                {
+                    CurrentStockText.Text = "N/A";
+                    Request.CurrentStock = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading stock for {selectedItem}: {ex.Message}");
+                CurrentStockText.Text = "Error";
+                Request.CurrentStock = 0;
+            }
         }
     }
 
-    private int GetMockCurrentStock(string itemName)
-    {
-        // Mock current stock data
-        return itemName switch
-        {
-            "Coffee Beans" => 15,
-            "Burger Patties" => 8,
-            "Cooking Oil" => 3,
-            "Paper Cups" => 45,
-            "Paper Napkins" => 25,
-            "Salt" => 12,
-            "Pepper" => 7,
-            "Sugar" => 20,
-            "Flour" => 5,
-            "Cheese" => 10,
-            _ => 0
-        };
-    }
 
     private void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
@@ -140,3 +149,6 @@ public sealed partial class RestockRequestDialog : ContentDialog
         Request.Notes = NotesBox.Text.Trim();
     }
 }
+
+
+

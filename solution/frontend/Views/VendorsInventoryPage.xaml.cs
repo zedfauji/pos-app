@@ -11,17 +11,27 @@ public sealed partial class VendorsInventoryPage : Page, IToolbarConsumer
 
     public VendorsInventoryPage()
     {
-        this.InitializeComponent();
-        
-        // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
-        if (App.Api == null)
+        try
         {
-            throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
+            this.InitializeComponent();
+            
+            // CRITICAL FIX: Ensure Api is initialized before creating ViewModel
+            if (App.Api == null)
+            {
+                // Show error dialog instead of throwing exception
+                ShowErrorDialog("API Not Initialized", "The API service is not available. Please restart the application or contact support.");
+                return;
+            }
+            _vm = new InventoryViewModel(App.Api);
+            
+            this.DataContext = _vm;
+            Loaded += VendorsInventoryPage_Loaded;
         }
-        _vm = new InventoryViewModel(App.Api);
-        
-        this.DataContext = _vm;
-        Loaded += VendorsInventoryPage_Loaded;
+        catch (Exception ex)
+        {
+            // Show error dialog instead of letting the exception crash the app
+            ShowErrorDialog("Initialization Error", $"Failed to initialize Vendors Inventory page: {ex.Message}");
+        }
     }
 
     private async void VendorsInventoryPage_Loaded(object sender, RoutedEventArgs e)
@@ -107,4 +117,24 @@ public sealed partial class VendorsInventoryPage : Page, IToolbarConsumer
     public async void OnEdit() => await _vm.LoadAsync();
     public async void OnDelete() => await _vm.LoadAsync();
     public async void OnRefresh() { await _vm.LoadAsync(); await _vm.RefreshJobsAsync(); }
+
+    private async void ShowErrorDialog(string title, string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new TextBlock { Text = message },
+                PrimaryButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback: Log error if dialog fails
+            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
+        }
+    }
 }

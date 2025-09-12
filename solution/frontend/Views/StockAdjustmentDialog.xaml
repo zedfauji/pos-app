@@ -35,3 +35,6 @@
         <TextBox Grid.Row="6" x:Name="NotesBox" PlaceholderText="Enter adjustment reason..." AcceptsReturn="True" Height="60"/>
     </Grid>
 </ContentDialog>
+
+
+

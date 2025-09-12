@@ -52,7 +52,17 @@ public sealed partial class PaymentPage : Page
             else
             {
                 DebugLogger.LogStep("ProcessPayment_Click", "ERROR: Invalid button or bill data");
-                throw new InvalidOperationException("Invalid button or bill data");
+                
+                // Show error dialog instead of throwing exception
+                var errorDialog = new ContentDialog()
+                {
+                    Title = "Invalid Data",
+                    Content = "Invalid button or bill data. Please try again.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+                return;
             }
         }
         catch (Exception ex)

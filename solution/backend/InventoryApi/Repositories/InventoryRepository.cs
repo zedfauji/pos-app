@@ -15,7 +15,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<IEnumerable<ItemDto>> ListItemsAsync(string? vendorId, string? categoryId, bool? isMenuAvailable, string? search, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        var sql = @"select item_id as Id, sku as Sku, name as Name, coalesce(selling_price,0) as Price, coalesce(quantity_on_hand,0) as Stock
+        var sql = @"select item_id::text as Id, sku as Sku, name as Name, coalesce(selling_price,0) as Price, coalesce(quantity_on_hand,0) as Stock
                     from inventory.v_items_current";
         var where = new List<string>();
         var param = new DynamicParameters();
@@ -32,7 +32,7 @@ public class InventoryRepository : IInventoryRepository
     public async Task<ItemDto?> GetItemAsync(string id, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = @"select item_id as Id, sku as Sku, name as Name, coalesce(selling_price,0) as Price, coalesce(quantity_on_hand,0) as Stock
+        const string sql = @"select item_id::text as Id, sku as Sku, name as Name, coalesce(selling_price,0) as Price, coalesce(quantity_on_hand,0) as Stock
                              from inventory.v_items_current where item_id = @id";
         return await conn.QuerySingleOrDefaultAsync<ItemDto>(sql, new { id });
     }

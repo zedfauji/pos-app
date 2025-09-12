@@ -447,7 +447,8 @@ namespace MagiDesk.Frontend.ViewModels
                 
                 if (!File.Exists(pdfFilePath))
                 {
-                    throw new FileNotFoundException($"PDF file not found: {pdfFilePath}");
+                    SetError($"PDF file not found: {pdfFilePath}");
+                    return;
                 }
 
                 // Create print preview dialog
@@ -565,7 +566,8 @@ namespace MagiDesk.Frontend.ViewModels
                 }
                 else
                 {
-                    throw new InvalidOperationException("Failed to start print process");
+                    SetError("Failed to start print process");
+                    return;
                 }
             }
             catch (Exception ex)
@@ -581,7 +583,8 @@ namespace MagiDesk.Frontend.ViewModels
                 catch (Exception fallbackEx)
                 {
                     _logger.LogError(fallbackEx, "PrintPdfFileAsync: Fallback also failed");
-                    throw new InvalidOperationException($"Failed to print PDF and fallback failed: {ex.Message}", ex);
+                    SetError($"Failed to print PDF and fallback failed: {ex.Message}");
+                    return;
                 }
             }
         }
@@ -609,13 +612,15 @@ namespace MagiDesk.Frontend.ViewModels
                 }
                 else
                 {
-                    throw new InvalidOperationException("Failed to start PDF viewer process");
+                    SetError("Failed to start PDF viewer process");
+                    return;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "OpenPdfInDefaultAppAsync failed");
-                throw new InvalidOperationException($"Failed to open PDF: {ex.Message}", ex);
+                SetError($"Failed to open PDF: {ex.Message}");
+                return;
             }
         }
 
@@ -635,12 +640,14 @@ namespace MagiDesk.Frontend.ViewModels
                 // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
                 // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
                 _logger.LogWarning("Could not get XamlRoot from any window");
-                throw new InvalidOperationException("Unable to get XamlRoot for dialog display");
+                SetError("Unable to get XamlRoot for dialog display");
+                return null;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get XamlRoot");
-                throw;
+                SetError($"Failed to get XamlRoot: {ex.Message}");
+                return null;
             }
         }
 
@@ -931,5 +938,20 @@ namespace MagiDesk.Frontend.ViewModels
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? m = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(m));
+
+        private void SetError(string message)
+        {
+            Error = message;
+            OnPropertyChanged(nameof(Error));
+            OnPropertyChanged(nameof(HasError));
+            _logger.LogError("PaymentViewModel Error: {Message}", message);
+        }
+
+        private void ClearError()
+        {
+            Error = null;
+            OnPropertyChanged(nameof(Error));
+            OnPropertyChanged(nameof(HasError));
+        }
     }
 }

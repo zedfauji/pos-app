@@ -17,24 +17,50 @@ public sealed partial class MenuSelectionDialog : ContentDialog
     public Guid SessionId { get; set; }
     public long? OrderId { get; set; }
 
-    private readonly MenuApiService _menuService;
-    private readonly OrderApiService _orderService;
+    private readonly MenuApiService? _menuService;
+    private readonly OrderApiService? _orderService;
 
     public MenuSelectionDialog()
     {
-        this.InitializeComponent();
-        _menuService = App.Menu ?? throw new InvalidOperationException("Menu service not available");
-        _orderService = App.OrdersApi ?? throw new InvalidOperationException("Order service not available");
-        
-        LoadMenuItems();
-        LoadServers();
-        UpdateSummary();
+        try
+        {
+            this.InitializeComponent();
+            _menuService = App.Menu;
+            _orderService = App.OrdersApi;
+            
+            if (_menuService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Menu service is not available. Please restart the application or contact support.");
+                return;
+            }
+            
+            if (_orderService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Order service is not available. Please restart the application or contact support.");
+                return;
+            }
+            
+            LoadMenuItems();
+            LoadServers();
+            UpdateSummary();
+        }
+        catch (Exception ex)
+        {
+            // Show error dialog instead of letting the exception crash the app
+            ShowErrorDialog("Initialization Error", $"Failed to initialize Menu Selection dialog: {ex.Message}");
+        }
     }
 
     private async void LoadMenuItems()
     {
         try
         {
+            if (_menuService == null)
+            {
+                ShowErrorDialog("Service Not Available", "Menu service is not available.");
+                return;
+            }
+            
             var query = new MenuApiService.ItemsQuery(Q: null, Category: null, GroupName: null, AvailableOnly: true);
             var items = await _menuService.ListItemsAsync(query);
             MenuItems.Clear();
@@ -59,15 +85,50 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         }
     }
 
-    private void LoadServers()
+    private async void LoadServers()
     {
-        // TODO: Load from server management or user management
-        AvailableServers.Add(new ServerViewModel { Id = "server1", Name = "Server 1" });
-        AvailableServers.Add(new ServerViewModel { Id = "server2", Name = "Server 2" });
-        AvailableServers.Add(new ServerViewModel { Id = "server3", Name = "Server 3" });
-        
-        if (AvailableServers.Count > 0)
-            SelectedServer = AvailableServers[0];
+        try
+        {
+            // Load servers from UserApiService
+            if (App.UsersApi != null)
+            {
+                var users = await App.UsersApi.GetUsersAsync();
+                AvailableServers.Clear();
+                
+                foreach (var user in users)
+                {
+                    AvailableServers.Add(new ServerViewModel 
+                    { 
+                        Id = user.UserId ?? Guid.NewGuid().ToString(), 
+                        Name = user.Username ?? $"User {user.UserId}" 
+                    });
+                }
+                
+                if (AvailableServers.Count > 0)
+                    SelectedServer = AvailableServers[0];
+            }
+            else
+            {
+                // Fallback to mock data if service not available
+                AvailableServers.Add(new ServerViewModel { Id = "server1", Name = "Server 1" });
+                AvailableServers.Add(new ServerViewModel { Id = "server2", Name = "Server 2" });
+                AvailableServers.Add(new ServerViewModel { Id = "server3", Name = "Server 3" });
+                
+                if (AvailableServers.Count > 0)
+                    SelectedServer = AvailableServers[0];
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load servers: {ex.Message}");
+            // Fallback to mock data
+            AvailableServers.Add(new ServerViewModel { Id = "server1", Name = "Server 1" });
+            AvailableServers.Add(new ServerViewModel { Id = "server2", Name = "Server 2" });
+            AvailableServers.Add(new ServerViewModel { Id = "server3", Name = "Server 3" });
+            
+            if (AvailableServers.Count > 0)
+                SelectedServer = AvailableServers[0];
+        }
     }
 
     private void DecreaseQuantity(long itemId)
@@ -88,7 +149,7 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         }
     }
 
-    private void AddItemToSelection(long itemId)
+    private async void AddItemToSelection(long itemId)
     {
         var menuItem = MenuItems.FirstOrDefault(i => i.Id == itemId);
         if (menuItem != null && menuItem.SelectedQuantity > 0)
@@ -98,8 +159,7 @@ public sealed partial class MenuSelectionDialog : ContentDialog
             if (invalidModifiers.Any())
             {
                 var requiredModifiers = string.Join(", ", invalidModifiers.Select(m => m.DisplayName));
-                System.Diagnostics.Debug.WriteLine($"Required modifiers not selected: {requiredModifiers}");
-                // TODO: Show error dialog to user
+                await ShowErrorDialog("Required Modifiers", $"Please select required modifiers: {requiredModifiers}");
                 return;
             }
 
@@ -244,6 +304,11 @@ public sealed partial class MenuSelectionDialog : ContentDialog
             if (OrderId.HasValue)
             {
                 // Add to existing order
+                if (_orderService == null)
+                {
+                    ShowErrorDialog("Service Not Available", "Order service is not available.");
+                    return;
+                }
                 await _orderService.AddItemsAsync(OrderId.Value, orderItems);
             }
             else
@@ -258,6 +323,11 @@ public sealed partial class MenuSelectionDialog : ContentDialog
                     orderItems
                 );
                 
+                if (_orderService == null)
+                {
+                    ShowErrorDialog("Service Not Available", "Order service is not available.");
+                    return;
+                }
                 var order = await _orderService.CreateOrderAsync(request);
                 if (order != null)
                 {
@@ -270,13 +340,33 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Failed to add items to order: {ex.Message}");
-            // TODO: Show error dialog
+            await ShowErrorDialog("Order Error", $"Failed to add items to order: {ex.Message}");
         }
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
         this.Hide();
+    }
+
+    private async Task ShowErrorDialog(string title, string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new TextBlock { Text = message },
+                PrimaryButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback: Log error if dialog fails
+            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
+        }
     }
 
     // Properties for binding

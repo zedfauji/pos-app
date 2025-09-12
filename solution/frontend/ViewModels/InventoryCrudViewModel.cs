@@ -8,24 +8,20 @@ namespace MagiDesk.Frontend.ViewModels;
 public class InventoryCrudViewModel : INotifyPropertyChanged
 {
     private readonly IInventoryService _inventoryService;
-    private readonly IVendorService _vendorService;
 
     private ObservableCollection<InventoryItemDto> _items = new();
     private ObservableCollection<InventoryItemDto> _filteredItems = new();
     private string _searchText = string.Empty;
     private string _selectedCategory = string.Empty;
-    private string _selectedVendor = string.Empty;
     private string _selectedStatus = string.Empty;
 
     public ObservableCollection<InventoryItemDto> Items => _filteredItems;
-    public ObservableCollection<VendorDto> Vendors { get; } = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public InventoryCrudViewModel(IInventoryService inventoryService, IVendorService vendorService)
+    public InventoryCrudViewModel(IInventoryService inventoryService)
     {
         _inventoryService = inventoryService;
-        _vendorService = vendorService;
     }
 
     public async Task LoadDataAsync()
@@ -70,31 +66,7 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<IEnumerable<VendorDto>> GetVendorsAsync()
-    {
-        try
-        {
-            // Return sample vendors
-            var sampleVendors = new[]
-            {
-                new VendorDto { Id = "VENDOR-001", Name = "Coffee Supply Co.", Status = "Active" },
-                new VendorDto { Id = "VENDOR-002", Name = "Meat Suppliers Inc.", Status = "Active" },
-                new VendorDto { Id = "VENDOR-003", Name = "Supply Solutions", Status = "Active" }
-            };
-            
-            Vendors.Clear();
-            foreach (var vendor in sampleVendors)
-            {
-                Vendors.Add(vendor);
-            }
-            return sampleVendors;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error loading vendors: {ex.Message}");
-            return new List<VendorDto>();
-        }
-    }
+    // Legacy vendor methods removed - using new inventory system
 
     public async Task<InventoryItemDto?> GetItemAsync(string id)
     {
@@ -191,12 +163,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         ApplyFilters();
     }
 
-    public void FilterByVendor(string vendorId)
-    {
-        _selectedVendor = vendorId ?? string.Empty;
-        ApplyFilters();
-    }
-
     public void FilterByStatus(string status)
     {
         _selectedStatus = status ?? string.Empty;
@@ -219,12 +185,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         if (!string.IsNullOrEmpty(_selectedCategory))
         {
             filtered = filtered.Where(item => item.Category == _selectedCategory);
-        }
-
-        // Apply vendor filter
-        if (!string.IsNullOrEmpty(_selectedVendor))
-        {
-            filtered = filtered.Where(item => item.VendorId == _selectedVendor);
         }
 
         // Apply status filter

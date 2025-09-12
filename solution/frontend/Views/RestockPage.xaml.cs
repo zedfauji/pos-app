@@ -15,12 +15,11 @@ public sealed partial class RestockPage : Page, IToolbarConsumer
     {
         this.InitializeComponent();
         
-        // Create services
+        // Create services with proper HTTP clients and loggers
         var restockService = new RestockService(new HttpClient(), new SimpleLogger<RestockService>());
         var inventoryService = new InventoryService(new HttpClient(), new SimpleLogger<InventoryService>());
-        var vendorService = new VendorService(new HttpClient(), new SimpleLogger<VendorService>());
         
-        _vm = new RestockViewModel(restockService, inventoryService, vendorService);
+        _vm = new RestockViewModel(restockService, inventoryService);
         this.DataContext = _vm;
         
         Loaded += RestockPage_Loaded;

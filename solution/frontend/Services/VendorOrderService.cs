@@ -38,33 +38,25 @@ public class VendorOrderService : IVendorOrderService
             {
                 new VendorOrderDto
                 {
-                    Id = "1",
+                    OrderId = "1",
                     VendorId = "VENDOR-001",
                     VendorName = "Coffee Supply Co.",
                     OrderDate = DateTime.Now.AddDays(-3),
-                    ExpectedDelivery = DateTime.Now.AddDays(2),
+                    ExpectedDeliveryDate = DateTime.Now.AddDays(2),
                     Status = "Submitted",
-                    TotalAmount = 1250.00m,
-                    Items = new List<VendorOrderItemDto>
-                    {
-                        new VendorOrderItemDto { ItemId = "COF-BEAN-001", ItemName = "Coffee Beans", Quantity = 50, UnitPrice = 15.99m },
-                        new VendorOrderItemDto { ItemId = "COF-FILTER-001", ItemName = "Coffee Filters", Quantity = 200, UnitPrice = 2.50m }
-                    }
+                    TotalValue = 1250.00m,
+                    ItemCount = 2
                 },
                 new VendorOrderDto
                 {
-                    Id = "2",
+                    OrderId = "2",
                     VendorId = "VENDOR-002",
                     VendorName = "Meat Suppliers Inc.",
                     OrderDate = DateTime.Now.AddDays(-1),
-                    ExpectedDelivery = DateTime.Now.AddDays(1),
+                    ExpectedDeliveryDate = DateTime.Now.AddDays(1),
                     Status = "In Transit",
-                    TotalAmount = 850.00m,
-                    Items = new List<VendorOrderItemDto>
-                    {
-                        new VendorOrderItemDto { ItemId = "BUR-PAT-001", ItemName = "Burger Patties", Quantity = 100, UnitPrice = 2.50m },
-                        new VendorOrderItemDto { ItemId = "CHK-BREAST-001", ItemName = "Chicken Breast", Quantity = 50, UnitPrice = 8.99m }
-                    }
+                    TotalValue = 850.00m,
+                    ItemCount = 2
                 }
             };
         }
@@ -80,7 +72,7 @@ public class VendorOrderService : IVendorOrderService
         try
         {
             var orders = await GetVendorOrdersAsync(ct);
-            return orders.FirstOrDefault(o => o.Id == id);
+            return orders.FirstOrDefault(o => o.OrderId == id);
         }
         catch (Exception ex)
         {
@@ -94,7 +86,7 @@ public class VendorOrderService : IVendorOrderService
         try
         {
             // TODO: Implement actual endpoint
-            order.Id = Guid.NewGuid().ToString();
+            order.OrderId = Guid.NewGuid().ToString();
             order.OrderDate = DateTime.Now;
             order.Status = "Draft";
             return order;
@@ -175,29 +167,4 @@ public class VendorOrderService : IVendorOrderService
             return new List<VendorOrderDto>();
         }
     }
-}
-
-// DTOs for vendor order service
-public class VendorOrderDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string VendorId { get; set; } = string.Empty;
-    public string VendorName { get; set; } = string.Empty;
-    public DateTime OrderDate { get; set; }
-    public DateTime? ExpectedDelivery { get; set; }
-    public DateTime? ActualDelivery { get; set; }
-    public string Status { get; set; } = "Draft"; // Draft, Submitted, In Transit, Delivered, Cancelled
-    public decimal TotalAmount { get; set; }
-    public List<VendorOrderItemDto> Items { get; set; } = new();
-    public string? Notes { get; set; }
-    public string? CreatedBy { get; set; }
-}
-
-public class VendorOrderItemDto
-{
-    public string ItemId { get; set; } = string.Empty;
-    public string ItemName { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal Subtotal => Quantity * UnitPrice;
 }

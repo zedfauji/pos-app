@@ -52,3 +52,6 @@
         <TextBox Grid.Row="11" x:Name="NotesBox" PlaceholderText="Add any notes about this restock request..." AcceptsReturn="True" TextWrapping="Wrap" Height="80"/>
     </Grid>
 </ContentDialog>
+
+
+

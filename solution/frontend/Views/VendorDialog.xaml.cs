@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.ViewModels;
+using MagiDesk.Shared.DTOs;
 using System.Windows.Input;
 
 namespace MagiDesk.Frontend.Views;
@@ -31,11 +32,12 @@ public sealed partial class VendorDialog : ContentDialog
                 Phone = string.Empty,
                 Email = string.Empty,
                 Address = string.Empty,
-                Status = "Active",
+                Status = "active",
                 PaymentTerms = "Net 30",
                 CreditLimit = 0,
-                OrderCount = 0,
-                StatusColor = "Green"
+                TotalOrders = 0,
+                PendingOrders = 0,
+                AverageDeliveryTimeDays = 0
             };
             ViewModel = new VendorDialogViewModel(Vendor, "Add New Vendor");
         }
@@ -81,7 +83,7 @@ public sealed partial class VendorDialog : ContentDialog
         Vendor.Phone = PhoneBox.Text.Trim();
         Vendor.Email = EmailBox.Text.Trim();
         Vendor.Address = AddressBox.Text.Trim();
-        Vendor.Status = (StatusBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Active";
+        Vendor.Status = (StatusBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "active";
         Vendor.PaymentTerms = (PaymentTermsBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Net 30";
         Vendor.CreditLimit = (decimal)CreditLimitBox.Value;
     }

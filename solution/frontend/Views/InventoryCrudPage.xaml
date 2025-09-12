@@ -32,13 +32,12 @@
             </Grid.ColumnDefinitions>
             
             <ComboBox Grid.Column="0" x:Name="CategoryFilter" PlaceholderText="All Categories" SelectionChanged="CategoryFilter_SelectionChanged" Margin="0,0,8,0"/>
-            <ComboBox Grid.Column="1" x:Name="VendorFilter" PlaceholderText="All Vendors" SelectionChanged="VendorFilter_SelectionChanged" Margin="0,0,8,0"/>
-            <ComboBox Grid.Column="2" x:Name="StatusFilter" PlaceholderText="All Status" SelectionChanged="StatusFilter_SelectionChanged" Margin="0,0,8,0">
+            <ComboBox Grid.Column="1" x:Name="StatusFilter" PlaceholderText="All Status" SelectionChanged="StatusFilter_SelectionChanged" Margin="0,0,8,0">
                 <ComboBoxItem Content="Active" Tag="Active"/>
                 <ComboBoxItem Content="Inactive" Tag="Inactive"/>
                 <ComboBoxItem Content="Low Stock" Tag="LowStock"/>
             </ComboBox>
-            <TextBox Grid.Column="3" x:Name="SearchBox" PlaceholderText="Search items..." TextChanged="SearchBox_TextChanged"/>
+            <TextBox Grid.Column="2" x:Name="SearchBox" PlaceholderText="Search items..." TextChanged="SearchBox_TextChanged"/>
         </Grid>
 
         <!-- Inventory Items List -->

@@ -27,83 +27,76 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
         }
     }
 
-    private readonly MenuApiService _menuService;
+    private readonly MenuApiService? _menuService;
 
     public ModifierManagementPage()
     {
-        this.InitializeComponent();
-        _menuService = App.Menu ?? throw new InvalidOperationException("Menu service not available");
-        LoadModifiers();
-    }
-
-    private async void LoadModifiers()
-    {
         try
         {
-            // TODO: Implement GetModifiersAsync in MenuApiService
-            // For now, create sample modifiers
-            Modifiers.Clear();
+            this.InitializeComponent();
+            _menuService = App.Menu;
             
-            // Sample modifiers for demonstration
-            var sampleModifiers = new[]
+            if (_menuService == null)
             {
-                new ModifierManagementViewModel
-                {
-                    Id = 1,
-                    Name = "Size",
-                    Description = "Choose your drink size",
-                    IsRequired = true,
-                    AllowMultiple = false,
-                    MaxSelections = 1,
-                    Options = new ObservableCollection<ModifierOptionManagementViewModel>
-                    {
-                        new() { Id = 1, Name = "Small", PriceDelta = 0, SortOrder = 1 },
-                        new() { Id = 2, Name = "Medium", PriceDelta = 1.50m, SortOrder = 2 },
-                        new() { Id = 3, Name = "Large", PriceDelta = 2.50m, SortOrder = 3 }
-                    }
-                },
-                new ModifierManagementViewModel
-                {
-                    Id = 2,
-                    Name = "Flavor",
-                    Description = "Add flavor to your drink",
-                    IsRequired = false,
-                    AllowMultiple = true,
-                    MaxSelections = 3,
-                    Options = new ObservableCollection<ModifierOptionManagementViewModel>
-                    {
-                        new() { Id = 4, Name = "Vanilla", PriceDelta = 0.50m, SortOrder = 1 },
-                        new() { Id = 5, Name = "Chocolate", PriceDelta = 0.50m, SortOrder = 2 },
-                        new() { Id = 6, Name = "Strawberry", PriceDelta = 0.50m, SortOrder = 3 },
-                        new() { Id = 7, Name = "Caramel", PriceDelta = 0.75m, SortOrder = 4 }
-                    }
-                },
-                new ModifierManagementViewModel
-                {
-                    Id = 3,
-                    Name = "Salsa",
-                    Description = "Choose your salsa heat level",
-                    IsRequired = true,
-                    AllowMultiple = false,
-                    MaxSelections = 1,
-                    Options = new ObservableCollection<ModifierOptionManagementViewModel>
-                    {
-                        new() { Id = 8, Name = "Mild", PriceDelta = 0, SortOrder = 1 },
-                        new() { Id = 9, Name = "Medium", PriceDelta = 0, SortOrder = 2 },
-                        new() { Id = 10, Name = "Hot", PriceDelta = 0, SortOrder = 3 },
-                        new() { Id = 11, Name = "Extra Hot", PriceDelta = 0.25m, SortOrder = 4 }
-                    }
-                }
-            };
-
-            foreach (var modifier in sampleModifiers)
-            {
-                Modifiers.Add(modifier);
+                ShowErrorDialog("Service Not Available", "Menu service is not available. Please restart the application or contact support.");
+                return;
             }
+            
+            Loaded += async (s, e) => await LoadModifiersAsync();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load modifiers: {ex.Message}");
+            // Show error dialog instead of letting the exception crash the app
+            ShowErrorDialog("Initialization Error", $"Failed to initialize Modifier Management page: {ex.Message}");
+        }
+    }
+
+    private async Task LoadModifiersAsync()
+    {
+        if (_menuService == null) return;
+
+        try
+        {
+            Modifiers.Clear();
+            System.Diagnostics.Debug.WriteLine("ModifierManagementPage: Loading modifiers...");
+            
+            var query = new MenuApiService.ModifierQuery(Q: null, Page: 1, PageSize: 100);
+            var modifiers = await _menuService.ListModifiersAsync(query);
+            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Retrieved {modifiers.Count} modifiers from API");
+
+            foreach (var modifier in modifiers)
+            {
+                var vm = new ModifierManagementViewModel
+                {
+                    Id = modifier.Id,
+                    Name = modifier.Name,
+                    Description = "", // ModifierDto doesn't have Description in the current API
+                    IsRequired = modifier.IsRequired,
+                    AllowMultiple = modifier.AllowMultiple,
+                    MaxSelections = modifier.MaxSelections,
+                    Options = new ObservableCollection<ModifierOptionManagementViewModel>()
+                };
+
+                foreach (var option in modifier.Options)
+                {
+                    vm.Options.Add(new ModifierOptionManagementViewModel
+                    {
+                        Id = option.Id,
+                        Name = option.Name,
+                        PriceDelta = option.PriceDelta,
+                        SortOrder = option.SortOrder
+                    });
+                }
+
+                Modifiers.Add(vm);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Added {Modifiers.Count} modifiers to collection");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Error loading modifiers: {ex.Message}");
+            ShowErrorDialog("Error", $"Failed to load modifiers: {ex.Message}");
         }
     }
 
@@ -115,39 +108,80 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
         }
     }
 
-    private void AddModifier_Click(object sender, RoutedEventArgs e)
+    private async void AddModifier_Click(object sender, RoutedEventArgs e)
     {
-        var newModifier = new ModifierManagementViewModel
+        try
         {
-            Id = Modifiers.Count + 1,
-            Name = "New Modifier",
-            Description = "",
-            IsRequired = false,
-            AllowMultiple = false,
-            MaxSelections = 1,
-            Options = new ObservableCollection<ModifierOptionManagementViewModel>()
-        };
-        
-        Modifiers.Add(newModifier);
-        SelectedModifier = newModifier;
-    }
+            var dialog = new Dialogs.ModifierCrudDialog();
+            dialog.XamlRoot = this.XamlRoot;
+            var result = await dialog.ShowAsync();
 
-    private void EditModifier_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.DataContext is ModifierManagementViewModel modifier)
+            if (result == ContentDialogResult.Primary)
+            {
+                await LoadModifiersAsync(); // Refresh the list
+            }
+        }
+        catch (Exception ex)
         {
-            SelectedModifier = modifier;
+            ShowErrorDialog("Error", $"Failed to add modifier: {ex.Message}");
         }
     }
 
-    private void DeleteModifier_Click(object sender, RoutedEventArgs e)
+    private async void EditModifier_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && button.DataContext is ModifierManagementViewModel modifier)
         {
-            Modifiers.Remove(modifier);
-            if (SelectedModifier == modifier)
+            try
             {
-                SelectedModifier = null;
+                var dialog = new Dialogs.ModifierCrudDialog(modifier);
+                dialog.XamlRoot = this.XamlRoot;
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary)
+                {
+                    await LoadModifiersAsync(); // Refresh the list
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Error", $"Failed to edit modifier: {ex.Message}");
+            }
+        }
+    }
+
+    private async void DeleteModifier_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.DataContext is ModifierManagementViewModel modifier)
+        {
+            try
+            {
+                var confirmDialog = new ContentDialog
+                {
+                    Title = "Delete Modifier",
+                    Content = $"Are you sure you want to delete '{modifier.Name}'? This action cannot be undone.",
+                    PrimaryButtonText = "Delete",
+                    SecondaryButtonText = "Cancel",
+                    DefaultButton = ContentDialogButton.Secondary,
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await confirmDialog.ShowAsync();
+                if (result == ContentDialogResult.Primary && _menuService != null)
+                {
+                    var success = await _menuService.DeleteModifierAsync(modifier.Id);
+                    if (success)
+                    {
+                        await LoadModifiersAsync(); // Refresh the list
+                    }
+                    else
+                    {
+                        ShowErrorDialog("Error", "Failed to delete modifier. Please try again.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Error", $"Failed to delete modifier: {ex.Message}");
             }
         }
     }
@@ -191,6 +225,26 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
     private void CancelEdit_Click(object sender, RoutedEventArgs e)
     {
         SelectedModifier = null;
+    }
+
+    private async void ShowErrorDialog(string title, string message)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = new TextBlock { Text = message },
+                PrimaryButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            // Fallback: Log error if dialog fails
+            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

@@ -27,6 +27,8 @@ namespace MagiDesk.Frontend.Views
         private decimal _discountAmount;
         private string? _discountReason;
         private PaymentApiService? _paymentService;
+        private PaymentIdResolver? _idResolver;
+        private SplitPaymentCalculator? _splitCalculator;
         private bool _isProcessing = false;
         private ObservableCollection<OrderItemViewModel> _orderItems = new();
         
@@ -48,6 +50,8 @@ namespace MagiDesk.Frontend.Views
         {
             this.InitializeComponent();
             _paymentService = App.Payments;
+            _idResolver = new PaymentIdResolver(new TableRepository());
+            _splitCalculator = new SplitPaymentCalculator();
             Loaded += EphemeralPaymentPage_Loaded;
             
             // Initialize order items list
@@ -500,75 +504,44 @@ namespace MagiDesk.Frontend.Views
 
         private async Task<bool> ProcessPaymentAsync()
         {
-            if (_paymentService == null || _bill == null)
+            if (_paymentService == null || _bill == null || _idResolver == null || _splitCalculator == null)
             {
-                throw new InvalidOperationException("Payment service or bill information not available");
+                throw new InvalidOperationException("Required services not available");
             }
 
             try
             {
-                // Try to get the active session for this table to get the correct billing ID
-                var tableRepository = new TableRepository();
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Looking for active session for table: '{_bill.TableLabel}'");
-                var (activeSessionId, activeBillingId) = await tableRepository.GetActiveSessionForTableAsync(_bill.TableLabel ?? "");
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: GetActiveSessionForTableAsync result - SessionId='{activeSessionId}', BillingId='{activeBillingId}'");
+                // Resolve SessionId and BillingId using the new service
+                var (sessionId, billingId) = await _idResolver.ResolvePaymentIdsAsync(_bill);
                 
-                // Also get the complete bill information as fallback
-                var completeBill = await tableRepository.GetBillByIdAsync(_bill.BillId);
-                
-                // Since there are no active sessions, use the BillingId from the complete bill
-                // The payment API now expects UUID format for both SessionId and BillingId
-                var billingId = activeBillingId ?? completeBill?.BillingId ?? _bill.BillingId ?? _bill.BillId;
-                var sessionId = activeSessionId ?? 
-                    completeBill?.SessionId ?? 
-                    _bill.SessionId ?? 
-                    Guid.Empty;
+                if (!_idResolver.ValidatePaymentIds(sessionId, billingId))
+                {
+                    throw new InvalidOperationException("Invalid SessionId or BillingId resolved");
+                }
 
-                // Debug logging
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Original Bill - BillId={_bill.BillId}, BillingId={_bill.BillingId}, SessionId={_bill.SessionId}");
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Complete Bill - BillId={completeBill?.BillId}, BillingId={completeBill?.BillingId}, SessionId={completeBill?.SessionId}");
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Active Session - SessionId={activeSessionId}, BillingId={activeBillingId}");
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Final - BillingId={billingId}, SessionId={sessionId}");
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Resolved IDs - SessionId={sessionId}, BillingId={billingId}");
 
                 var paymentLines = new List<PaymentApiService.RegisterPaymentLineDto>();
 
                 if (_selectedPaymentMethod == "Split")
                 {
-                    // Create multiple payment lines for split payment
-                    if (_cashAmount > 0)
+                    // Use the split payment calculator
+                    var splitAmounts = new Dictionary<string, decimal>();
+                    if (_cashAmount > 0) splitAmounts["Cash"] = _cashAmount;
+                    if (_cardAmount > 0) splitAmounts["Card"] = _cardAmount;
+                    if (_digitalAmount > 0) splitAmounts["Mobile"] = _digitalAmount;
+
+                    var splitResult = _splitCalculator.CalculateSplitPayment(
+                        _originalAmount, _tipAmount, _discountAmount, splitAmounts);
+
+                    foreach (var split in splitResult.SplitDetails)
                     {
                         paymentLines.Add(new PaymentApiService.RegisterPaymentLineDto(
-                            AmountPaid: _cashAmount,
-                            PaymentMethod: "Cash",
-                            DiscountAmount: 0,
-                            DiscountReason: null,
-                            TipAmount: 0,
-                            ExternalRef: null,
-                            Meta: null
-                        ));
-                    }
-                    
-                    if (_cardAmount > 0)
-                    {
-                        paymentLines.Add(new PaymentApiService.RegisterPaymentLineDto(
-                            AmountPaid: _cardAmount,
-                            PaymentMethod: "Card",
-                            DiscountAmount: 0,
-                            DiscountReason: null,
-                            TipAmount: 0,
-                            ExternalRef: null,
-                            Meta: null
-                        ));
-                    }
-                    
-                    if (_digitalAmount > 0)
-                    {
-                        paymentLines.Add(new PaymentApiService.RegisterPaymentLineDto(
-                            AmountPaid: _digitalAmount,
-                            PaymentMethod: "Mobile",
-                            DiscountAmount: 0,
-                            DiscountReason: null,
-                            TipAmount: 0,
+                            AmountPaid: split.AmountPaid,
+                            PaymentMethod: split.PaymentMethod,
+                            DiscountAmount: split.DiscountAmount,
+                            DiscountReason: _discountReason,
+                            TipAmount: split.TipAmount,
                             ExternalRef: null,
                             Meta: null
                         ));

@@ -15,11 +15,10 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
     {
         this.InitializeComponent();
         
-        // Create services
+        // Create service with proper HTTP client and logger
         var inventoryService = new InventoryService(new HttpClient(), new SimpleLogger<InventoryService>());
-        var vendorService = new VendorService(new HttpClient(), new SimpleLogger<VendorService>());
         
-        _vm = new InventoryCrudViewModel(inventoryService, vendorService);
+        _vm = new InventoryCrudViewModel(inventoryService);
         this.DataContext = _vm;
         
         Loaded += InventoryCrudPage_Loaded;
@@ -44,14 +43,7 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
                 CategoryFilter.Items.Add(new ComboBoxItem { Content = category, Tag = category });
             }
 
-            // Load vendors
-            var vendors = await _vm.GetVendorsAsync();
-            VendorFilter.Items.Clear();
-            VendorFilter.Items.Add(new ComboBoxItem { Content = "All Vendors", Tag = "" });
-            foreach (var vendor in vendors)
-            {
-                VendorFilter.Items.Add(new ComboBoxItem { Content = vendor.Name, Tag = vendor.Id });
-            }
+            // Legacy vendor loading removed - using new inventory system
         }
         catch (Exception ex)
         {
@@ -67,6 +59,7 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
     private async void AddItem_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new InventoryItemDialog();
+        dialog.XamlRoot = this.XamlRoot;
         var result = await dialog.ShowAsync();
         if (result == ContentDialogResult.Primary)
         {
@@ -83,6 +76,7 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
             if (item != null)
             {
                 var dialog = new InventoryItemDialog(item);
+                dialog.XamlRoot = this.XamlRoot;
                 var result = await dialog.ShowAsync();
                 if (result == ContentDialogResult.Primary)
                 {
@@ -98,6 +92,7 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
         if (sender is Button button && button.Tag is string itemId)
         {
             var dialog = new StockAdjustmentDialog(itemId);
+            dialog.XamlRoot = this.XamlRoot;
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
@@ -163,13 +158,7 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
         }
     }
 
-    private void VendorFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (VendorFilter.SelectedItem is ComboBoxItem item && item.Tag is string vendorId)
-        {
-            _vm.FilterByVendor(vendorId);
-        }
-    }
+    // Legacy vendor filter removed - using new inventory system
 
     private void StatusFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

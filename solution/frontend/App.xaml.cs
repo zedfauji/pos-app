@@ -279,7 +279,21 @@ namespace MagiDesk.Frontend
         void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {
             Log.Error($"Navigation failed to {e.SourcePageType.FullName}", e.Exception);
-            throw new Exception("Failed to load Page " + e.SourcePageType.FullName, e.Exception);
+            
+            // Handle navigation failure gracefully instead of throwing exception
+            try
+            {
+                // Try to navigate to a safe fallback page
+                if (MainWindow?.Content is Frame frame)
+                {
+                    frame.Navigate(typeof(Views.MainPage));
+                }
+            }
+            catch (Exception fallbackEx)
+            {
+                Log.Error("Failed to navigate to fallback page", fallbackEx);
+                // If even the fallback fails, just log it - don't crash the app
+            }
         }
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)

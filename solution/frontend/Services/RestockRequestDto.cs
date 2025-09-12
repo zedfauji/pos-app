@@ -47,3 +47,6 @@ public class RestockRequestDto
     public bool CanReceive => Status == "Ordered";
     public bool CanCancel => Status is "Pending" or "Approved";
 }
+
+
+

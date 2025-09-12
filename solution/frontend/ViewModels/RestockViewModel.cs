@@ -9,7 +9,6 @@ public class RestockViewModel : INotifyPropertyChanged
 {
     private readonly IRestockService _restockService;
     private readonly IInventoryService _inventoryService;
-    private readonly IVendorService _vendorService;
 
     private ObservableCollection<RestockRequestDto> _requests = new();
     private ObservableCollection<RestockRequestDto> _filteredRequests = new();
@@ -45,11 +44,10 @@ public class RestockViewModel : INotifyPropertyChanged
         }
     }
 
-    public RestockViewModel(IRestockService restockService, IInventoryService inventoryService, IVendorService vendorService)
+    public RestockViewModel(IRestockService restockService, IInventoryService inventoryService)
     {
         _restockService = restockService;
         _inventoryService = inventoryService;
-        _vendorService = vendorService;
     }
 
     public async Task LoadDataAsync()
@@ -342,3 +340,6 @@ public class RestockViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
+
+
+

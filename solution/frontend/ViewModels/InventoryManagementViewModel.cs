@@ -7,7 +7,6 @@ namespace MagiDesk.Frontend.ViewModels;
 public class InventoryDashboardViewModel
 {
     private readonly IInventoryService _inventoryService;
-    private readonly IVendorService _vendorService;
     private readonly IRestockService _restockService;
     private readonly IVendorOrderService _vendorOrderService;
     private readonly IAuditService _auditService;
@@ -21,13 +20,11 @@ public class InventoryDashboardViewModel
 
     // Collections for data
     public ObservableCollection<ItemDto> LowStockItems { get; } = new();
-    public ObservableCollection<VendorDto> ActiveVendors { get; } = new();
     public ObservableCollection<InventoryTransactionDto> RecentTransactions { get; } = new();
 
-    public InventoryDashboardViewModel(IInventoryService inventoryService, IVendorService vendorService, IRestockService restockService, IVendorOrderService vendorOrderService, IAuditService auditService)
+    public InventoryDashboardViewModel(IInventoryService inventoryService, IRestockService restockService, IVendorOrderService vendorOrderService, IAuditService auditService)
     {
         _inventoryService = inventoryService;
-        _vendorService = vendorService;
         _restockService = restockService;
         _vendorOrderService = vendorOrderService;
         _auditService = auditService;

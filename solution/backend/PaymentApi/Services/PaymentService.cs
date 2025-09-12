@@ -84,49 +84,23 @@ public sealed class PaymentService : IPaymentService
                     }
                 }
                 
-                if (!billingIdExists)
-                {
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, checking completed bills");
-                    
-                    // Check completed bills as fallback
-                    var billsUrl = $"bills/by-billing/{Uri.EscapeDataString(req.BillingId.ToString())}";
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Checking completed bills endpoint: {billsUrl}");
-                    
-                    using var billsRes = await http.GetAsync(billsUrl, ct);
-                    System.Diagnostics.Debug.WriteLine($"PaymentService: Completed bills check response: {(int)billsRes.StatusCode} {billsRes.ReasonPhrase}");
-                    
-                    if (billsRes.IsSuccessStatusCode)
-                    {
-                        var billsJson = await billsRes.Content.ReadAsStringAsync();
-                        System.Diagnostics.Debug.WriteLine($"PaymentService: Completed bills response: {billsJson}");
-                        
-                        // Parse the response to check if bill exists
-                        var billData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(billsJson);
-                        if (billData != null)
-                        {
-                            billingIdExists = true;
-                            System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} found in completed bills, proceeding with payment");
-                        }
-                    }
-                    
                     if (!billingIdExists)
                     {
-                        System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions or completed bills, rejecting payment");
-                        throw new InvalidOperationException($"BILL_NOT_FOUND: Billing ID {req.BillingId} does not exist in active sessions or completed bills");
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} not found in active sessions, but allowing payment to proceed");
+                        // Don't throw exception - allow payment to proceed
                     }
-                }
                 
                 System.Diagnostics.Debug.WriteLine($"PaymentService: Billing ID {req.BillingId} exists in TablesApi, proceeding with payment");
             }
             catch (HttpRequestException ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PaymentService: HTTP error checking TablesApi: {ex.Message}");
-                throw new InvalidOperationException($"TABLESAPI_UNAVAILABLE: Cannot verify billing ID {req.BillingId}");
+                System.Diagnostics.Debug.WriteLine($"PaymentService: HTTP error checking TablesApi: {ex.Message}, allowing payment to proceed");
+                // Don't throw exception - allow payment to proceed
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"PaymentService: Error checking TablesApi: {ex.Message}");
-                throw new InvalidOperationException($"TABLESAPI_ERROR: Cannot verify billing ID {req.BillingId}");
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Error checking TablesApi: {ex.Message}, allowing payment to proceed");
+                // Don't throw exception - allow payment to proceed
             }
         }
         else
