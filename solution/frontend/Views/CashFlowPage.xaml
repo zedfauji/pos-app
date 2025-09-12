@@ -163,7 +163,6 @@
                             <NumberBox x:Name="CashAmountBox" 
                                        Value="{Binding CashAmount, Mode=TwoWay}"
                                        PlaceholderText="0.00"
-                                       NumberFormatter="{x:Null}"
                                        HorizontalAlignment="Stretch"/>
                         </StackPanel>
 
