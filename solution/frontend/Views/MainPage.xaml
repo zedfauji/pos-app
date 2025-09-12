@@ -60,10 +60,11 @@
                 <NavigationViewItem Content="Vendors" Tag="VendorsPage" Icon="People">
                     <NavigationViewItem.MenuItems>
                         <NavigationViewItem Content="Vendor-Orders" Tag="VendorOrdersPage" Icon="List"/>
+                        <NavigationViewItem Content="Vendors Inventory" Tag="VendorsInventoryPage" Icon="AllApps"/>
                     </NavigationViewItem.MenuItems>
                 </NavigationViewItem>
                 <NavigationViewItem Content="Items" Tag="ItemsPage" Icon="Shop"/>
-                <NavigationViewItem Content="Inventory" Tag="InventoryPage" Icon="AllApps"/>
+                <NavigationViewItem Content="Inventory Management" Tag="InventoryManagementPage" Icon="AllApps"/>
 
                 <NavigationViewItemSeparator/>
 

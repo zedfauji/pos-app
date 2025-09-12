@@ -113,8 +113,10 @@
     </ItemGroup>
     <!-- OrderBuilderPage removed -->
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeInventory)'=='true'">
-        <Page Include="Views\InventoryPage.xaml" />
-        <Compile Include="Views\InventoryPage.xaml.cs" />
+        <Page Include="Views\VendorsInventoryPage.xaml" />
+        <Compile Include="Views\VendorsInventoryPage.xaml.cs" />
+        <Page Include="Views\InventoryManagementPage.xaml" />
+        <Compile Include="Views\InventoryManagementPage.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
         <Page Include="Views\CashFlowPage.xaml" />

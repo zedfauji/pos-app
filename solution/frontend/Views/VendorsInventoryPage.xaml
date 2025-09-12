@@ -1,5 +1,5 @@
 <Page
-    x:Class="MagiDesk.Frontend.Views.InventoryPage"
+    x:Class="MagiDesk.Frontend.Views.VendorsInventoryPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -12,7 +12,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Inventory" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Vendors Inventory" FontSize="20" FontWeight="SemiBold"/>
             <Button Content="Sync Product Names" Click="Sync_Click"/>
             <Button Content="Refresh" Click="Refresh_Click"/>
             <Button Content="Job History" Click="JobHistory_Click"/>

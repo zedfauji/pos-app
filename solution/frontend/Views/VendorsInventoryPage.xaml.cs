@@ -5,11 +5,11 @@ using MagiDesk.Frontend.Services;
 
 namespace MagiDesk.Frontend.Views;
 
-public sealed partial class InventoryPage : Page, IToolbarConsumer
+public sealed partial class VendorsInventoryPage : Page, IToolbarConsumer
 {
     private readonly InventoryViewModel _vm;
 
-    public InventoryPage()
+    public VendorsInventoryPage()
     {
         this.InitializeComponent();
         
@@ -21,10 +21,10 @@ public sealed partial class InventoryPage : Page, IToolbarConsumer
         _vm = new InventoryViewModel(App.Api);
         
         this.DataContext = _vm;
-        Loaded += InventoryPage_Loaded;
+        Loaded += VendorsInventoryPage_Loaded;
     }
 
-    private async void InventoryPage_Loaded(object sender, RoutedEventArgs e)
+    private async void VendorsInventoryPage_Loaded(object sender, RoutedEventArgs e)
     {
         await _vm.LoadAsync();
         await _vm.RefreshJobsAsync();
