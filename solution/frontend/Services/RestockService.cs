@@ -38,25 +38,25 @@ public class RestockService : IRestockService
             {
                 new RestockRequestDto
                 {
-                    Id = "1",
+                    RequestId = "1",
                     ItemId = "COF-BEAN-001",
                     ItemName = "Coffee Beans",
                     RequestedQuantity = 100,
-                    RequestedBy = "Manager",
-                    RequestedAt = DateTime.Now.AddDays(-1),
+                    CreatedBy = "Manager",
+                    CreatedDate = DateTime.Now.AddDays(-1),
                     Status = "Pending",
-                    Priority = "High"
+                    Priority = 4
                 },
                 new RestockRequestDto
                 {
-                    Id = "2",
+                    RequestId = "2",
                     ItemId = "BUR-PAT-001",
                     ItemName = "Burger Patties",
                     RequestedQuantity = 200,
-                    RequestedBy = "Kitchen Staff",
-                    RequestedAt = DateTime.Now.AddDays(-2),
+                    CreatedBy = "Kitchen Staff",
+                    CreatedDate = DateTime.Now.AddDays(-2),
                     Status = "Approved",
-                    Priority = "Medium"
+                    Priority = 3
                 }
             };
         }
@@ -73,7 +73,7 @@ public class RestockService : IRestockService
         {
             // TODO: Implement actual endpoint
             var requests = await GetRestockRequestsAsync(ct);
-            return requests.FirstOrDefault(r => r.Id == id);
+            return requests.FirstOrDefault(r => r.RequestId == id);
         }
         catch (Exception ex)
         {
@@ -87,8 +87,8 @@ public class RestockService : IRestockService
         try
         {
             // TODO: Implement actual endpoint
-            request.Id = Guid.NewGuid().ToString();
-            request.RequestedAt = DateTime.Now;
+            request.RequestId = Guid.NewGuid().ToString();
+            request.CreatedDate = DateTime.Now;
             request.Status = "Pending";
             return request;
         }
@@ -168,21 +168,4 @@ public class RestockService : IRestockService
             return new List<RestockRequestDto>();
         }
     }
-}
-
-// DTOs for restock service
-public class RestockRequestDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string ItemId { get; set; } = string.Empty;
-    public string ItemName { get; set; } = string.Empty;
-    public decimal RequestedQuantity { get; set; }
-    public string RequestedBy { get; set; } = string.Empty;
-    public DateTime RequestedAt { get; set; }
-    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Completed
-    public string Priority { get; set; } = "Medium"; // Low, Medium, High, Critical
-    public string? Notes { get; set; }
-    public string? ApprovedBy { get; set; }
-    public DateTime? ApprovedAt { get; set; }
-    public string? RejectionReason { get; set; }
 }

@@ -127,6 +127,10 @@
                 <Compile Include="Views\VendorsPage.xaml.cs" />
                 <Page Include="Views\VendorDialog.xaml" />
                 <Compile Include="Views\VendorDialog.xaml.cs" />
+                <Page Include="Views\RestockPage.xaml" />
+                <Compile Include="Views\RestockPage.xaml.cs" />
+                <Page Include="Views\RestockRequestDialog.xaml" />
+                <Compile Include="Views\RestockRequestDialog.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
         <Page Include="Views\CashFlowPage.xaml" />

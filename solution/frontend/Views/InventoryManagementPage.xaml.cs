@@ -55,14 +55,14 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
 
     private void NavigateToVendors_Click(object sender, TappedRoutedEventArgs e)
     {
-        // TODO: Navigate to Vendors page
-        ShowComingSoonDialog("Vendor Management", "Vendor profiles and relationship management will be implemented here.");
+        var frame = (Frame)this.Parent;
+        frame.Navigate(typeof(VendorsPage));
     }
 
     private void NavigateToRestock_Click(object sender, TappedRoutedEventArgs e)
     {
-        // TODO: Navigate to Restock page
-        ShowComingSoonDialog("Restock Management", "Restock requests and order management will be implemented here.");
+        var frame = (Frame)this.Parent;
+        frame.Navigate(typeof(RestockPage));
     }
 
     private void NavigateToVendorOrders_Click(object sender, TappedRoutedEventArgs e)
