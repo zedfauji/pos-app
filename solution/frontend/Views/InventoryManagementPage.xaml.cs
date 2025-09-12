@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 
@@ -7,7 +8,7 @@ namespace MagiDesk.Frontend.Views;
 
 public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
 {
-    private readonly InventoryManagementViewModel _vm;
+    private readonly InventoryDashboardViewModel _vm;
 
     public InventoryManagementPage()
     {
@@ -18,7 +19,7 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
         {
             throw new InvalidOperationException("Api not initialized. Ensure App.InitializeApiAsync() has completed successfully.");
         }
-        _vm = new InventoryManagementViewModel(App.Api);
+        _vm = new InventoryDashboardViewModel(App.Api);
         
         this.DataContext = _vm;
         Loaded += InventoryManagementPage_Loaded;
@@ -26,100 +27,77 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
 
     private async void InventoryManagementPage_Loaded(object sender, RoutedEventArgs e)
     {
-        await _vm.LoadAsync();
+        await _vm.LoadDashboardDataAsync();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
-        await _vm.LoadAsync();
+        await _vm.LoadDashboardDataAsync();
     }
 
-    private async void AddItem_Click(object sender, RoutedEventArgs e)
+    // Navigation methods
+    private void NavigateToInventory_Click(object sender, TappedRoutedEventArgs e)
     {
-        // TODO: Implement add item dialog
+        // TODO: Navigate to Inventory CRUD page
+        ShowComingSoonDialog("Inventory Management", "Full inventory CRUD functionality will be implemented here.");
+    }
+
+    private void NavigateToVendors_Click(object sender, TappedRoutedEventArgs e)
+    {
+        // TODO: Navigate to Vendors page
+        ShowComingSoonDialog("Vendor Management", "Vendor profiles and relationship management will be implemented here.");
+    }
+
+    private void NavigateToRestock_Click(object sender, TappedRoutedEventArgs e)
+    {
+        // TODO: Navigate to Restock page
+        ShowComingSoonDialog("Restock Management", "Restock requests and order management will be implemented here.");
+    }
+
+    private void NavigateToVendorOrders_Click(object sender, TappedRoutedEventArgs e)
+    {
+        // TODO: Navigate to Vendor Orders page
+        ShowComingSoonDialog("Vendor Orders", "Purchase order tracking and management will be implemented here.");
+    }
+
+    private void NavigateToAudit_Click(object sender, TappedRoutedEventArgs e)
+    {
+        // TODO: Navigate to Audit & Reports page
+        ShowComingSoonDialog("Audit & Reports", "Transaction logs and reporting functionality will be implemented here.");
+    }
+
+    private void NavigateToSettings_Click(object sender, TappedRoutedEventArgs e)
+    {
+        // TODO: Navigate to Settings page
+        ShowComingSoonDialog("Inventory Settings", "Configuration and preferences will be implemented here.");
+    }
+
+    private async void ShowComingSoonDialog(string title, string message)
+    {
         var dialog = new ContentDialog
         {
-            Title = "Add Inventory Item",
-            Content = new TextBlock { Text = "Add item functionality will be implemented here" },
-            PrimaryButtonText = "OK"
+            Title = title,
+            Content = new TextBlock { Text = message },
+            PrimaryButtonText = "OK",
+            XamlRoot = this.XamlRoot
         };
         await dialog.ShowAsync();
-    }
-
-    private async void EditItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.Tag is InventoryItemDto item)
-        {
-            // TODO: Implement edit item dialog
-            var dialog = new ContentDialog
-            {
-                Title = "Edit Inventory Item",
-                Content = new TextBlock { Text = $"Edit {item.Name} functionality will be implemented here" },
-                PrimaryButtonText = "OK"
-            };
-            await dialog.ShowAsync();
-        }
-    }
-
-    private async void AdjustQuantity_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.Tag is InventoryItemDto item)
-        {
-            // TODO: Implement quantity adjustment dialog
-            var dialog = new ContentDialog
-            {
-                Title = "Adjust Quantity",
-                Content = new TextBlock { Text = $"Adjust quantity for {item.Name} functionality will be implemented here" },
-                PrimaryButtonText = "OK"
-            };
-            await dialog.ShowAsync();
-        }
-    }
-
-    private async void DeleteItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && button.Tag is InventoryItemDto item)
-        {
-            var confirmDialog = new ContentDialog
-            {
-                Title = "Delete Item",
-                Content = new TextBlock { Text = $"Are you sure you want to delete {item.Name}?" },
-                PrimaryButtonText = "Delete",
-                CloseButtonText = "Cancel"
-            };
-            
-            var result = await confirmDialog.ShowAsync();
-            if (result == ContentDialogResult.Primary)
-            {
-                // TODO: Implement delete functionality
-                await _vm.LoadAsync(); // Refresh after deletion
-            }
-        }
-    }
-
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (sender is TextBox textBox)
-        {
-            _vm.SearchText = textBox.Text;
-            _vm.FilterItems();
-        }
     }
 
     // IToolbarConsumer implementation
     public void OnAdd()
     {
-        AddItem_Click(this, new RoutedEventArgs());
+        NavigateToRestock_Click(this, new TappedRoutedEventArgs());
     }
 
     public void OnEdit()
     {
-        // TODO: Implement edit functionality
+        NavigateToInventory_Click(this, new TappedRoutedEventArgs());
     }
 
     public void OnDelete()
     {
-        // TODO: Implement delete functionality
+        // Not applicable for dashboard
     }
 
     public void OnRefresh()

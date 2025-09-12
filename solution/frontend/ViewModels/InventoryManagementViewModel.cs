@@ -4,88 +4,171 @@ using MagiDesk.Shared.DTOs;
 
 namespace MagiDesk.Frontend.ViewModels;
 
-public class InventoryManagementViewModel
+public class InventoryDashboardViewModel
 {
     private readonly ApiService _api;
 
-    public ObservableCollection<InventoryItemDto> InventoryItems { get; } = new();
-    public ObservableCollection<InventoryItemDto> FilteredItems { get; } = new();
+    // KPI Properties
+    public string TotalStockValue { get; set; } = "$0.00";
+    public string StockValueChange { get; set; } = "+0%";
+    public int LowStockCount { get; set; } = 0;
+    public int PendingOrdersCount { get; set; } = 0;
+    public int FastMoversCount { get; set; } = 0;
 
-    public string? SearchText { get; set; }
+    // Collections for data
+    public ObservableCollection<ItemDto> LowStockItems { get; } = new();
+    public ObservableCollection<VendorDto> ActiveVendors { get; } = new();
+    public ObservableCollection<InventoryTransactionDto> RecentTransactions { get; } = new();
 
-    public InventoryManagementViewModel(ApiService api)
+    public InventoryDashboardViewModel(ApiService api)
     {
         _api = api;
     }
 
-    public async Task LoadAsync(CancellationToken ct = default)
+    public async Task LoadDashboardDataAsync(CancellationToken ct = default)
     {
-        InventoryItems.Clear();
-        FilteredItems.Clear();
-        
         try
         {
-            // TODO: Replace with actual inventory API call
-            // var items = await _api.GetInventoryItemsAsync(ct);
-            
-            // For now, create some sample data
-            var sampleItems = new List<InventoryItemDto>
+            // Load KPI data in parallel
+            var tasks = new[]
             {
-                new InventoryItemDto { Id = Guid.NewGuid(), Sku = "COF-BEAN-001", Name = "Coffee Beans", Category = "Raw Materials", Quantity = 50, UnitCost = 15.99m },
-                new InventoryItemDto { Id = Guid.NewGuid(), Sku = "BUR-PAT-001", Name = "Burger Patties", Category = "Raw Materials", Quantity = 100, UnitCost = 2.50m },
-                new InventoryItemDto { Id = Guid.NewGuid(), Sku = "FRI-OIL-001", Name = "Cooking Oil", Category = "Raw Materials", Quantity = 25, UnitCost = 8.99m },
-                new InventoryItemDto { Id = Guid.NewGuid(), Sku = "BEV-COK-001", Name = "Coca Cola", Category = "Beverages", Quantity = 200, UnitCost = 1.25m },
-                new InventoryItemDto { Id = Guid.NewGuid(), Sku = "BEV-BEE-001", Name = "Corona Beer", Category = "Beverages", Quantity = 48, UnitCost = 2.99m }
+                LoadStockValueDataAsync(ct),
+                LoadLowStockDataAsync(ct),
+                LoadPendingOrdersDataAsync(ct),
+                LoadFastMoversDataAsync(ct),
+                LoadRecentTransactionsAsync(ct)
+            };
+
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading dashboard data: {ex.Message}");
+            // Set default values on error
+            SetDefaultValues();
+        }
+    }
+
+    private async Task LoadStockValueDataAsync(CancellationToken ct)
+    {
+        try
+        {
+            // TODO: Replace with actual API call to get stock value
+            // For now, simulate with sample data
+            var totalValue = 125000.50m;
+            var change = 5.2m;
+            
+            TotalStockValue = totalValue.ToString("C");
+            StockValueChange = $"+{change:F1}%";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading stock value: {ex.Message}");
+            TotalStockValue = "$0.00";
+            StockValueChange = "+0%";
+        }
+    }
+
+    private async Task LoadLowStockDataAsync(CancellationToken ct)
+    {
+        try
+        {
+            // TODO: Call inventoryApi reports/low-stock endpoint
+            // For now, simulate with sample data
+            LowStockCount = 12;
+            
+            // Load sample low stock items
+            LowStockItems.Clear();
+            var sampleItems = new[]
+            {
+                new ItemDto { Id = "1", Sku = "COF-BEAN-001", Name = "Coffee Beans", Stock = 5 },
+                new ItemDto { Id = "2", Sku = "BUR-PAT-001", Name = "Burger Patties", Stock = 8 },
+                new ItemDto { Id = "3", Sku = "FRI-OIL-001", Name = "Cooking Oil", Stock = 3 }
             };
 
             foreach (var item in sampleItems)
             {
-                InventoryItems.Add(item);
+                LowStockItems.Add(item);
             }
-            
-            FilterItems();
         }
         catch (Exception ex)
         {
-            // TODO: Handle error properly
-            System.Diagnostics.Debug.WriteLine($"Error loading inventory: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error loading low stock data: {ex.Message}");
+            LowStockCount = 0;
         }
     }
 
-    public void FilterItems()
+    private async Task LoadPendingOrdersDataAsync(CancellationToken ct)
     {
-        FilteredItems.Clear();
-        
-        if (string.IsNullOrWhiteSpace(SearchText))
+        try
         {
-            foreach (var item in InventoryItems)
+            // TODO: Call inventoryApi to get pending vendor orders
+            // For now, simulate with sample data
+            PendingOrdersCount = 7;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading pending orders: {ex.Message}");
+            PendingOrdersCount = 0;
+        }
+    }
+
+    private async Task LoadFastMoversDataAsync(CancellationToken ct)
+    {
+        try
+        {
+            // TODO: Call inventoryApi to get fast moving items
+            // For now, simulate with sample data
+            FastMoversCount = 15;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading fast movers: {ex.Message}");
+            FastMoversCount = 0;
+        }
+    }
+
+    private async Task LoadRecentTransactionsAsync(CancellationToken ct)
+    {
+        try
+        {
+            // TODO: Call inventoryApi to get recent transactions
+            // For now, simulate with sample data
+            RecentTransactions.Clear();
+            var sampleTransactions = new[]
             {
-                FilteredItems.Add(item);
+                new InventoryTransactionDto { Id = "1", ItemName = "Coffee Beans", Type = "Sale", Quantity = -2, Timestamp = DateTime.Now.AddHours(-1) },
+                new InventoryTransactionDto { Id = "2", ItemName = "Burger Patties", Type = "Restock", Quantity = 50, Timestamp = DateTime.Now.AddHours(-2) },
+                new InventoryTransactionDto { Id = "3", ItemName = "Cooking Oil", Type = "Sale", Quantity = -1, Timestamp = DateTime.Now.AddHours(-3) }
+            };
+
+            foreach (var transaction in sampleTransactions)
+            {
+                RecentTransactions.Add(transaction);
             }
         }
-        else
+        catch (Exception ex)
         {
-            var searchLower = SearchText.ToLower();
-            foreach (var item in InventoryItems)
-            {
-                if (item.Name.ToLower().Contains(searchLower) ||
-                    item.Sku.ToLower().Contains(searchLower) ||
-                    item.Category.ToLower().Contains(searchLower))
-                {
-                    FilteredItems.Add(item);
-                }
-            }
+            System.Diagnostics.Debug.WriteLine($"Error loading recent transactions: {ex.Message}");
         }
+    }
+
+    private void SetDefaultValues()
+    {
+        TotalStockValue = "$0.00";
+        StockValueChange = "+0%";
+        LowStockCount = 0;
+        PendingOrdersCount = 0;
+        FastMoversCount = 0;
     }
 }
 
-// TODO: Replace with actual DTO from shared project
-public class InventoryItemDto
+// Additional DTOs for dashboard
+public class InventoryTransactionDto
 {
-    public Guid Id { get; set; }
-    public string Sku { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
+    public string ItemName { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty; // Sale, Restock, Adjustment, etc.
     public decimal Quantity { get; set; }
-    public decimal UnitCost { get; set; }
+    public DateTime Timestamp { get; set; }
 }
