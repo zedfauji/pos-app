@@ -202,12 +202,13 @@ namespace MagiDesk.Frontend
                 var paymentBase = config["PaymentApi:BaseUrl"] ?? backendBase;
                 var ordersBase = config["OrderApi:BaseUrl"] ?? backendBase;
                 var vendorOrdersBase = config["VendorOrdersApi:BaseUrl"] ?? backendBase;
+                var usersBase = config["UsersApi:BaseUrl"] ?? backendBase;
                 Api = new Services.ApiService(backendBase, inventoryBase);
 
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
-                var http = new HttpClient(logging) { BaseAddress = new Uri(backendBase.TrimEnd('/') + "/") };
+                var http = new HttpClient(logging) { BaseAddress = new Uri(usersBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
 
                 var innerMenu = new HttpClientHandler();
@@ -254,7 +255,7 @@ namespace MagiDesk.Frontend
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
-                UsersApi = new Services.UserApiService(new HttpClient(logging) { BaseAddress = new Uri("https://localhost:7016/") });
+                UsersApi = new Services.UserApiService(new HttpClient(logging) { BaseAddress = new Uri("https://magidesk-users-904541739138.northamerica-south1.run.app/") });
 
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using MagiDesk.Frontend.Services;
 using Microsoft.Extensions.Configuration;
-using MagiDesk.Shared.DTOs.Auth;
+using MagiDesk.Shared.DTOs.Users;
 using MagiDesk.Shared.DTOs.Tables;
 using MagiDesk.Shared.DTOs;
 

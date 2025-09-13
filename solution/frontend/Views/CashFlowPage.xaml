@@ -5,9 +5,14 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
     mc:Ignorable="d">
 
     <Page.Resources>
+        <!-- Converters -->
+        <converters:DateTimeToDateTimeOffsetConverter x:Key="DateTimeToDateTimeOffsetConverter"/>
+        <converters:DecimalToDoubleConverter x:Key="DecimalToDoubleConverter"/>
+        
         <!-- Professional Styles -->
         <Style x:Key="PageTitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="32"/>
@@ -153,7 +158,7 @@
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,16,0">
                             <TextBlock Text="Date" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <DatePicker x:Name="EntryDatePicker" 
-                                        Date="{Binding Date, Mode=TwoWay}"
+                                        Date="{Binding Date, Mode=TwoWay, Converter={StaticResource DateTimeToDateTimeOffsetConverter}}"
                                         HorizontalAlignment="Stretch"/>
                         </StackPanel>
 
@@ -161,7 +166,7 @@
                         <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,16,0">
                             <TextBlock Text="Cash Amount" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <NumberBox x:Name="CashAmountBox" 
-                                       Value="{Binding CashAmount, Mode=TwoWay}"
+                                       Value="{Binding CashAmount, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}"
                                        PlaceholderText="0.00"
                                        HorizontalAlignment="Stretch"/>
                         </StackPanel>

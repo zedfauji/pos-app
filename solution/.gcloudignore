@@ -1,0 +1,41 @@
+# Ignore build outputs
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+# Ignore IDE files
+.vs/
+.vscode/
+*.swp
+*.swo
+*.vsidx
+FileContentIndex/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore test results
+TestResults/
+
+# Ignore frontend build outputs
+frontend/bin/
+frontend/obj/
+frontend/.vs/
+
+# Ignore backend build outputs
+backend/*/bin/
+backend/*/obj/
+backend/*/.vs/

@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using MagiDesk.Shared.DTOs.Users;
 using MagiDesk.Shared.DTOs.Auth;
 
 namespace MagiDesk.Frontend.Services;
@@ -12,8 +14,7 @@ public class UserApiService
     {
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, "api/users");
-            var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+            var res = await _http.GetAsync("api/users/ping", ct);
             return res.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -42,14 +43,72 @@ public class UserApiService
     {
         try
         {
-            var res = await _http.GetAsync("api/users", ct);
-            if (!res.IsSuccessStatusCode) return new();
-            return await res.Content.ReadFromJsonAsync<List<UserDto>>(cancellationToken: ct) ?? new();
+            var request = new UserSearchRequest { PageSize = 1000 }; // Get all users for backward compatibility
+            var result = await GetUsersPagedAsync(request, ct);
+            return result.Items.ToList();
         }
         catch (Exception ex)
         {
             Log.Error("GetUsers failed", ex);
             return new();
+        }
+    }
+
+    public async Task<PagedResult<UserDto>> GetUsersPagedAsync(UserSearchRequest request, CancellationToken ct = default)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                queryParams.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+            if (!string.IsNullOrWhiteSpace(request.Role))
+                queryParams.Add($"role={Uri.EscapeDataString(request.Role)}");
+            if (request.IsActive.HasValue)
+                queryParams.Add($"isActive={request.IsActive.Value}");
+            queryParams.Add($"sortBy={Uri.EscapeDataString(request.SortBy)}");
+            queryParams.Add($"sortDescending={request.SortDescending}");
+            queryParams.Add($"page={request.Page}");
+            queryParams.Add($"pageSize={request.PageSize}");
+
+            var query = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+            var res = await _http.GetAsync($"api/users{query}", ct);
+            
+            if (!res.IsSuccessStatusCode) 
+                return new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
+                
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            return await res.Content.ReadFromJsonAsync<PagedResult<UserDto>>(options, cancellationToken: ct) 
+                   ?? new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetUsersPagedAsync failed", ex);
+            return new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
+        }
+    }
+
+    public async Task<UserStatsDto?> GetUserStatsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetAsync("api/users/stats", ct);
+            if (!res.IsSuccessStatusCode) return null;
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            return await res.Content.ReadFromJsonAsync<UserStatsDto>(options, cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetUserStats failed", ex);
+            return null;
         }
     }
 
@@ -59,7 +118,12 @@ public class UserApiService
         {
             var res = await _http.PostAsJsonAsync("api/users", req, ct);
             if (!res.IsSuccessStatusCode) return null;
-            return await res.Content.ReadFromJsonAsync<UserDto>(cancellationToken: ct);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            return await res.Content.ReadFromJsonAsync<UserDto>(options, cancellationToken: ct);
         }
         catch (Exception ex)
         {
