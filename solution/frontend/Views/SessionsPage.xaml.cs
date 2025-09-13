@@ -67,6 +67,7 @@ public sealed partial class SessionsPage : Page
             var table = TableFilterText?.Text;
             var server = ServerFilterText?.Text;
             var list = await _repo.GetSessionsAsync(100, from, to, table, server);
+            
             // Apply filters
             try
             {
@@ -78,13 +79,14 @@ public sealed partial class SessionsPage : Page
                 // Combo filter
                 if (StatusFilterCombo != null && StatusFilterCombo.SelectedItem is ComboBoxItem cbi && cbi.Content is string sel)
                 {
-                    if (string.Equals(sel, "Active", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(sel, "Active Only", StringComparison.OrdinalIgnoreCase))
                         list = list.Where(s => string.Equals(s.Status, "active", StringComparison.OrdinalIgnoreCase)).ToList();
-                    else if (string.Equals(sel, "Closed", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(sel, "Closed Only", StringComparison.OrdinalIgnoreCase))
                         list = list.Where(s => string.Equals(s.Status, "closed", StringComparison.OrdinalIgnoreCase)).ToList();
                 }
             }
             catch { }
+            
             // simple reconcile
             var byId = Sessions.ToDictionary(s => s.SessionId);
             foreach (var s in list)
@@ -121,8 +123,44 @@ public sealed partial class SessionsPage : Page
                 Sessions.Clear();
                 foreach (var s in ordered) Sessions.Add(s);
             }
+
+            // Update metrics
+            UpdateMetrics();
         }
         catch { }
+    }
+
+    private void UpdateMetrics()
+    {
+        try
+        {
+            var today = DateTime.Today;
+            var activeSessions = Sessions.Count(s => string.Equals(s.Status, "active", StringComparison.OrdinalIgnoreCase));
+            var totalSessionsToday = Sessions.Count(s => s.StartTime.Date == today);
+            
+            // Calculate average session time
+            var activeSessionTimes = Sessions
+                .Where(s => string.Equals(s.Status, "active", StringComparison.OrdinalIgnoreCase))
+                .Select(s => DateTime.Now - s.StartTime)
+                .ToList();
+            var averageSessionTime = activeSessionTimes.Any() 
+                ? TimeSpan.FromMinutes(activeSessionTimes.Average(t => t.TotalMinutes))
+                : TimeSpan.Zero;
+
+            // Calculate total revenue
+            var totalRevenue = Sessions.Sum(s => s.Total);
+
+            // Update UI
+            ActiveSessionsText.Text = activeSessions.ToString();
+            TotalSessionsText.Text = totalSessionsToday.ToString();
+            AverageSessionTimeText.Text = $"{averageSessionTime.TotalMinutes:F0}m";
+            TotalRevenueText.Text = totalRevenue.ToString("C");
+            SessionCountText.Text = $"({Sessions.Count} sessions)";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error updating metrics: {ex.Message}");
+        }
     }
 
     private async void ActiveOnlyToggle_Toggled(object sender, RoutedEventArgs e)
@@ -153,5 +191,61 @@ public sealed partial class SessionsPage : Page
     private async void RefreshNowButton_Click(object sender, RoutedEventArgs e)
     {
         await RefreshAsync();
+    }
+
+    private void ViewSessionDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is SessionOverview session)
+        {
+            // For now, just show a message - in a real implementation, you'd open a details dialog
+            var dialog = new ContentDialog()
+            {
+                Title = "Session Details",
+                Content = $"Session ID: {session.SessionId}\nTable: {session.TableId}\nServer: {session.ServerName}\nStatus: {session.Status}\nItems: {session.ItemsCount}\nTotal: {session.Total:C}",
+                CloseButtonText = "Close",
+                XamlRoot = this.XamlRoot
+            };
+            _ = dialog.ShowAsync();
+        }
+    }
+
+    private async void CloseSession_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is SessionOverview session)
+        {
+            var dialog = new ContentDialog()
+            {
+                Title = "Close Session",
+                Content = $"Are you sure you want to close the session for Table {session.TableId}?",
+                PrimaryButtonText = "Close Session",
+                CloseButtonText = "Cancel",
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                try
+                {
+                    // In a real implementation, you would call a service to close the session
+                    // await _sessionService.CloseSessionAsync(session.SessionId);
+                    
+                    // For now, just update the status locally
+                    session.Status = "closed";
+                    await RefreshAsync();
+                }
+                catch (Exception ex)
+                {
+                    var errorDialog = new ContentDialog()
+                    {
+                        Title = "Error",
+                        Content = $"Failed to close session: {ex.Message}",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    };
+                    _ = errorDialog.ShowAsync();
+                }
+            }
+        }
     }
 }

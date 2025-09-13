@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" ?>
 <Page
     x:Class="MagiDesk.Frontend.Views.SessionsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -5,76 +6,402 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
-    <Grid Padding="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <TextBlock Text="Sessions" FontSize="20" FontWeight="SemiBold"/>
-            <TextBlock Text="(auto-refreshing)" Opacity="0.6"/>
-            <ToggleSwitch x:Name="ActiveOnlyToggle" Header="Show active only" Toggled="ActiveOnlyToggle_Toggled"/>
-            <ComboBox x:Name="StatusFilterCombo" Width="160" SelectionChanged="StatusFilterCombo_SelectionChanged">
-                <ComboBoxItem Content="All"/>
-                <ComboBoxItem Content="Active"/>
-                <ComboBoxItem Content="Closed"/>
-            </ComboBox>
-            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <TextBlock Text="From:" VerticalAlignment="Center"/>
-                <DatePicker x:Name="FromDatePicker" DateChanged="FromDatePicker_DateChanged"/>
-                <TextBlock Text="To:" VerticalAlignment="Center"/>
-                <DatePicker x:Name="ToDatePicker" DateChanged="ToDatePicker_DateChanged"/>
-                <TextBox x:Name="TableFilterText" PlaceholderText="Table filter" Width="140" TextChanged="TextFilter_Changed"/>
-                <TextBox x:Name="ServerFilterText" PlaceholderText="Server filter" Width="140" TextChanged="TextFilter_Changed"/>
-                <Button x:Name="RefreshNowButton" Content="Refresh Now" Click="RefreshNowButton_Click"/>
+
+    <Page.Resources>
+        <!-- Professional Styles -->
+        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="32"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,24"/>
+        </Style>
+
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="FilterCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,24"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="120"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="SessionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style x:Key="MetricCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,16,0"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="MinWidth" Value="200"/>
+        </Style>
+
+        <Style x:Key="MetricTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="StatusActiveStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+        <Style x:Key="StatusClosedStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorNeutralBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+
+        <Style x:Key="ProfessionalComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MinWidth" Value="140"/>
+        </Style>
+
+        <Style x:Key="ProfessionalTextBoxStyle" TargetType="TextBox">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="MinWidth" Value="140"/>
+        </Style>
+
+        <Style x:Key="ProfessionalDatePickerStyle" TargetType="DatePicker">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinWidth" Value="140"/>
+        </Style>
+
+        <Style x:Key="AutoRefreshIndicatorStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header Section -->
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="Session Management" Style="{StaticResource PageTitleStyle}"/>
+                    <Border Style="{StaticResource AutoRefreshIndicatorStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" Fill="White"/>
+                            <TextBlock Text="Auto-refresh" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Monitor and manage active sessions across all tables" Style="{StaticResource PageSubtitleStyle}"/>
             </StackPanel>
-        </StackPanel>
-        <!-- CRITICAL FIX: Replace CommunityToolkit DataGrid with native WinUI 3 ListView -->
-        <!-- CommunityToolkit DataGrid causes COM exceptions in WinUI 3 Desktop Apps -->
-        <ListView Grid.Row="1"
-                  x:Name="SessionsGrid"
-                  ItemsSource="{x:Bind Sessions, Mode=OneWay}"
-                  SelectionMode="None">
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Grid Padding="8">
+
+            <!-- Metrics Overview -->
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <Border Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Active Sessions" Style="{StaticResource MetricTitleStyle}"/>
+                        <TextBlock x:Name="ActiveSessionsText" Text="0" Style="{StaticResource MetricValueStyle}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Total Sessions Today" Style="{StaticResource MetricTitleStyle}"/>
+                        <TextBlock x:Name="TotalSessionsText" Text="0" Style="{StaticResource MetricValueStyle}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Average Session Time" Style="{StaticResource MetricTitleStyle}"/>
+                        <TextBlock x:Name="AverageSessionTimeText" Text="0m" Style="{StaticResource MetricValueStyle}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource MetricCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Total Revenue" Style="{StaticResource MetricTitleStyle}"/>
+                        <TextBlock x:Name="TotalRevenueText" Text="$0.00" Style="{StaticResource MetricValueStyle}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Filters and Controls -->
+            <Border Style="{StaticResource FilterCardStyle}">
+                <StackPanel Spacing="20">
+                    <TextBlock Text="Filters &amp; Controls" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        
-                        <!-- Session ID -->
-                        <TextBlock Grid.Column="0" Text="{Binding SessionId}" VerticalAlignment="Center"/>
-                        
-                        <!-- Billing ID -->
-                        <TextBlock Grid.Column="1" Text="{Binding BillingId}" VerticalAlignment="Center"/>
-                        
-                        <!-- Table -->
-                        <TextBlock Grid.Column="2" Text="{Binding TableId}" VerticalAlignment="Center"/>
-                        
-                        <!-- Server -->
-                        <TextBlock Grid.Column="3" Text="{Binding ServerName}" VerticalAlignment="Center"/>
-                        
-                        <!-- Start Time -->
-                        <TextBlock Grid.Column="4" Text="{Binding StartTime}" VerticalAlignment="Center"/>
-                        
-                        <!-- Status -->
-                        <TextBlock Grid.Column="5" Text="{Binding Status}" VerticalAlignment="Center"/>
-                        
-                        <!-- Items Count -->
-                        <TextBlock Grid.Column="6" Text="{Binding ItemsCount}" VerticalAlignment="Center"/>
-                        
-                        <!-- Total -->
-                        <TextBlock Grid.Column="7" Text="{Binding Total}" VerticalAlignment="Center"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Status Filter -->
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Status Filter" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ComboBox x:Name="StatusFilterCombo" 
+                                      Style="{StaticResource ProfessionalComboBoxStyle}"
+                                      SelectionChanged="StatusFilterCombo_SelectionChanged">
+                                <ComboBoxItem Content="All Sessions" IsSelected="True"/>
+                                <ComboBoxItem Content="Active Only"/>
+                                <ComboBoxItem Content="Closed Only"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Date Range -->
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,16,0">
+                            <TextBlock Text="From Date" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <DatePicker x:Name="FromDatePicker" 
+                                        Style="{StaticResource ProfessionalDatePickerStyle}"
+                                        DateChanged="FromDatePicker_DateChanged"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,16,0">
+                            <TextBlock Text="To Date" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <DatePicker x:Name="ToDatePicker" 
+                                        Style="{StaticResource ProfessionalDatePickerStyle}"
+                                        DateChanged="ToDatePicker_DateChanged"/>
+                        </StackPanel>
+
+                        <!-- Table Filter -->
+                        <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,16,0">
+                            <TextBlock Text="Table Filter" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBox x:Name="TableFilterText" 
+                                     Style="{StaticResource ProfessionalTextBoxStyle}"
+                                     PlaceholderText="Filter by table..."
+                                     TextChanged="TextFilter_Changed"/>
+                        </StackPanel>
+
+                        <!-- Refresh Button -->
+                        <Button Grid.Row="0" Grid.Column="4" 
+                                x:Name="RefreshNowButton" 
+                                Click="RefreshNowButton_Click"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                VerticalAlignment="Bottom">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                                    <TextBlock Text="Refresh Now"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+
+                        <!-- Server Filter -->
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,16,16,0">
+                            <TextBlock Text="Server Filter" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBox x:Name="ServerFilterText" 
+                                     Style="{StaticResource ProfessionalTextBoxStyle}"
+                                     PlaceholderText="Filter by server..."
+                                     TextChanged="TextFilter_Changed"/>
+                        </StackPanel>
+
+                        <!-- Active Only Toggle -->
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,16,16,0">
+                            <TextBlock Text="Show Active Only" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ToggleSwitch x:Name="ActiveOnlyToggle" 
+                                          Toggled="ActiveOnlyToggle_Toggled"
+                                          OffContent="All"
+                                          OnContent="Active Only"/>
+                        </StackPanel>
                     </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Sessions List -->
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE8F5;" FontSize="20" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Sessions Overview" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Name="SessionCountText" Text="(0 sessions)" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <ListView x:Name="SessionsGrid"
+                              ItemsSource="{x:Bind Sessions, Mode=OneWay}"
+                              SelectionMode="None"
+                              Background="Transparent">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource SessionCardStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- Session Info -->
+                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                            <TextBlock Text="{Binding TableId}" 
+                                                       FontWeight="Bold" 
+                                                       FontSize="16"
+                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding ServerName}" 
+                                                       FontSize="14"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Session ID -->
+                                        <StackPanel Grid.Row="0" Grid.Column="1">
+                                            <TextBlock Text="Session ID" 
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding SessionId}" 
+                                                       FontSize="14"
+                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Start Time -->
+                                        <StackPanel Grid.Row="0" Grid.Column="2">
+                                            <TextBlock Text="Start Time" 
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding StartTime}" 
+                                                       FontSize="14"
+                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Items Count -->
+                                        <StackPanel Grid.Row="0" Grid.Column="3">
+                                            <TextBlock Text="Items" 
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding ItemsCount}" 
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Total Amount -->
+                                        <StackPanel Grid.Row="0" Grid.Column="4">
+                                            <TextBlock Text="Total" 
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding Total}" 
+                                                       FontSize="14"
+                                                       FontWeight="Bold"
+                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Status -->
+                                        <StackPanel Grid.Row="0" Grid.Column="5" HorizontalAlignment="Right">
+                                            <Border Style="{Binding Status, Converter={StaticResource StatusToStyleConverter}}">
+                                                <TextBlock Text="{Binding Status}" 
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Row="0" Grid.Column="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                            <Button Content="View Details" 
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    Padding="8,4"
+                                                    FontSize="12"
+                                                    Click="ViewSessionDetails_Click"
+                                                    Tag="{Binding}"/>
+                                            <Button Content="Close Session" 
+                                                    Style="{StaticResource PrimaryButtonStyle}"
+                                                    Padding="8,4"
+                                                    FontSize="12"
+                                                    Click="CloseSession_Click"
+                                                    Tag="{Binding}"
+                                                    Visibility="{Binding Status, Converter={StaticResource StatusToVisibilityConverter}}"/>
+                                        </StackPanel>
+
+                                        <!-- Additional Info Row -->
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="7" Margin="0,12,0,0">
+                                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE7C3;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Billing ID: " FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding BillingId}" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE7C4;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="Duration: " FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding StartTime, Converter={StaticResource DurationConverter}}" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
 </Page>

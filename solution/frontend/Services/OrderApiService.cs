@@ -26,6 +26,34 @@ public sealed class OrderApiService
     public sealed record OrderLogDto(long Id, long OrderId, string Action, object? OldValue, object? NewValue, string? ServerId, DateTimeOffset CreatedAt);
     public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
 
+    // Analytics DTOs
+    public sealed record OrderAnalyticsDto(
+        int OrdersToday,
+        decimal RevenueToday,
+        decimal AverageOrderValue,
+        decimal CompletionRate,
+        int PendingOrders,
+        int InProgressOrders,
+        int ReadyForDeliveryOrders,
+        int CompletedTodayOrders,
+        int AveragePrepTimeMinutes,
+        string PeakHour,
+        decimal EfficiencyScore,
+        int TotalOrders,
+        decimal TotalRevenue,
+        int AverageOrderTimeMinutes,
+        decimal CustomerSatisfactionRate,
+        decimal ReturnRate,
+        int AlertCount,
+        string AlertMessage,
+        IReadOnlyList<RecentActivityDto> RecentActivities
+    );
+
+    public sealed record RecentActivityDto(string Title, string Description, string Timestamp, string ActivityType);
+    public sealed record OrderStatusSummaryDto(string Status, int Count, decimal Percentage);
+    public sealed record OrderTrendDto(DateTime Date, int OrderCount, decimal Revenue, decimal AverageOrderValue);
+    public sealed record OrderAnalyticsRequestDto(DateTime? FromDate, DateTime? ToDate, string ReportType);
+
     public async Task<OrderDto?> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct = default)
     {
         try
@@ -106,5 +134,65 @@ public sealed class OrderApiService
         var res = await _http.GetAsync($"api/orders/{orderId}/logs?page={page}&pageSize={pageSize}", ct);
         res.EnsureSuccessStatusCode();
         return await res.Content.ReadFromJsonAsync<PagedResult<OrderLogDto>>(cancellationToken: ct) ?? new PagedResult<OrderLogDto>(Array.Empty<OrderLogDto>(), 0);
+    }
+
+    // Analytics methods
+    public async Task<OrderAnalyticsDto?> GetOrderAnalyticsAsync(DateTime? fromDate = null, DateTime? toDate = null, string reportType = "daily", CancellationToken ct = default)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            if (fromDate.HasValue) queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+            if (toDate.HasValue) queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+            queryParams.Add($"reportType={reportType}");
+            
+            var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+            var res = await _http.GetAsync($"api/orders/analytics{queryString}", ct);
+            
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                System.Diagnostics.Debug.WriteLine($"GetOrderAnalyticsAsync failed: HTTP {(int)res.StatusCode} - {errorContent}");
+                return null;
+            }
+            
+            return await res.Content.ReadFromJsonAsync<OrderAnalyticsDto>(cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetOrderAnalyticsAsync exception: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<OrderStatusSummaryDto>> GetOrderStatusSummaryAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetAsync("api/orders/analytics/status-summary", ct);
+            if (!res.IsSuccessStatusCode) return Array.Empty<OrderStatusSummaryDto>();
+            return await res.Content.ReadFromJsonAsync<IReadOnlyList<OrderStatusSummaryDto>>(cancellationToken: ct) ?? Array.Empty<OrderStatusSummaryDto>();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetOrderStatusSummaryAsync exception: {ex.Message}");
+            return Array.Empty<OrderStatusSummaryDto>();
+        }
+    }
+
+    public async Task<IReadOnlyList<OrderTrendDto>> GetOrderTrendsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct = default)
+    {
+        try
+        {
+            var queryString = $"?fromDate={fromDate:yyyy-MM-dd}&toDate={toDate:yyyy-MM-dd}";
+            var res = await _http.GetAsync($"api/orders/analytics/trends{queryString}", ct);
+            if (!res.IsSuccessStatusCode) return Array.Empty<OrderTrendDto>();
+            return await res.Content.ReadFromJsonAsync<IReadOnlyList<OrderTrendDto>>(cancellationToken: ct) ?? Array.Empty<OrderTrendDto>();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"GetOrderTrendsAsync exception: {ex.Message}");
+            return Array.Empty<OrderTrendDto>();
+        }
     }
 }

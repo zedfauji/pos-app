@@ -141,4 +141,82 @@ public sealed class InMemoryOrderService : IOrderService
         
         return Task.FromResult<OrderDto?>(updated);
     }
+
+    // Analytics methods - simplified in-memory implementations
+    public Task<OrderAnalyticsDto> GetOrderAnalyticsAsync(OrderAnalyticsRequestDto request, CancellationToken ct)
+    {
+        var today = DateTime.Today;
+        var ordersToday = _orders.Values.Count(o => o.Status != "deleted");
+        var revenueToday = _orders.Values.Where(o => o.Status != "deleted").Sum(o => o.Total);
+        var averageOrderValue = ordersToday > 0 ? revenueToday / ordersToday : 0m;
+        
+        var pendingOrders = _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "pending");
+        var inProgressOrders = _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "in_progress");
+        var readyForDeliveryOrders = _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "ready");
+        var completedTodayOrders = _orders.Values.Count(o => o.Status == "closed");
+        
+        var completionRate = ordersToday > 0 ? (decimal)completedTodayOrders / ordersToday * 100 : 0m;
+        
+        var recentActivities = new List<RecentActivityDto>
+        {
+            new("Order #1 Completed", "Table 5 - $45.50", "2 min ago", "completed"),
+            new("New Order Received", "Table 8 - 3 items", "5 min ago", "received"),
+            new("Order In Progress", "Table 2 - Prep started", "8 min ago", "in_progress")
+        };
+
+        var analytics = new OrderAnalyticsDto(
+            OrdersToday: ordersToday,
+            RevenueToday: revenueToday,
+            AverageOrderValue: averageOrderValue,
+            CompletionRate: completionRate,
+            PendingOrders: pendingOrders,
+            InProgressOrders: inProgressOrders,
+            ReadyForDeliveryOrders: readyForDeliveryOrders,
+            CompletedTodayOrders: completedTodayOrders,
+            AveragePrepTimeMinutes: 15,
+            PeakHour: "14:00",
+            EfficiencyScore: Math.Min(95m, completionRate + 10m),
+            TotalOrders: ordersToday,
+            TotalRevenue: revenueToday,
+            AverageOrderTimeMinutes: 20,
+            CustomerSatisfactionRate: Math.Min(98m, completionRate + 5m),
+            ReturnRate: Math.Max(1m, Math.Min(5m, 100m - completionRate)),
+            AlertCount: pendingOrders > 5 ? 1 : 0,
+            AlertMessage: pendingOrders > 5 ? "1 critical issue(s) require attention" : "No critical issues detected",
+            RecentActivities: recentActivities
+        );
+
+        return Task.FromResult(analytics);
+    }
+
+    public Task<IReadOnlyList<OrderStatusSummaryDto>> GetOrderStatusSummaryAsync(CancellationToken ct)
+    {
+        var summaries = new List<OrderStatusSummaryDto>
+        {
+            new("Pending", _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "pending"), 25m),
+            new("In Progress", _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "in_progress"), 35m),
+            new("Ready", _orders.Values.Count(o => o.Status == "open" && o.DeliveryStatus == "ready"), 20m),
+            new("Completed", _orders.Values.Count(o => o.Status == "closed"), 20m)
+        };
+
+        return Task.FromResult((IReadOnlyList<OrderStatusSummaryDto>)summaries);
+    }
+
+    public Task<IReadOnlyList<OrderTrendDto>> GetOrderTrendsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct)
+    {
+        var trends = new List<OrderTrendDto>();
+        var currentDate = fromDate;
+        
+        while (currentDate <= toDate)
+        {
+            var dayOrders = _orders.Values.Count(o => o.Status != "deleted");
+            var dayRevenue = _orders.Values.Where(o => o.Status != "deleted").Sum(o => o.Total);
+            var avgOrderValue = dayOrders > 0 ? dayRevenue / dayOrders : 0m;
+            
+            trends.Add(new OrderTrendDto(currentDate, dayOrders, dayRevenue, avgOrderValue));
+            currentDate = currentDate.AddDays(1);
+        }
+
+        return Task.FromResult((IReadOnlyList<OrderTrendDto>)trends);
+    }
 }

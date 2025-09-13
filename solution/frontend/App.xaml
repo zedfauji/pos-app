@@ -65,6 +65,11 @@
             <converters:PaymentMethodToColorConverter x:Key="PaymentMethodToColorConverter" />
             <converters:OverdueToColorConverter x:Key="OverdueToColorConverter" />
             <converters:DateTimeConverter x:Key="DateTimeConverter" />
+
+            <!-- Session Converters -->
+            <converters:StatusToStyleConverter x:Key="StatusToStyleConverter" />
+            <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
+            <converters:DurationConverter x:Key="DurationConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>
