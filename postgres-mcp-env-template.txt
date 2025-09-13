@@ -1,0 +1,14 @@
+# Postgres MCP Pro Environment Configuration Template
+# Copy this file to postgres-mcp/.env and fill in your Cloud SQL details
+
+# Cloud SQL Connection Details
+DATABASE_URI=postgresql://username:password@your-cloud-sql-ip:5432/your-database-name?sslmode=require
+
+# Optional: OpenAI API Key for LLM-based index tuning
+# OPENAI_API_KEY=your-openai-api-key-here
+
+# Example:
+# DATABASE_URI=postgresql://postgres:mypassword@34.123.45.67:5432/mydatabase?sslmode=require
+
+
+

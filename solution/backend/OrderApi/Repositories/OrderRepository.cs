@@ -445,15 +445,17 @@ public sealed partial class OrderRepository : IOrderRepository
         }
         await completionRateRdr.CloseAsync();
 
-        // Status Monitoring
+        // Status Monitoring (scoped to selected date range)
         const string statusSql = @"SELECT 
-            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'pending') as pending,
-            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'in_progress') as in_progress,
-            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'ready') as ready,
-            COUNT(*) FILTER (WHERE status = 'closed' AND DATE(closed_at) = CURRENT_DATE) as completed_today
+            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'pending' AND created_at >= @fromDate AND created_at < @toDatePlusOne) as pending,
+            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'in_progress' AND created_at >= @fromDate AND created_at < @toDatePlusOne) as in_progress,
+            COUNT(*) FILTER (WHERE status = 'open' AND delivery_status = 'ready' AND created_at >= @fromDate AND created_at < @toDatePlusOne) as ready,
+            COUNT(*) FILTER (WHERE status = 'closed' AND closed_at IS NOT NULL AND closed_at >= @fromDate AND closed_at < @toDatePlusOne) as completed_in_range
             FROM ord.orders 
             WHERE is_deleted = false";
         await using var statusCmd = new NpgsqlCommand(statusSql, conn);
+        statusCmd.Parameters.AddWithValue("@fromDate", fromDate);
+        statusCmd.Parameters.AddWithValue("@toDatePlusOne", toDate.AddDays(1));
         await using var statusRdr = await statusCmd.ExecuteReaderAsync(ct);
         var pendingOrders = 0;
         var inProgressOrders = 0;

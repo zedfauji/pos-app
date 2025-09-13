@@ -9,7 +9,48 @@ Commands format - Use Power Shell compatible commands
 DB Region - northamerica-south-1
 Cloud Run Regios - northamerica-south-1
 YOU ARE DEVELOPING WIN UI 3 Apps not UWP Apps. 
-Priting through CommunityToolkit Print Helper
+Priting through PDFSharp Printing
+Confirm with user to implement dialoge or pane
+Do not create anything simple or fallback option for debugging. Before creating anything simple because XAML Compilation issue ask user for help or help in debugging.
+You do not create fallback or simple version. Ask user to cofirm and help in XAML compilation debugging through visual studio 
+
+Cloud run deployment parameters -ProjectId "bola8pos" -Region "northamerica-south1" -ServiceName "magidesk-menu" -CloudSqlInstance "bola8pos:northamerica-south1:pos-app-1"
+
+DB Credentials
+Username - posapp
+Password - Campus_66
+{
+  "Api": {
+    "BaseUrl": "https://magidesk-backend-904541739138.us-central1.run.app"
+  },
+  "SettingsApi": {
+    "BaseUrl": "https://magidesk-settings-904541739138.us-central1.run.app"
+  },
+  "MenuApi": {
+    "BaseUrl": "https://magidesk-menu-904541739138.northamerica-south1.run.app"
+  },
+  "OrderApi": {
+    "BaseUrl": "https://magidesk-order-904541739138.northamerica-south1.run.app"
+  },
+  "InventoryApi": {
+    "BaseUrl": "http://localhost:5001"
+  },
+  "PaymentApi": {
+    "BaseUrl": "https://magidesk-payment-904541739138.northamerica-south1.run.app"
+  },
+  "VendorOrdersApi": {
+    "BaseUrl": "https://magidesk-vendororders-904541739138.northamerica-south1.run.app"
+  },
+  "Db": {
+    "Postgres": {
+      "ConnectionString": "Host=/cloudsql/bola8pos:northamerica-south1:pos-app-1;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
+    }
+  },
+  "TablesApi": {
+    "BaseUrl": "https://magidesk-tables-904541739138.northamerica-south1.run.app"  
+  }
+}
+
 ---
 trigger: always_on
 ---
