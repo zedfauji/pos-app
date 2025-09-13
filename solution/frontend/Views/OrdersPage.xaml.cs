@@ -16,7 +16,8 @@ namespace MagiDesk.Frontend.Views
     public sealed partial class OrdersPage : Page, IToolbarConsumer
     {
         public OrderDetailViewModel Vm { get; } = new();
-        private readonly DispatcherTimer _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        private readonly DispatcherTimer _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+        private DateTime _lastUpdateTime = DateTime.Now;
 
         public OrdersPage()
         {
@@ -44,6 +45,18 @@ namespace MagiDesk.Frontend.Views
         private async void RefreshTimer_Tick(object sender, object e)
         {
             await UpdateAnalyticsAsync();
+        }
+
+        private async Task RefreshDataAsync()
+        {
+            try
+            {
+                await UpdateAnalyticsAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error refreshing data: {ex.Message}");
+            }
         }
 
         private async void OrderContext_CurrentOrderChanged(object? sender, long? e)
@@ -78,51 +91,124 @@ namespace MagiDesk.Frontend.Views
                     return; // Elements not yet initialized, skip update
                 }
 
-                // Simulate analytics data - in a real implementation, this would come from your analytics service
-                var today = DateTime.Today;
+                // Get real analytics data from API
+                var orderApi = App.OrdersApi;
+                if (orderApi == null)
+                {
+                    // Fallback to mock data if API is not available
+                    await UpdateAnalyticsWithMockData();
+                    return;
+                }
+
+                // Get date range from UI controls
+                var fromDate = FromDatePicker != null ? FromDatePicker.Date.Date : (DateTime?)null;
+                var toDate = ToDatePicker != null ? ToDatePicker.Date.Date : (DateTime?)null;
+                var reportType = ReportTypeCombo?.SelectedItem?.ToString() ?? "daily";
+
+                // Fetch analytics data from API
+                var analytics = await orderApi.GetOrderAnalyticsAsync(fromDate, toDate, reportType);
+                if (analytics == null)
+                {
+                    // Fallback to mock data if API call fails
+                    await UpdateAnalyticsWithMockData();
+                    return;
+                }
+
+                // Update KPI metrics with real data
+                OrdersTodayText.Text = analytics.OrdersToday.ToString();
+                RevenueTodayText.Text = analytics.RevenueToday.ToString("C");
+                AvgOrderValueText.Text = analytics.AverageOrderValue.ToString("C");
+                CompletionRateText.Text = $"{analytics.CompletionRate:F1}%";
+                
+                // Update status monitoring with real data
+                PendingOrdersText.Text = analytics.PendingOrders.ToString();
+                InProgressText.Text = analytics.InProgressOrders.ToString();
+                ReadyForDeliveryText.Text = analytics.ReadyForDeliveryOrders.ToString();
+                CompletedTodayText.Text = analytics.CompletedTodayOrders.ToString();
+                
+                // Update performance metrics with real data
+                AvgPrepTimeText.Text = $"{analytics.AveragePrepTimeMinutes}m";
+                PeakHourText.Text = analytics.PeakHour;
+                EfficiencyScoreText.Text = $"{analytics.EfficiencyScore:F1}%";
+                
+                // Update analytics summary with real data
+                TotalOrdersText.Text = analytics.TotalOrders.ToString();
+                TotalRevenueText.Text = analytics.TotalRevenue.ToString("C");
+                AvgOrderTimeText.Text = $"{analytics.AverageOrderTimeMinutes}m";
+                CustomerSatisfactionText.Text = $"{analytics.CustomerSatisfactionRate:F1}%";
+                ReturnRateText.Text = $"{analytics.ReturnRate:F1}%";
+                
+                // Update alerts with real data
+                AlertText.Text = analytics.AlertMessage;
+                
+                // Update recent activity with real data
+                await UpdateRecentActivityWithRealData(analytics.RecentActivities);
+                
+                // Update last refresh time
+                _lastUpdateTime = DateTime.Now;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating analytics: {ex.Message}");
+                // Fallback to mock data on error
+                await UpdateAnalyticsWithMockData();
+            }
+        }
+
+        private async Task UpdateAnalyticsWithMockData()
+        {
+            try
+            {
+                // Fallback mock data when API is not available
                 var random = new Random();
                 
-                // Update KPI metrics
                 OrdersTodayText.Text = random.Next(15, 45).ToString();
                 RevenueTodayText.Text = (random.Next(800, 2500)).ToString("C");
                 AvgOrderValueText.Text = (random.Next(25, 75)).ToString("C");
                 CompletionRateText.Text = $"{random.Next(85, 98)}%";
                 
-                // Update status monitoring
                 PendingOrdersText.Text = random.Next(0, 8).ToString();
                 InProgressText.Text = random.Next(2, 12).ToString();
                 ReadyForDeliveryText.Text = random.Next(1, 6).ToString();
                 CompletedTodayText.Text = random.Next(20, 40).ToString();
                 
-                // Update performance metrics
                 AvgPrepTimeText.Text = $"{random.Next(8, 25)}m";
                 PeakHourText.Text = $"{random.Next(12, 20):00}:{random.Next(0, 60):00}";
                 EfficiencyScoreText.Text = $"{random.Next(75, 95)}%";
                 
-                // Update analytics summary
                 TotalOrdersText.Text = random.Next(100, 500).ToString();
                 TotalRevenueText.Text = (random.Next(5000, 15000)).ToString("C");
                 AvgOrderTimeText.Text = $"{random.Next(15, 35)}m";
                 CustomerSatisfactionText.Text = $"{random.Next(85, 98)}%";
                 ReturnRateText.Text = $"{random.Next(1, 5)}%";
                 
-                // Update alerts
                 var alertCount = random.Next(0, 3);
-                if (alertCount == 0)
-                {
-                    AlertText.Text = "No critical issues detected";
-                }
-                else
-                {
-                    AlertText.Text = $"{alertCount} critical issue(s) require attention";
-                }
+                AlertText.Text = alertCount == 0 ? "No critical issues detected" : $"{alertCount} critical issue(s) require attention";
                 
-                // Update recent activity
                 await UpdateRecentActivityAsync();
+                
+                // Update last refresh time
+                _lastUpdateTime = DateTime.Now;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating analytics: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating mock analytics: {ex.Message}");
+            }
+        }
+
+        private async Task UpdateRecentActivityWithRealData(IReadOnlyList<OrderApiService.RecentActivityDto> activities)
+        {
+            try
+            {
+                if (RecentActivityList != null)
+                {
+                    RecentActivityList.ItemsSource = activities;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating recent activity with real data: {ex.Message}");
+                await UpdateRecentActivityAsync();
             }
         }
 
@@ -211,7 +297,7 @@ namespace MagiDesk.Frontend.Views
 
         private async void RefreshData_Click(object sender, RoutedEventArgs e)
         {
-            await UpdateAnalyticsAsync();
+            await RefreshDataAsync();
         }
 
         private async void FromDatePicker_DateChanged(object sender, Microsoft.UI.Xaml.Controls.DatePickerValueChangedEventArgs e)

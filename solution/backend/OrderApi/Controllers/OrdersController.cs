@@ -88,4 +88,26 @@ public class OrdersController : ControllerBase
         var result = await _service.ListLogsAsync(orderId, page, pageSize, ct);
         return Ok(result);
     }
+
+    [HttpGet("analytics")]
+    public async Task<ActionResult<OrderAnalyticsDto>> GetAnalyticsAsync([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] string reportType = "daily", CancellationToken ct = default)
+    {
+        var request = new OrderAnalyticsRequestDto(fromDate, toDate, reportType);
+        var analytics = await _service.GetOrderAnalyticsAsync(request, ct);
+        return Ok(analytics);
+    }
+
+    [HttpGet("analytics/status-summary")]
+    public async Task<ActionResult<IReadOnlyList<OrderStatusSummaryDto>>> GetStatusSummaryAsync(CancellationToken ct = default)
+    {
+        var summary = await _service.GetOrderStatusSummaryAsync(ct);
+        return Ok(summary);
+    }
+
+    [HttpGet("analytics/trends")]
+    public async Task<ActionResult<IReadOnlyList<OrderTrendDto>>> GetTrendsAsync([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate, CancellationToken ct = default)
+    {
+        var trends = await _service.GetOrderTrendsAsync(fromDate, toDate, ct);
+        return Ok(trends);
+    }
 }

@@ -37,4 +37,16 @@ public interface IOrderRepository
     Task MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct);
     Task UpdateOrderDeliveryStatusAsync(long orderId, string deliveryStatus, CancellationToken ct);
     Task UpdateOrderStatusAsync(long orderId, string status, CancellationToken ct);
+    
+    // Analytics methods
+    Task<(int OrdersToday, decimal RevenueToday, decimal AverageOrderValue, decimal CompletionRate,
+          int PendingOrders, int InProgressOrders, int ReadyForDeliveryOrders, int CompletedTodayOrders,
+          int AveragePrepTimeMinutes, string PeakHour, decimal EfficiencyScore,
+          int TotalOrders, decimal TotalRevenue, int AverageOrderTimeMinutes, 
+          decimal CustomerSatisfactionRate, decimal ReturnRate, int AlertCount, string AlertMessage)> 
+        GetOrderAnalyticsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct);
+    
+    Task<IReadOnlyList<RecentActivityDto>> GetRecentOrderActivitiesAsync(int limit, CancellationToken ct);
+    Task<IReadOnlyList<OrderStatusSummaryDto>> GetOrderStatusSummaryAsync(CancellationToken ct);
+    Task<IReadOnlyList<OrderTrendDto>> GetOrderTrendsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct);
 }

@@ -231,4 +231,44 @@ public sealed class OrderService : IOrderService
         var preMadeDrinkCategories = new[] { "Alcohol", "Beer", "Soda", "Juice", "Water", "Bottled Drinks" };
         return preMadeDrinkCategories.Contains(category, StringComparer.OrdinalIgnoreCase);
     }
+
+    public async Task<OrderAnalyticsDto> GetOrderAnalyticsAsync(OrderAnalyticsRequestDto request, CancellationToken ct)
+    {
+        var fromDate = request.FromDate ?? DateTime.Today.AddDays(-30);
+        var toDate = request.ToDate ?? DateTime.Today;
+        
+        // Get analytics data from repository
+        var analytics = await _repo.GetOrderAnalyticsAsync(fromDate, toDate, ct);
+        
+        // Get recent activities
+        var recentActivities = await _repo.GetRecentOrderActivitiesAsync(10, ct);
+        
+        return new OrderAnalyticsDto(
+            OrdersToday: analytics.OrdersToday,
+            RevenueToday: analytics.RevenueToday,
+            AverageOrderValue: analytics.AverageOrderValue,
+            CompletionRate: analytics.CompletionRate,
+            PendingOrders: analytics.PendingOrders,
+            InProgressOrders: analytics.InProgressOrders,
+            ReadyForDeliveryOrders: analytics.ReadyForDeliveryOrders,
+            CompletedTodayOrders: analytics.CompletedTodayOrders,
+            AveragePrepTimeMinutes: analytics.AveragePrepTimeMinutes,
+            PeakHour: analytics.PeakHour,
+            EfficiencyScore: analytics.EfficiencyScore,
+            TotalOrders: analytics.TotalOrders,
+            TotalRevenue: analytics.TotalRevenue,
+            AverageOrderTimeMinutes: analytics.AverageOrderTimeMinutes,
+            CustomerSatisfactionRate: analytics.CustomerSatisfactionRate,
+            ReturnRate: analytics.ReturnRate,
+            AlertCount: analytics.AlertCount,
+            AlertMessage: analytics.AlertMessage,
+            RecentActivities: recentActivities
+        );
+    }
+
+    public Task<IReadOnlyList<OrderStatusSummaryDto>> GetOrderStatusSummaryAsync(CancellationToken ct)
+        => _repo.GetOrderStatusSummaryAsync(ct);
+
+    public Task<IReadOnlyList<OrderTrendDto>> GetOrderTrendsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct)
+        => _repo.GetOrderTrendsAsync(fromDate, toDate, ct);
 }

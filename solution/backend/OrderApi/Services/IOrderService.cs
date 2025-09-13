@@ -15,4 +15,9 @@ public interface IOrderService
     Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct);
     Task<PagedResult<OrderLogDto>> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct);
     Task RecalculateTotalsAsync(long orderId, CancellationToken ct);
+    
+    // Analytics methods
+    Task<OrderAnalyticsDto> GetOrderAnalyticsAsync(OrderAnalyticsRequestDto request, CancellationToken ct);
+    Task<IReadOnlyList<OrderStatusSummaryDto>> GetOrderStatusSummaryAsync(CancellationToken ct);
+    Task<IReadOnlyList<OrderTrendDto>> GetOrderTrendsAsync(DateTime fromDate, DateTime toDate, CancellationToken ct);
 }

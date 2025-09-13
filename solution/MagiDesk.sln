@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderApi", "backend\OrderAp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentApi", "backend\PaymentApi\PaymentApi.csproj", "{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Tests", "MagiDesk.Tests\MagiDesk.Tests.csproj", "{C9B5F9D1-2345-6789-ABCD-EF0123456789}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AAF6FF87-7EED-497D-92BA-1482A96E8802} = {657AD4B1-2FB5-47E6-A690-9379106ABBBF}
