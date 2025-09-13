@@ -95,8 +95,13 @@ namespace MagiDesk.Frontend.Views
                 var orderApi = App.OrdersApi;
                 if (orderApi == null)
                 {
-                    // Fallback to mock data if API is not available
-                    await UpdateAnalyticsWithMockData();
+                    // API not available; show error and exit without mock data
+                    if (AnalyticsErrorBar != null)
+                    {
+                        AnalyticsErrorBar.Title = "Analytics Error";
+                        AnalyticsErrorBar.Message = "Orders API is not available. Please check configuration and connectivity.";
+                        AnalyticsErrorBar.IsOpen = true;
+                    }
                     return;
                 }
 
@@ -109,8 +114,13 @@ namespace MagiDesk.Frontend.Views
                 var analytics = await orderApi.GetOrderAnalyticsAsync(fromDate, toDate, reportType);
                 if (analytics == null)
                 {
-                    // Fallback to mock data if API call fails
-                    await UpdateAnalyticsWithMockData();
+                    // API call failed; show error and exit without mock data
+                    if (AnalyticsErrorBar != null)
+                    {
+                        AnalyticsErrorBar.Title = "Analytics Error";
+                        AnalyticsErrorBar.Message = "Failed to load analytics. Please try again later.";
+                        AnalyticsErrorBar.IsOpen = true;
+                    }
                     return;
                 }
 
@@ -143,56 +153,66 @@ namespace MagiDesk.Frontend.Views
                 
                 // Update recent activity with real data
                 await UpdateRecentActivityWithRealData(analytics.RecentActivities);
+
+                // Fetch and bind status summary
+                try
+                {
+                    var statusSummary = await orderApi.GetOrderStatusSummaryAsync();
+                    if (StatusSummaryList != null)
+                    {
+                        StatusSummaryList.ItemsSource = statusSummary;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (AnalyticsErrorBar != null)
+                    {
+                        AnalyticsErrorBar.Title = "Status Summary Error";
+                        AnalyticsErrorBar.Message = $"Failed to load status summary: {ex.Message}";
+                        AnalyticsErrorBar.IsOpen = true;
+                    }
+                }
+
+                // Fetch and bind order trends (default to last 7 days if not specified)
+                try
+                {
+                    var from = fromDate ?? DateTime.Today.AddDays(-6);
+                    var to = toDate ?? DateTime.Today;
+                    var trends = await orderApi.GetOrderTrendsAsync(from, to);
+                    if (TrendsList != null)
+                    {
+                        TrendsList.ItemsSource = trends;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (AnalyticsErrorBar != null)
+                    {
+                        AnalyticsErrorBar.Title = "Trends Error";
+                        AnalyticsErrorBar.Message = $"Failed to load trends: {ex.Message}";
+                        AnalyticsErrorBar.IsOpen = true;
+                    }
+                }
                 
+                // Close error bar on success (if nothing failed after this point)
+                if (AnalyticsErrorBar != null)
+                {
+                    AnalyticsErrorBar.IsOpen = false;
+                }
+
                 // Update last refresh time
                 _lastUpdateTime = DateTime.Now;
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating analytics: {ex.Message}");
-                // Fallback to mock data on error
-                await UpdateAnalyticsWithMockData();
-            }
-        }
-
-        private async Task UpdateAnalyticsWithMockData()
-        {
-            try
-            {
-                // Fallback mock data when API is not available
-                var random = new Random();
-                
-                OrdersTodayText.Text = random.Next(15, 45).ToString();
-                RevenueTodayText.Text = (random.Next(800, 2500)).ToString("C");
-                AvgOrderValueText.Text = (random.Next(25, 75)).ToString("C");
-                CompletionRateText.Text = $"{random.Next(85, 98)}%";
-                
-                PendingOrdersText.Text = random.Next(0, 8).ToString();
-                InProgressText.Text = random.Next(2, 12).ToString();
-                ReadyForDeliveryText.Text = random.Next(1, 6).ToString();
-                CompletedTodayText.Text = random.Next(20, 40).ToString();
-                
-                AvgPrepTimeText.Text = $"{random.Next(8, 25)}m";
-                PeakHourText.Text = $"{random.Next(12, 20):00}:{random.Next(0, 60):00}";
-                EfficiencyScoreText.Text = $"{random.Next(75, 95)}%";
-                
-                TotalOrdersText.Text = random.Next(100, 500).ToString();
-                TotalRevenueText.Text = (random.Next(5000, 15000)).ToString("C");
-                AvgOrderTimeText.Text = $"{random.Next(15, 35)}m";
-                CustomerSatisfactionText.Text = $"{random.Next(85, 98)}%";
-                ReturnRateText.Text = $"{random.Next(1, 5)}%";
-                
-                var alertCount = random.Next(0, 3);
-                AlertText.Text = alertCount == 0 ? "No critical issues detected" : $"{alertCount} critical issue(s) require attention";
-                
-                await UpdateRecentActivityAsync();
-                
-                // Update last refresh time
-                _lastUpdateTime = DateTime.Now;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error updating mock analytics: {ex.Message}");
+                // Show error InfoBar instead of mock data
+                if (AnalyticsErrorBar != null)
+                {
+                    AnalyticsErrorBar.Title = "Analytics Error";
+                    AnalyticsErrorBar.Message = $"Error updating analytics: {ex.Message}";
+                    AnalyticsErrorBar.IsOpen = true;
+                }
             }
         }
 
@@ -208,7 +228,7 @@ namespace MagiDesk.Frontend.Views
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating recent activity with real data: {ex.Message}");
-                await UpdateRecentActivityAsync();
+                // Do not populate mock data on error
             }
         }
 
