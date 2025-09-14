@@ -289,19 +289,22 @@ public class SettingsViewModel : INotifyPropertyChanged
         
         try
         {
-            // Load Frontend settings
-            var frontendSettings = await _settingsApi.GetFrontendAsync(HostKey);
-            if (frontendSettings != null)
+            // Try to load settings from API, but handle offline mode gracefully
+            try
             {
-                if (frontendSettings.TryGetValue("theme", out var theme))
-                    Theme = theme?.ToString() ?? "System";
-                if (frontendSettings.TryGetValue("ratePerMinute", out var rate) && 
-                    decimal.TryParse(rate?.ToString(), out var rateValue))
-                    RatePerMinute = rateValue;
-            }
+                // Load Frontend settings
+                var frontendSettings = await _settingsApi.GetFrontendAsync(HostKey);
+                if (frontendSettings != null)
+                {
+                    if (frontendSettings.TryGetValue("theme", out var theme))
+                        Theme = theme?.ToString() ?? "System";
+                    if (frontendSettings.TryGetValue("ratePerMinute", out var rate) && 
+                        decimal.TryParse(rate?.ToString(), out var rateValue))
+                        RatePerMinute = rateValue;
+                }
 
-            // Load Backend settings
-            var backendSettings = await _settingsApi.GetBackendAsync(HostKey);
+                // Load Backend settings
+                var backendSettings = await _settingsApi.GetBackendAsync(HostKey);
             if (backendSettings != null)
             {
                 if (backendSettings.TryGetValue("backendApiUrl", out var url))
@@ -334,12 +337,38 @@ public class SettingsViewModel : INotifyPropertyChanged
                 }
             }
 
-            StatusMessage = "Settings loaded successfully";
+                StatusMessage = "Settings loaded successfully";
+            }
+            catch (HttpRequestException httpEx) when (httpEx.Message.Contains("actively refused") || httpEx.Message.Contains("No connection"))
+            {
+                // Backend is offline - this is expected
+                _logger.LogInformation("Backend is offline, using default settings");
+                StatusMessage = "Backend offline - using default settings";
+                
+                // Initialize with default values for offline mode
+                await InitializeOfflineModeAsync();
+            }
+            catch (Exception apiEx)
+            {
+                _logger.LogWarning(apiEx, "API error, falling back to offline mode");
+                StatusMessage = "Using offline mode - backend unavailable";
+                await InitializeOfflineModeAsync();
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load settings");
             StatusMessage = $"Error loading settings: {ex.Message}";
+            
+            // Initialize with defaults even on error
+            try
+            {
+                await InitializeOfflineModeAsync();
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Failed to initialize offline mode");
+            }
         }
         finally
         {
