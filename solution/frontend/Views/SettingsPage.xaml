@@ -18,21 +18,46 @@
 
         <!-- Main Content -->
         <ScrollViewer Grid.Row="1">
-            <StackPanel Spacing="16" Width="640">
+            <StackPanel Spacing="20" Width="800">
                 
                 <!-- General Settings -->
                 <StackPanel x:Name="GeneralPanel" Spacing="8">
                     <TextBlock Text="General Settings" FontSize="18" FontWeight="SemiBold"/>
                     
-                    <TextBlock Text="Store Name / Host Key" FontWeight="SemiBold"/>
-                    <TextBox x:Name="SettingsHostText" PlaceholderText="store-1"/>
-                    
-                    <TextBlock Text="Theme" FontWeight="SemiBold"/>
-                    <ComboBox x:Name="ThemeSelector" SelectedIndex="0">
-                        <ComboBoxItem Content="System"/>
-                        <ComboBoxItem Content="Dark"/>
-                        <ComboBoxItem Content="Light"/>
-                    </ComboBox>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Host Key -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Store Name / Host Key" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="SettingsHostText" PlaceholderText="store-1" Margin="8,0"/>
+                        
+                        <!-- Theme -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Theme" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="ThemeSelector" SelectedIndex="0" Margin="8,0">
+                            <ComboBoxItem Content="System"/>
+                            <ComboBoxItem Content="Dark"/>
+                            <ComboBoxItem Content="Light"/>
+                        </ComboBox>
+                        
+                        <!-- Locale -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Locale" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="LocaleText" PlaceholderText="en-US" Margin="8,0"/>
+                        
+                        <!-- Notifications -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Enable Notifications" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="3" Grid.Column="1" x:Name="EnableNotificationsCheck" IsChecked="True" Margin="8,0"/>
+                    </Grid>
                     
                     <TextBlock x:Name="ThemeSummaryText" Text="Theme: System" Opacity="0.7"/>
                     <TextBlock x:Name="AppSummaryText" Text="App Settings: Loading..." Opacity="0.7"/>
@@ -42,27 +67,62 @@
                 <StackPanel x:Name="ConnectionsPanel" Spacing="8">
                     <TextBlock Text="API Connections" FontSize="18" FontWeight="SemiBold"/>
                     
-                    <TextBlock Text="Backend Base URL" FontWeight="SemiBold"/>
-                    <TextBox x:Name="BaseUrlText" PlaceholderText="https://localhost:7016"/>
-                    
-                    <TextBlock Text="Inventory API URL" FontWeight="SemiBold"/>
-                    <TextBox x:Name="InventoryApiUrlText" PlaceholderText="https://.../inventory"/>
-                    
-                    <TextBlock Text="Settings API URL" FontWeight="SemiBold"/>
-                    <TextBox x:Name="SettingsApiUrlText" PlaceholderText="https://.../settings"/>
-                    
-                    <TextBlock Text="Tables API URL" FontWeight="SemiBold"/>
-                    <TextBox x:Name="TablesApiUrlText" PlaceholderText="https://.../tables"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Backend API -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Backend API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="BaseUrlText" PlaceholderText="https://localhost:7016" Margin="8,0"/>
+                        
+                        <!-- Settings API -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Settings API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="SettingsApiUrlText" PlaceholderText="https://.../settings" Margin="8,0"/>
+                        
+                        <!-- Tables API -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Tables API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="TablesApiUrlText" PlaceholderText="https://.../tables" Margin="8,0"/>
+                        
+                        <!-- Menu API -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Menu API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="MenuApiUrlText" PlaceholderText="https://.../menu" Margin="8,0"/>
+                        
+                        <!-- Order API -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Order API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="4" Grid.Column="1" x:Name="OrderApiUrlText" PlaceholderText="https://.../order" Margin="8,0"/>
+                        
+                        <!-- Payment API -->
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Payment API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="5" Grid.Column="1" x:Name="PaymentApiUrlText" PlaceholderText="https://.../payment" Margin="8,0"/>
+                        
+                        <!-- Inventory API -->
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Inventory API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="6" Grid.Column="1" x:Name="InventoryApiUrlText" PlaceholderText="https://.../inventory" Margin="8,0"/>
+                        
+                        <!-- Vendor Orders API -->
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="Vendor Orders API URL" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="7" Grid.Column="1" x:Name="VendorOrdersApiUrlText" PlaceholderText="https://.../vendororders" Margin="8,0"/>
+                    </Grid>
                     
                     <!-- Status Indicators -->
                     <StackPanel Spacing="6" Margin="0,8,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse x:Name="BackendStatusDot" Width="10" Height="10" Fill="Gray"/>
-                            <TextBlock x:Name="BackendSummaryText" Text="Backend: Unknown"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse x:Name="InventoryStatusDot" Width="10" Height="10" Fill="Gray"/>
-                            <TextBlock x:Name="InventoryStatusText" Text="Inventory API: Unknown"/>
+                            <TextBlock x:Name="BackendSummaryText" Text="Backend API: Unknown"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse x:Name="SettingsStatusDot" Width="10" Height="10" Fill="Gray"/>
@@ -72,52 +132,152 @@
                             <Ellipse x:Name="TablesStatusDot" Width="10" Height="10" Fill="Gray"/>
                             <TextBlock x:Name="TablesStatusText" Text="Tables API: Unknown"/>
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="MenuStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="MenuStatusText" Text="Menu API: Unknown"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="OrderStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="OrderStatusText" Text="Order API: Unknown"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="PaymentStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="PaymentStatusText" Text="Payment API: Unknown"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="InventoryStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="InventoryStatusText" Text="Inventory API: Unknown"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="VendorOrdersStatusDot" Width="10" Height="10" Fill="Gray"/>
+                            <TextBlock x:Name="VendorOrdersStatusText" Text="Vendor Orders API: Unknown"/>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Printer Settings -->
-                <StackPanel x:Name="BillingPanel" Spacing="8">
-                    <TextBlock Text="Printer Settings" FontSize="18" FontWeight="SemiBold"/>
+                <!-- Business Information -->
+                <StackPanel x:Name="BusinessPanel" Spacing="8">
+                    <TextBlock Text="Business Information" FontSize="18" FontWeight="SemiBold"/>
                     
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <StackPanel>
-                            <TextBlock Text="Paper Width" FontWeight="SemiBold"/>
-                            <ComboBox x:Name="PrinterWidthCombo" SelectedIndex="1" Width="120">
-                                <ComboBoxItem Content="58 mm" Tag="58"/>
-                                <ComboBoxItem Content="80 mm" Tag="80"/>
-                            </ComboBox>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Tax %" FontWeight="SemiBold"/>
-                            <TextBox x:Name="TaxPercentText" PlaceholderText="8.5" Width="100"/>
-                        </StackPanel>
-                    </StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Business Name" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="BusinessNameText" PlaceholderText="MagiDesk Billiard Club" Margin="8,0"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Business Address" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="BusinessAddressText" PlaceholderText="123 Main Street, City, State 12345" Margin="8,0"/>
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Business Phone" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="BusinessPhoneText" PlaceholderText="(555) 123-4567" Margin="8,0"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Receipt Settings -->
+                <StackPanel x:Name="ReceiptPanel" Spacing="8">
+                    <TextBlock Text="Receipt Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Default Printer -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Default Printer" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="DefaultPrinterText" PlaceholderText="Select printer..." Margin="8,0"/>
+                        
+                        <!-- Receipt Size -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Receipt Size" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="ReceiptSizeCombo" SelectedIndex="1" Margin="8,0">
+                            <ComboBoxItem Content="58mm" Tag="58mm"/>
+                            <ComboBoxItem Content="80mm" Tag="80mm"/>
+                        </ComboBox>
+                        
+                        <!-- Auto Print on Payment -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Auto Print on Payment" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="2" Grid.Column="1" x:Name="AutoPrintOnPaymentCheck" IsChecked="True" Margin="8,0"/>
+                        
+                        <!-- Preview Before Print -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Preview Before Print" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="3" Grid.Column="1" x:Name="PreviewBeforePrintCheck" IsChecked="True" Margin="8,0"/>
+                        
+                        <!-- Print Pro Forma -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Print Pro Forma" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="4" Grid.Column="1" x:Name="PrintProFormaCheck" IsChecked="True" Margin="8,0"/>
+                        
+                        <!-- Print Final Receipt -->
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Print Final Receipt" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Row="5" Grid.Column="1" x:Name="PrintFinalReceiptCheck" IsChecked="True" Margin="8,0"/>
+                        
+                        <!-- Copies for Final Receipt -->
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Copies for Final Receipt" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="6" Grid.Column="1" x:Name="CopiesForFinalReceiptText" PlaceholderText="2" Margin="8,0"/>
+                        
+                        <!-- Tax Percentage -->
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="Tax %" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="7" Grid.Column="1" x:Name="TaxPercentText" PlaceholderText="8.5" Margin="8,0"/>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Tables Settings -->
                 <StackPanel x:Name="TablesPanel" Spacing="8">
                     <TextBlock Text="Tables Settings" FontSize="18" FontWeight="SemiBold"/>
                     
-                    <TextBlock x:Name="CurrentRateText" Text="Current Rate: Loading..." FontWeight="SemiBold"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Rate Per Minute -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Rate Per Minute" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="RatePerMinuteBox" PlaceholderText="0.50" Margin="8,0"/>
+                        
+                        <!-- Warn Minutes -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Warn after (minutes)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="WarnMinutesBox" PlaceholderText="30" Margin="8,0"/>
+                        
+                        <!-- Auto-stop Minutes -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Auto-stop after (minutes)" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="AutoStopMinutesBox" PlaceholderText="120" Margin="8,0"/>
+                        
+                        <!-- Rate Actions -->
+                        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0">
+                            <Button Content="Load Rate" Click="RateLoad_Click"/>
+                            <Button Content="Save Rate" Click="RateSave_Click"/>
+                        </StackPanel>
+                    </Grid>
                     
-                    <TextBlock Text="Session Timers" FontWeight="SemiBold"/>
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <StackPanel>
-                            <TextBlock Text="Warn after (minutes)" FontWeight="SemiBold"/>
-                            <TextBox x:Name="WarnMinutesBox" PlaceholderText="30" Width="160"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="Auto-stop after (minutes)" FontWeight="SemiBold"/>
-                            <TextBox x:Name="AutoStopMinutesBox" PlaceholderText="120" Width="180"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <TextBlock Text="Rate Per Minute" FontWeight="SemiBold"/>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBox x:Name="RatePerMinuteBox" PlaceholderText="0.50" Width="160"/>
-                        <Button Content="Load Rate" Click="RateLoad_Click"/>
-                        <Button Content="Save Rate" Click="RateSave_Click"/>
-                    </StackPanel>
+                    <TextBlock x:Name="CurrentRateText" Text="Current Rate: Loading..." FontWeight="SemiBold" Opacity="0.7"/>
                 </StackPanel>
 
                 <!-- Audit Log -->
@@ -142,16 +302,17 @@
 
         <!-- Bottom Actions -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
-            <Button x:Name="SaveButton" Content="Save Settings" Click="Save_Click"/>
+            <Button x:Name="SaveButton" Content="Save All Settings" Click="Save_Click"/>
             <Button x:Name="SaveApiButton" Content="Save API URLs" Click="SaveApi_Click"/>
-            <Button x:Name="PingApisButton" Content="Refresh Status" Click="PingApis_Click"/>
+            <Button x:Name="PingApisButton" Content="Test API Connections" Click="PingApis_Click"/>
             <Button x:Name="TestPrintButton" Content="Test Print" Click="TestPrint_Click"/>
-            <Button x:Name="ResetDefaultsButton" Content="Reset Defaults" Click="ResetDefaults_Click"/>
+            <Button x:Name="LoadDefaultsButton" Content="Load Defaults" Click="LoadDefaults_Click"/>
+            <Button x:Name="RefreshButton" Content="Refresh Settings" Click="Refresh_Click"/>
         </StackPanel>
 
         <!-- Status Bar -->
         <StackPanel Grid.Row="2" HorizontalAlignment="Right" Orientation="Horizontal" Spacing="8">
-            <InfoBar x:Name="ToastBar" IsOpen="False" Severity="Success" Message="Saved"/>
+            <InfoBar x:Name="ToastBar" IsOpen="False" Severity="Success" Message="Settings saved successfully"/>
             <TextBlock x:Name="StatusText" Text="Ready"/>
         </StackPanel>
 
