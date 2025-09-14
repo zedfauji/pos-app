@@ -79,6 +79,17 @@ create table if not exists inventory.inventory_transactions (
     created_at timestamptz not null default now()
 );
 
+-- Cash Flow
+create table if not exists inventory.cash_flow (
+    id uuid primary key default gen_random_uuid(),
+    employee_name text not null,
+    date timestamptz not null default now(),
+    cash_amount numeric(18,2) not null,
+    notes text null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
 -- Convenience view for current items with stock
 create or replace view inventory.v_items_current as
 select i.item_id,
@@ -99,4 +110,6 @@ create index if not exists idx_inventory_items_vendor on inventory.inventory_ite
 create index if not exists idx_inventory_items_category on inventory.inventory_items(category_id);
 create index if not exists idx_inventory_items_menu on inventory.inventory_items(is_menu_available);
 create index if not exists idx_inventory_tx_item_time on inventory.inventory_transactions(item_id, occurred_at);
+create index if not exists idx_cash_flow_date on inventory.cash_flow(date);
+create index if not exists idx_cash_flow_employee on inventory.cash_flow(employee_name);
 

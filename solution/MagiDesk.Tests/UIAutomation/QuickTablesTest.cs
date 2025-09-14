@@ -244,3 +244,4 @@ namespace MagiDesk.Tests.UIAutomation
         }
     }
 }
+

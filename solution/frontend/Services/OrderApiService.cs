@@ -195,4 +195,19 @@ public sealed class OrderApiService
             return Array.Empty<OrderTrendDto>();
         }
     }
+
+    public async Task<IReadOnlyList<OrderDto>> GetOrdersByBillingIdAsync(Guid billingId, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = $"api/orders/by-billing/{billingId}";
+            var list = await _http.GetFromJsonAsync<IReadOnlyList<OrderDto>>(url, ct);
+            return list ?? Array.Empty<OrderDto>();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error getting orders by billing ID {billingId}: {ex.Message}");
+            return Array.Empty<OrderDto>();
+        }
+    }
 }

@@ -10,6 +10,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddScoped<IUsersRepository, UsersRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<IRbacRepository, RbacRepository>();
+builder.Services.AddScoped<IRbacService, RbacService>();
 
 // Npgsql DataSource (dev: use LocalConnectionString, prod: use CloudRunSocketConnectionString)
 var pgSection = builder.Configuration.GetSection("Postgres");

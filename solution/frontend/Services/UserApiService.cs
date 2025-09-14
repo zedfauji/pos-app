@@ -8,7 +8,10 @@ namespace MagiDesk.Frontend.Services;
 public class UserApiService
 {
     private readonly HttpClient _http;
-    public UserApiService(HttpClient http) { _http = http; }
+    public UserApiService(HttpClient http) { 
+        _http = http; 
+        Log.Info($"UserApiService initialized with base address: {_http.BaseAddress}");
+    }
 
     public async Task<bool> PingAsync(CancellationToken ct = default)
     {
@@ -74,16 +77,23 @@ public class UserApiService
             var res = await _http.GetAsync($"api/users{query}", ct);
             
             if (!res.IsSuccessStatusCode) 
+            {
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                Log.Error($"GetUsersPagedAsync failed with status {res.StatusCode}: {errorContent}");
                 return new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
+            }
                 
+            var jsonContent = await res.Content.ReadAsStringAsync(ct);
+            Log.Info($"Received JSON response: {jsonContent}");
+            
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
             
-            return await res.Content.ReadFromJsonAsync<PagedResult<UserDto>>(options, cancellationToken: ct) 
-                   ?? new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
+            var result = await res.Content.ReadFromJsonAsync<PagedResult<UserDto>>(options, cancellationToken: ct);
+            return result ?? new PagedResult<UserDto> { Items = Array.Empty<UserDto>() };
         }
         catch (Exception ex)
         {
@@ -159,4 +169,120 @@ public class UserApiService
             return false;
         }
     }
+
+    #region RBAC Methods
+
+    public async Task<List<RoleDto>> GetRolesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetAsync("api/rbac/roles", ct);
+            if (!res.IsSuccessStatusCode) return new List<RoleDto>();
+            var pagedResult = await res.Content.ReadFromJsonAsync<PagedResult<RoleDto>>(cancellationToken: ct);
+            return pagedResult?.Items?.ToList() ?? new List<RoleDto>();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetRoles failed", ex);
+            return new List<RoleDto>();
+        }
+    }
+
+    public async Task<List<PermissionDto>> GetAllPermissionsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetAsync("api/rbac/permissions", ct);
+            if (!res.IsSuccessStatusCode) return new List<PermissionDto>();
+            return await res.Content.ReadFromJsonAsync<List<PermissionDto>>(cancellationToken: ct) ?? new List<PermissionDto>();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetAllPermissions failed", ex);
+            return new List<PermissionDto>();
+        }
+    }
+
+    public async Task<List<string>> GetRolePermissionsAsync(string roleId, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.GetAsync($"api/rbac/roles/{roleId}/permissions", ct);
+            if (!res.IsSuccessStatusCode) return new List<string>();
+            var permissions = await res.Content.ReadFromJsonAsync<string[]>(cancellationToken: ct);
+            return permissions?.ToList() ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetRolePermissions failed", ex);
+            return new List<string>();
+        }
+    }
+
+    public async Task<bool> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.PostAsJsonAsync("api/rbac/roles", request, ct);
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("CreateRole failed", ex);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateRoleAsync(string roleId, UpdateRoleRequest request, CancellationToken ct = default)
+    {
+        try
+        {
+            // Log the update request for debugging
+            System.Diagnostics.Debug.WriteLine($"Updating role {roleId} with request: {System.Text.Json.JsonSerializer.Serialize(request)}");
+            var res = await _http.PutAsJsonAsync($"api/rbac/roles/{roleId}", request, ct);
+            
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                Log.Error($"UpdateRole failed with status {res.StatusCode}: {errorContent}");
+            }
+            
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"UpdateRole failed for role {roleId}: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> DeleteRoleAsync(string roleId, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.DeleteAsync($"api/rbac/roles/{roleId}", ct);
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("DeleteRole failed", ex);
+            return false;
+        }
+    }
+
+    public async Task<bool> UpdateRolePermissionsAsync(string roleId, List<string> permissions, CancellationToken ct = default)
+    {
+        try
+        {
+            var res = await _http.PutAsJsonAsync($"api/rbac/roles/{roleId}/permissions", permissions, ct);
+            return res.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("UpdateRolePermissions failed", ex);
+            return false;
+        }
+    }
+
+    #endregion
 }

@@ -52,38 +52,53 @@ namespace MagiDesk.Frontend
         /// </summary>
         public App()
         {
-            this.InitializeComponent();
-            this.UnhandledException += App_UnhandledException;
-            
-            // CRITICAL DEBUG: Enable first-chance exception logging
-            AppDomain.CurrentDomain.FirstChanceException += (sender, e) =>
-            {
-                if (e.Exception is System.Runtime.InteropServices.COMException comEx)
-                {
-                    System.Diagnostics.Debug.WriteLine($"FIRST-CHANCE COM EXCEPTION: {comEx.Message}");
-                    System.Diagnostics.Debug.WriteLine($"HRESULT: 0x{comEx.HResult:X8}");
-                    System.Diagnostics.Debug.WriteLine($"Stack Trace: {comEx.StackTrace}");
-                }
-            };
-            
-            // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
-            // This prevents race conditions with InitializeApiAsync
-            // Note: ReceiptService will be properly initialized in MainPage constructor
             try
             {
-                var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<Services.ReceiptService>();
-                var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
-                ReceiptService = new Services.ReceiptService(logger, config);
+                Log.Info("App constructor started");
+                this.InitializeComponent();
+                Log.Info("InitializeComponent completed");
+                this.UnhandledException += App_UnhandledException;
+                
+                // CRITICAL DEBUG: Enable first-chance exception logging
+                AppDomain.CurrentDomain.FirstChanceException += (sender, e) =>
+                {
+                    if (e.Exception is System.Runtime.InteropServices.COMException comEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"FIRST-CHANCE COM EXCEPTION: {comEx.Message}");
+                        System.Diagnostics.Debug.WriteLine($"HRESULT: 0x{comEx.HResult:X8}");
+                        System.Diagnostics.Debug.WriteLine($"Stack Trace: {comEx.StackTrace}");
+                    }
+                };
+                
+                // CRITICAL FIX: Initialize ReceiptService IMMEDIATELY in constructor
+                // This prevents race conditions with InitializeApiAsync
+                // Note: ReceiptService will be properly initialized in MainPage constructor
+                try
+                {
+                    Log.Info("Initializing ReceiptService");
+                    var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<Services.ReceiptService>();
+                    var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
+                    ReceiptService = new Services.ReceiptService(logger, config);
+                    Log.Info("ReceiptService initialized successfully");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("ReceiptService initialization failed", ex);
+                    // Fallback to null - will be properly initialized later
+                    ReceiptService = null;
+                }
+                
+                Log.Info("Starting InitializeApiAsync");
+                _ = InitializeApiAsync();
+                Log.Info("ApplyThemeFromConfig started");
+                ApplyThemeFromConfig();
+                Log.Info("App constructor completed successfully");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ReceiptService initialization failed: {ex.Message}");
-                // Fallback to null - will be properly initialized later
-                ReceiptService = null;
+                Log.Error("Critical error in App constructor", ex);
+                throw; // Re-throw to prevent silent failure
             }
-            
-            _ = InitializeApiAsync();
-            ApplyThemeFromConfig();
         }
 
         public static void ReinitializeApi(string backendBase, string inventoryBase)
@@ -137,46 +152,64 @@ namespace MagiDesk.Frontend
         /// <param name="e">Details about the launch request and process.</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            window ??= new Window();
-            window.Title = "MagiDesk";
-            MainWindow = window;
-            
-            // Set minimum window size to ensure navigation pane is visible
-            window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
-            
-            // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
-            // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
-            // We use App.MainWindow instead for thread-safe access
-            System.Diagnostics.Debug.WriteLine("MainWindow set successfully");
-
-            if (window.Content is not Frame rootFrame)
+            try
             {
-                rootFrame = new Frame();
-                rootFrame.NavigationFailed += OnNavigationFailed;
-                window.Content = rootFrame;
-            }
-            // Always start at LoginPage; under isolation builds navigate to MainPage
-#if XAML_ONLY_MAIN
-            rootFrame.Navigate(typeof(MagiDesk.Frontend.Views.MainPage), e.Arguments);
-#else
-            rootFrame.Navigate(typeof(Views.LoginPage), e.Arguments);
-#endif
-            window.Activate();
+                Log.Info("OnLaunched started");
+                window ??= new Window();
+                window.Title = "MagiDesk";
+                MainWindow = window;
+                
+                // Set minimum window size to ensure navigation pane is visible
+                window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
+                
+                // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
+                // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
+                // We use App.MainWindow instead for thread-safe access
+                System.Diagnostics.Debug.WriteLine("MainWindow set successfully");
 
-            // Add window closing cleanup
-            window.Closed += async (sender, e) =>
-            {
-                try
+                if (window.Content is not Frame rootFrame)
                 {
-                    await CleanupActiveSessionsAsync();
+                    Log.Info("Creating new Frame");
+                    rootFrame = new Frame();
+                    rootFrame.NavigationFailed += OnNavigationFailed;
+                    window.Content = rootFrame;
                 }
-                catch { }
-            };
+                // Always start at LoginPage; under isolation builds navigate to MainPage
+#if XAML_ONLY_MAIN
+                Log.Info("Navigating to MainPage (XAML_ONLY_MAIN)");
+                rootFrame.Navigate(typeof(MagiDesk.Frontend.Views.MainPage), e.Arguments);
+#else
+                Log.Info("Navigating to LoginPage");
+                rootFrame.Navigate(typeof(Views.LoginPage), e.Arguments);
+#endif
+                Log.Info("Activating window");
+                window.Activate();
 
-            // CRITICAL FIX: Remove WindowNative COM interop calls to prevent Marshal.ThrowExceptionForHR errors
-            // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
-            // Window activation is handled automatically by the system
-            System.Diagnostics.Debug.WriteLine("Window launched successfully");
+                // Add window closing cleanup
+                window.Closed += async (sender, e) =>
+                {
+                    try
+                    {
+                        Log.Info("Window closing, cleaning up sessions");
+                        await CleanupActiveSessionsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("Error during window cleanup", ex);
+                    }
+                };
+
+                // CRITICAL FIX: Remove WindowNative COM interop calls to prevent Marshal.ThrowExceptionForHR errors
+                // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
+                // Window activation is handled automatically by the system
+                System.Diagnostics.Debug.WriteLine("Window launched successfully");
+                Log.Info("OnLaunched completed successfully");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Critical error in OnLaunched", ex);
+                throw; // Re-throw to prevent silent failure
+            }
         }
 
         private async Task InitializeApiAsync()
@@ -188,6 +221,15 @@ namespace MagiDesk.Frontend
                 _isInitializing = true;
             }
 
+            // Default values for fallback
+            var backendBase = "https://localhost:7016";
+            var inventoryBase = "https://localhost:7016";
+            var menuBase = "https://localhost:7016";
+            var paymentBase = "https://localhost:7016";
+            var ordersBase = "https://localhost:7016";
+            var vendorOrdersBase = "https://localhost:7016";
+            var usersBase = "https://magidesk-users-23sbzjsxaq-pv.a.run.app";
+
             try
             {
                 var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
@@ -196,13 +238,18 @@ namespace MagiDesk.Frontend
                     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                     .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true);
                 var config = builder.Build();
-                var backendBase = config["Api:BaseUrl"] ?? "https://localhost:7016";
-                var inventoryBase = config["InventoryApi:BaseUrl"] ?? backendBase;
-                var menuBase = config["MenuApi:BaseUrl"] ?? inventoryBase;
-                var paymentBase = config["PaymentApi:BaseUrl"] ?? backendBase;
-                var ordersBase = config["OrderApi:BaseUrl"] ?? backendBase;
-                var vendorOrdersBase = config["VendorOrdersApi:BaseUrl"] ?? backendBase;
-                var usersBase = config["UsersApi:BaseUrl"] ?? backendBase;
+                backendBase = config["Api:BaseUrl"] ?? "https://localhost:7016";
+                inventoryBase = config["InventoryApi:BaseUrl"] ?? backendBase;
+                menuBase = config["MenuApi:BaseUrl"] ?? inventoryBase;
+                paymentBase = config["PaymentApi:BaseUrl"] ?? backendBase;
+                ordersBase = config["OrderApi:BaseUrl"] ?? backendBase;
+                vendorOrdersBase = config["VendorOrdersApi:BaseUrl"] ?? backendBase;
+                usersBase = config["UsersApi:BaseUrl"] ?? "https://magidesk-users-23sbzjsxaq-pv.a.run.app";
+                
+                // Debug logging
+                Log.Info($"Configuration loaded:");
+                Log.Info($"  UsersApi:BaseUrl = {config["UsersApi:BaseUrl"]}");
+                Log.Info($"  usersBase = {usersBase}");
                 Api = new Services.ApiService(backendBase, inventoryBase);
 
                 var inner = new HttpClientHandler();
@@ -249,13 +296,15 @@ namespace MagiDesk.Frontend
                 
                 // ReceiptService is already initialized in constructor
             }
-            catch
+            catch (Exception ex)
             {
-                Api = new Services.ApiService("https://localhost:7016", "https://localhost:7016");
+                Log.Error("Failed to initialize APIs from configuration, using fallback", ex);
+                Api = new Services.ApiService(backendBase, inventoryBase);
                 var inner = new HttpClientHandler();
                 inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logging = new Services.HttpLoggingHandler(inner);
-                UsersApi = new Services.UserApiService(new HttpClient(logging) { BaseAddress = new Uri("https://magidesk-users-904541739138.northamerica-south1.run.app/") });
+                var http = new HttpClient(logging) { BaseAddress = new Uri(usersBase.TrimEnd('/') + "/") };
+                UsersApi = new Services.UserApiService(http);
 
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;

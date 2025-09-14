@@ -7,6 +7,7 @@ public interface IOrderService
     Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct);
     Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct);
     Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct);
+    Task<IReadOnlyList<OrderDto>> GetOrdersByBillingIdAsync(Guid billingId, CancellationToken ct);
     Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct);
     Task<OrderDto> UpdateItemAsync(long orderId, UpdateOrderItemDto item, CancellationToken ct);
     Task<OrderDto> DeleteItemAsync(long orderId, long orderItemId, CancellationToken ct);

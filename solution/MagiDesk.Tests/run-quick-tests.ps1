@@ -67,3 +67,4 @@ if ($passedTests -eq $totalTests) {
     Write-Host "Run full test suite for detailed analysis." -ForegroundColor Yellow
     exit 1
 }
+

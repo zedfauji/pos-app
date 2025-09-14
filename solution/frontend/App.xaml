@@ -70,6 +70,11 @@
             <converters:StatusToStyleConverter x:Key="StatusToStyleConverter" />
             <converters:StatusToVisibilityConverter x:Key="StatusToVisibilityConverter" />
             <converters:DurationConverter x:Key="DurationConverter" />
+            
+            <!-- User Status Converters -->
+            <converters:BoolToStatusBrushConverter x:Key="BoolToStatusBrushConverter" />
+            <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
+            <converters:DateTimeToStringConverter x:Key="DateTimeToStringConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

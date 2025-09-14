@@ -92,7 +92,9 @@ namespace MagiDesk.Frontend.Views
                 ApplyLanguage();
                 // Role-based menu: add Users item only for admins
                 var role = Services.SessionService.Current?.Role ?? "employee";
-                bool isAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase);
+                bool isAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase) || 
+                              string.Equals(role, "administrator", StringComparison.OrdinalIgnoreCase) ||
+                              string.Equals(role, "owner", StringComparison.OrdinalIgnoreCase);
                 // Ensure Users menu exists for admins
                 var usersItem = NavView.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (i.Content?.ToString() ?? "") == "Users");
                 if (isAdmin && usersItem == null)

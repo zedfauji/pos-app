@@ -205,6 +205,10 @@
                                                                 Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
                                                                 Icon="Cancel"/>
                                                 <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Table Status" Click="TableStatusMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Help"/>
+                                                <MenuFlyoutSeparator/>
                                                 <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
                                                                 Icon="Repair"/>
                                                 <MenuFlyoutSeparator/>

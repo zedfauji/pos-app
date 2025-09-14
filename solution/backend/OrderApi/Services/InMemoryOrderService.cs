@@ -42,6 +42,14 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult((IReadOnlyList<OrderDto>)list);
     }
 
+    public Task<IReadOnlyList<OrderDto>> GetOrdersByBillingIdAsync(Guid billingId, CancellationToken ct)
+    {
+        // In-memory implementation: return empty list since billing IDs aren't tracked in memory
+        // In a real implementation, this would query orders by billing_id
+        var list = new List<OrderDto>();
+        return Task.FromResult((IReadOnlyList<OrderDto>)list);
+    }
+
     public Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) throw new KeyNotFoundException("Order not found");

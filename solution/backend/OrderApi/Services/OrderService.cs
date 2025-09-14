@@ -105,6 +105,9 @@ public sealed class OrderService : IOrderService
     public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
         => _repo.GetOrdersBySessionAsync(sessionId, includeHistory, ct);
 
+    public Task<IReadOnlyList<OrderDto>> GetOrdersByBillingIdAsync(Guid billingId, CancellationToken ct)
+        => _repo.GetOrdersByBillingIdAsync(billingId, ct);
+
     public async Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
     {
         var mapped = new List<OrderItemDto>();
