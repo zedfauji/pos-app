@@ -513,6 +513,49 @@ public class SettingsViewModel : INotifyPropertyChanged
             StatusMessage = $"Error loading defaults: {ex.Message}";
         }
     }
+
+    public async Task InitializeOfflineModeAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Initializing offline mode...";
+
+            // Set default values for offline mode
+            HostKey = "store-1";
+            Theme = "System";
+            Locale = "en-US";
+            EnableNotifications = true;
+
+            // API URLs - use default cloud URLs
+            BackendApiUrl = "https://magidesk-backend-904541739138.us-central1.run.app";
+            SettingsApiUrl = "https://magidesk-settings-904541739138.us-central1.run.app";
+            MenuApiUrl = "https://magidesk-menu-904541739138.northamerica-south1.run.app";
+            OrderApiUrl = "https://magidesk-order-904541739138.northamerica-south1.run.app";
+            PaymentApiUrl = "https://magidesk-payment-904541739138.northamerica-south1.run.app";
+            TablesApiUrl = "https://magidesk-tables-904541739138.northamerica-south1.run.app";
+            InventoryApiUrl = "http://localhost:5001";
+            VendorOrdersApiUrl = "https://magidesk-vendororders-904541739138.northamerica-south1.run.app";
+
+            // Business settings defaults
+            BusinessName = "MagiDesk POS";
+            BusinessAddress = "123 Business St";
+            BusinessPhone = "+1-555-0123";
+            DefaultPrinter = "Default Printer";
+            ReceiptSize = "80mm";
+
+            StatusMessage = "Offline mode initialized - settings ready";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize offline mode");
+            StatusMessage = $"Error initializing offline mode: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
     #endregion
 
     #region INotifyPropertyChanged

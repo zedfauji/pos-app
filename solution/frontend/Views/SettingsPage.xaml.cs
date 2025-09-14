@@ -85,15 +85,15 @@ public sealed partial class SettingsPage : Page
             
             _logger.LogInformation($"Settings API base URL: {settingsBase}");
             
-            _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsBase) }, null);
-            _logger.LogInformation("SettingsApiService created successfully");
-        }
-        catch (Exception ex)
-        {
+                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsBase) }, null);
+                _logger.LogInformation("SettingsApiService created successfully");
+            }
+            catch (Exception ex)
+            {
             _logger.LogError(ex, "Failed to create SettingsApiService, using fallback");
-            _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://localhost:5001/") }, null);
-            System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
-        }
+                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://localhost:5001/") }, null);
+                System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
+            }
     }
 
     private void InitializeViewModel()
@@ -144,13 +144,46 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            await _viewModel.LoadSettingsAsync();
-            UpdateUIFromViewModel();
+            // Try to load settings from API, but don't fail if backend is unavailable
+            try
+            {
+                await _viewModel.LoadSettingsAsync();
+                UpdateUIFromViewModel();
+                ShowStatusMessage("Settings loaded successfully");
+            }
+            catch (HttpRequestException httpEx) when (httpEx.Message.Contains("actively refused") || httpEx.Message.Contains("No connection"))
+            {
+                // Backend is offline - this is expected
+                _logger.LogInformation("Backend is offline, using local settings mode");
+                ShowStatusMessage("Backend offline - using local settings", "Warning");
+                
+                // Initialize with default values for offline mode
+                await _viewModel.InitializeOfflineModeAsync();
+                UpdateUIFromViewModel();
+            }
+            catch (Exception apiEx)
+            {
+                _logger.LogWarning(apiEx, "API error, falling back to offline mode");
+                ShowStatusMessage("Using offline mode - backend unavailable", "Warning");
+                await _viewModel.InitializeOfflineModeAsync();
+                UpdateUIFromViewModel();
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load settings");
-            ShowStatusMessage($"Error loading settings: {ex.Message}", "Error");
+            _logger.LogError(ex, "Error in settings initialization");
+            ShowStatusMessage($"Error initializing settings: {ex.Message}", "Error");
+            
+            // Initialize with defaults even on error
+            try
+            {
+                await _viewModel.InitializeOfflineModeAsync();
+                UpdateUIFromViewModel();
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Failed to initialize offline mode");
+            }
         }
     }
 
