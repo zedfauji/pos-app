@@ -36,7 +36,6 @@
     <ProjectReference Include="../backend/InventoryApi/InventoryApi.csproj" />
     <ProjectReference Include="../backend/SettingsApi/SettingsApi.csproj" />
     <ProjectReference Include="../backend/TablesApi/TablesApi.csproj" />
-    <ProjectReference Include="../backend/MagiDesk.Backend/MagiDesk.Backend.csproj" />
   </ItemGroup>
 
 </Project>

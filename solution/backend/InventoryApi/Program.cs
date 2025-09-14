@@ -24,16 +24,25 @@ builder.Services.AddSingleton<NpgsqlDataSource>(_ =>
     return dataSourceBuilder.Build();
 });
 
+// Connection string for repositories
+builder.Services.AddSingleton<string>(_ => connString);
+
 // Repositories
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IVendorRepository, VendorRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ICashFlowRepository, CashFlowRepository>();
 
 // Services
 builder.Services.AddScoped<DatabaseInitializer>();
 
 // MVC + Swagger + CORS
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(opts =>

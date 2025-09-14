@@ -154,3 +154,4 @@ if ($LaunchAppOnly) {
 Write-Host ""
 Write-Host "🎬 Thank you for using MagiDesk Real UI Testing!" -ForegroundColor Magenta
 Write-Host "👀 You should have seen the application actually running and being tested!" -ForegroundColor Cyan
+

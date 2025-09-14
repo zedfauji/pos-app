@@ -5,6 +5,23 @@ using Microsoft.UI;
 
 namespace MagiDesk.Frontend.Converters
 {
+    public class BoolToStatusBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, string language)
+        {
+            if (value is bool isActive)
+            {
+                return isActive ? new SolidColorBrush(Microsoft.UI.Colors.Green) : new SolidColorBrush(Microsoft.UI.Colors.Red);
+            }
+            return new SolidColorBrush(Microsoft.UI.Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, string language)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class BoolToStatusColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)

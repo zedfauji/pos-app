@@ -108,6 +108,21 @@ public sealed partial class OrderRepository : IOrderRepository
         return order with { Items = list };
     }
 
+    private async Task<List<OrderItemDto>> LoadOrderItemsAsync(long orderId, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        const string items = @"SELECT order_item_id, menu_item_id, combo_id, quantity, delivered_quantity, base_price, price_delta, line_total, profit FROM ord.order_items WHERE order_id = @oid AND is_deleted = false";
+        await using var icmd = new NpgsqlCommand(items, conn);
+        icmd.Parameters.AddWithValue("@oid", orderId);
+        var list = new List<OrderItemDto>();
+        await using var ir = await icmd.ExecuteReaderAsync(ct);
+        while (await ir.ReadAsync(ct))
+        {
+            list.Add(new OrderItemDto(ir.GetInt64(0), ir.IsDBNull(1) ? null : ir.GetInt64(1), ir.IsDBNull(2) ? null : ir.GetInt64(2), ir.GetInt32(3), ir.GetInt32(4), ir.GetDecimal(5), ir.GetDecimal(6), ir.GetDecimal(7), ir.GetDecimal(8)));
+        }
+        return list;
+    }
+
     public async Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
@@ -119,7 +134,28 @@ public sealed partial class OrderRepository : IOrderRepository
         await using var rdr = await cmd.ExecuteReaderAsync(ct);
         while (await rdr.ReadAsync(ct))
         {
-            outList.Add(new OrderDto(rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetString(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), rdr.GetDecimal(9), new List<OrderItemDto>()));
+            var orderId = rdr.GetInt64(0);
+            var order = new OrderDto(orderId, rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetString(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), rdr.GetDecimal(9), new List<OrderItemDto>());
+            var items = await LoadOrderItemsAsync(orderId, ct);
+            outList.Add(order with { Items = items });
+        }
+        return outList;
+    }
+
+    public async Task<IReadOnlyList<OrderDto>> GetOrdersByBillingIdAsync(Guid billingId, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand(@"SELECT order_id, session_id, table_id, status, delivery_status, subtotal, discount_total, tax_total, total, profit_total
+                                                  FROM ord.orders WHERE billing_id = @bid AND is_deleted = false ORDER BY created_at DESC", conn);
+        cmd.Parameters.AddWithValue("@bid", billingId);
+        var outList = new List<OrderDto>();
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        while (await rdr.ReadAsync(ct))
+        {
+            var orderId = rdr.GetInt64(0);
+            var order = new OrderDto(orderId, rdr.GetFieldValue<Guid>(1), rdr.GetString(2), rdr.GetString(3), rdr.GetString(4), rdr.GetDecimal(5), rdr.GetDecimal(6), rdr.GetDecimal(7), rdr.GetDecimal(8), rdr.GetDecimal(9), new List<OrderItemDto>());
+            var items = await LoadOrderItemsAsync(orderId, ct);
+            outList.Add(order with { Items = items });
         }
         return outList;
     }

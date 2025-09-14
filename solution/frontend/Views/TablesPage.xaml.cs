@@ -1228,6 +1228,29 @@ public class AddItemRow : INotifyPropertyChanged
         }
     }
 
+    private async void TableStatusMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"TableStatusMenu_Click: Table Label = '{item.Label}'");
+            
+            var dialog = new Dialogs.TableStatusDialog
+            {
+                XamlRoot = this.XamlRoot
+            };
+
+            await dialog.LoadTableStatusAsync(item.Label);
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("TableStatusMenu_Click failed", ex);
+            await ShowSafeContentDialog("Error", $"Failed to load table status: {ex.Message}", "OK");
+        }
+    }
+
     private async void AddItemsMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
@@ -1310,43 +1333,58 @@ public class AddItemRow : INotifyPropertyChanged
 
     private async Task<(bool ok, UserDto? user)> PromptSelectEmployeeAsync()
     {
-        // Build API base URL from config
-        var userCfgPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "appsettings.user.json");
-        var cfg = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile(userCfgPath, optional: true, reloadOnChange: true)
-            .Build();
-        var apiBase = cfg["Api:BaseUrl"] ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(apiBase)) return (false, null);
-
-        var inner = new HttpClientHandler();
-        inner.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-        var logging = new HttpLoggingHandler(inner);
-        using var http = new HttpClient(logging) { BaseAddress = new Uri(apiBase.TrimEnd('/') + "/") };
-        var userApi = new UserApiService(http);
-        var users = await userApi.GetUsersAsync();
-        var employees = users.Where(u => string.Equals(u.Role, "employee", StringComparison.OrdinalIgnoreCase)).ToList();
-        if (employees.Count == 0)
+        try
         {
-            await new ContentDialog { Title = "No employees found", Content = "Please add employees first.", CloseButtonText = "OK", XamlRoot = this.XamlRoot }.ShowAsync();
+            // Use the existing UsersApi service instead of creating a new one
+            if (App.UsersApi == null)
+            {
+                Log.Error("UsersApi is not initialized");
+                await ShowSafeContentDialog("Error", "User service is not available. Please restart the application.", "OK");
+                return (false, null);
+            }
+
+            Log.Info("PromptSelectEmployeeAsync: Getting users from UsersApi");
+            var users = await App.UsersApi.GetUsersPagedAsync(new MagiDesk.Shared.DTOs.Users.UserSearchRequest { Page = 1, PageSize = 100 });
+            // Filter for users who can serve tables (Server, Cashier, Manager, Owner, Administrator)
+            var employees = users.Items.Where(u => 
+                string.Equals(u.Role, "Server", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Role, "Cashier", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Role, "Manager", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Role, "Owner", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Role, "Administrator", StringComparison.OrdinalIgnoreCase)
+            ).Where(u => u.IsActive).ToList();
+            
+            Log.Info($"PromptSelectEmployeeAsync: Found {employees.Count} employees");
+            if (employees.Count == 0)
+            {
+                await ShowSafeContentDialog("No employees found", "Please add employees first.", "OK");
+                return (false, null);
+            }
+
+            var combo = new ComboBox { ItemsSource = employees, DisplayMemberPath = nameof(UserDto.Username), SelectedIndex = 0, Width = 320 };
+            var dlg = new ContentDialog
+            {
+                Title = "Select Server",
+                Content = combo,
+                PrimaryButtonText = "Start",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+            var result = await dlg.ShowAsync();
+            if (result == ContentDialogResult.Primary && combo.SelectedItem is UserDto selected)
+            {
+                Log.Info($"PromptSelectEmployeeAsync: Selected employee {selected.Username}");
+                return (true, selected);
+            }
             return (false, null);
         }
-
-        var combo = new ComboBox { ItemsSource = employees, DisplayMemberPath = nameof(UserDto.Username), SelectedIndex = 0, Width = 320 };
-        var dlg = new ContentDialog
+        catch (Exception ex)
         {
-            Title = "Select Server",
-            Content = combo,
-            PrimaryButtonText = "Start",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = this.XamlRoot
-        };
-        var result = await dlg.ShowAsync();
-        if (result == ContentDialogResult.Primary && combo.SelectedItem is UserDto selected)
-            return (true, selected);
-        return (false, null);
+            Log.Error("PromptSelectEmployeeAsync failed", ex);
+            await ShowSafeContentDialog("Error", $"Failed to load employees: {ex.Message}", "OK");
+            return (false, null);
+        }
     }
 }
 

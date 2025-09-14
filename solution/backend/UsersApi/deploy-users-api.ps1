@@ -4,100 +4,99 @@
 # Usage: .\deploy-users-api.ps1
 
 param(
-    [string]$ProjectId = "bola8pos",
-    [string]$Region = "northamerica-south1", 
-    [string]$ServiceName = "magidesk-users",
-    [string]$CloudSqlInstance = "bola8pos:northamerica-south1:pos-app-1"
+    [Parameter(Mandatory=$false)][string]$ProjectId = "bola8pos",
+    [Parameter(Mandatory=$false)][string]$Region = "northamerica-south1", 
+    [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-users",
+    [Parameter(Mandatory=$false)][string]$CloudSqlInstance = "bola8pos:northamerica-south1:pos-app-1"
 )
 
-Write-Host "🚀 Deploying UsersApi to Cloud Run..." -ForegroundColor Cyan
-Write-Host "Project: $ProjectId" -ForegroundColor Yellow
-Write-Host "Region: $Region" -ForegroundColor Yellow
-Write-Host "Service: $ServiceName" -ForegroundColor Yellow
-Write-Host "Cloud SQL Instance: $CloudSqlInstance" -ForegroundColor Yellow
+$ErrorActionPreference = "Stop"
 
-# Set the project
-Write-Host "Setting GCP project..." -ForegroundColor Green
-gcloud config set project $ProjectId
+function Write-Info($msg) { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
+function Write-Warn($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+function Write-Err($msg) { Write-Host "[ERR ] $msg" -ForegroundColor Red }
 
-# Build and deploy to Cloud Run
-Write-Host "Building and deploying to Cloud Run..." -ForegroundColor Green
-
-try {
-    # Build container image first
-    $imageName = "gcr.io/$ProjectId/$ServiceName"
-    Write-Host "Building container image: $imageName" -ForegroundColor Yellow
-    
-    gcloud builds submit ../../ --config ../../cloudbuild-users.yaml
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Container build failed"
-    }
-    
-    # Deploy the built image
-    gcloud run deploy $ServiceName `
-        --image $imageName `
-        --region $Region `
-        --platform managed `
-        --allow-unauthenticated `
-        --port 8080 `
-        --memory 512Mi `
-        --cpu 1 `
-        --min-instances 0 `
-        --max-instances 10 `
-        --timeout 300 `
-        --set-env-vars "ASPNETCORE_ENVIRONMENT=Production" `
-        --set-cloudsql-instances $CloudSqlInstance `
-        --set-env-vars "ConnectionStrings__DefaultConnection=Host=/cloudsql/$CloudSqlInstance;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
-
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ UsersApi deployed successfully!" -ForegroundColor Green
-        
-        # Get the service URL
-        $serviceUrl = gcloud run services describe $ServiceName --region $Region --format "value(status.url)"
-        Write-Host "🌐 Service URL: $serviceUrl" -ForegroundColor Cyan
-        
-        # Test the health endpoint
-        Write-Host "🔍 Testing health endpoint..." -ForegroundColor Yellow
-        try {
-            $healthResponse = Invoke-RestMethod -Uri "$serviceUrl/health" -Method Get -TimeoutSec 30
-            Write-Host "✅ Health check passed: $($healthResponse.status)" -ForegroundColor Green
-        }
-        catch {
-            Write-Host "⚠️  Health check failed, but deployment succeeded. Service may still be starting up." -ForegroundColor Yellow
-            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        # Test the ping endpoint
-        Write-Host "🏓 Testing ping endpoint..." -ForegroundColor Yellow
-        try {
-            $pingResponse = Invoke-RestMethod -Uri "$serviceUrl/api/users/ping" -Method Get -TimeoutSec 30
-            Write-Host "✅ Ping successful: $($pingResponse.message)" -ForegroundColor Green
-        }
-        catch {
-            Write-Host "⚠️  Ping failed, but deployment succeeded. Service may still be starting up." -ForegroundColor Yellow
-            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-        }
-        
-        Write-Host "" -ForegroundColor White
-        Write-Host "🎉 Deployment Summary:" -ForegroundColor Cyan
-        Write-Host "   Service Name: $ServiceName" -ForegroundColor White
-        Write-Host "   Service URL: $serviceUrl" -ForegroundColor White
-        Write-Host "   Region: $Region" -ForegroundColor White
-        Write-Host "   Database: Connected to Cloud SQL PostgreSQL" -ForegroundColor White
-        Write-Host "" -ForegroundColor White
-        Write-Host "📋 Next Steps:" -ForegroundColor Cyan
-        Write-Host "   1. Verify database schema initialization" -ForegroundColor White
-        Write-Host "   2. Test API endpoints manually" -ForegroundColor White
-        Write-Host "   3. Run data migration from Firestore" -ForegroundColor White
-        Write-Host "   4. Update frontend configuration (when ready to switch)" -ForegroundColor White
-        
-    } else {
-        Write-Host "❌ Deployment failed!" -ForegroundColor Red
-        exit 1
-    }
-}
-catch {
-    Write-Host "❌ Deployment error: $($_.Exception.Message)" -ForegroundColor Red
+if (-not (Get-Command gcloud.cmd -ErrorAction SilentlyContinue)) {
+    Write-Err "gcloud CLI not found. Install Google Cloud SDK: https://cloud.google.com/sdk/docs/install"
     exit 1
 }
+
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path  # solution/backend/UsersApi
+$SvcRoot = $ScriptDir
+$BackendRoot = Split-Path $ScriptDir -Parent                 # solution/backend
+$SolutionRoot = Split-Path $BackendRoot -Parent             # solution/
+$DockerfilePath = Join-Path $SvcRoot "Dockerfile"
+$TempDockerfile = Join-Path $SolutionRoot "Dockerfile"        # copy to solution root
+
+if (-not (Test-Path $DockerfilePath)) { Write-Err "Dockerfile not found at $DockerfilePath"; exit 1 }
+
+Write-Info "Using service name: $ServiceName"
+
+try {
+    $acct = (& gcloud.cmd auth list --filter=status:ACTIVE --format="value(account)")
+    if (-not $acct) { Write-Warn "No active gcloud account detected. If deploy fails, run 'gcloud auth login' and re-run." }
+    elseif ($acct) { Write-Info "Active gcloud account: $acct" }
+} catch { Write-Warn "Could not check gcloud auth. If deploy fails, run 'gcloud auth login'. Details: $_" }
+
+Write-Info "Setting project to $ProjectId and region to $Region"
+& gcloud.cmd config set project $ProjectId | Out-Null
+& gcloud.cmd config set run/region $Region | Out-Null
+
+$Image = "gcr.io/${ProjectId}/${ServiceName}:latest"
+Write-Info "Resolved Image: $Image"
+Write-Info "Build Context (solution root): $SolutionRoot"
+Write-Info "Preparing Dockerfile in build context (solution root)..."
+Copy-Item -Path $DockerfilePath -Destination $TempDockerfile -Force
+
+Write-Info "Submitting build to Cloud Build..."
+& gcloud.cmd builds submit --project $ProjectId --tag $Image "$SolutionRoot"
+if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Build failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
+
+Write-Info "Deploying to Cloud Run service '$ServiceName' in region '$Region'..."
+$envPairs = @("ASPNETCORE_URLS=http://0.0.0.0:8080","ASPNETCORE_ENVIRONMENT=Production")
+$EnvVars = ($envPairs -join ",")
+$deployArgs = @(
+    'run','deploy',$ServiceName,
+    '--image',$Image,
+    '--region',$Region,
+    '--platform','managed',
+    '--allow-unauthenticated',
+    '--port','8080',
+    '--memory','512Mi',
+    '--cpu','1',
+    '--min-instances','0',
+    '--max-instances','10',
+    '--timeout','300',
+    '--set-env-vars',$EnvVars
+)
+if ($CloudSqlInstance -and $CloudSqlInstance.Trim().Length -gt 0) {
+    Write-Info "Attaching Cloud SQL instance $CloudSqlInstance"
+    $deployArgs += @('--add-cloudsql-instances', $CloudSqlInstance)
+}
+& gcloud.cmd @deployArgs
+if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Run deployment failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
+
+$Url = (& gcloud.cmd run services describe $ServiceName --region $Region --format="value(status.url)")
+Write-Info "Deployed: $Url"
+
+# Test the health endpoint
+Write-Info "Testing health endpoint..."
+try {
+    $healthResponse = Invoke-RestMethod -Uri "$Url/health" -Method Get -TimeoutSec 30
+    Write-Info "Health check passed: $healthResponse"
+} catch {
+    Write-Warn "Health check failed, but deployment succeeded. Service may still be starting up."
+    Write-Warn "Error: $($_.Exception.Message)"
+}
+
+# Test the ping endpoint
+Write-Info "Testing ping endpoint..."
+try {
+    $pingResponse = Invoke-RestMethod -Uri "$Url/api/users/ping" -Method Get -TimeoutSec 30
+    Write-Info "Ping successful: $pingResponse"
+} catch {
+    Write-Warn "Ping failed, but deployment succeeded. Service may still be starting up."
+    Write-Warn "Error: $($_.Exception.Message)"
+}
+
+Remove-Item -ErrorAction SilentlyContinue $TempDockerfile

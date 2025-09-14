@@ -33,12 +33,12 @@ public class ApiService
 
     // Legacy vendor endpoints removed - using new inventory system
 
-    // Cash Flow
+    // Cash Flow - now using InventoryApi
     public async Task<List<CashFlow>> GetCashFlowHistoryAsync(CancellationToken ct = default)
     {
         try
         {
-            var res = await _backendHttp.GetAsync("api/cashflow", ct);
+            var res = await _inventoryHttp.GetAsync("api/cashflow", ct);
             if (!res.IsSuccessStatusCode) return new();
             var list = await res.Content.ReadFromJsonAsync<List<CashFlow>>(cancellationToken: ct) ?? new();
             return list.OrderByDescending(c => c.Date).ToList();
@@ -54,7 +54,7 @@ public class ApiService
     {
         try
         {
-            var res = await _backendHttp.PostAsJsonAsync("api/cashflow", entry, ct);
+            var res = await _inventoryHttp.PostAsJsonAsync("api/cashflow", entry, ct);
             if (!res.IsSuccessStatusCode)
             {
                 var msg = await res.Content.ReadAsStringAsync(ct);
@@ -71,7 +71,7 @@ public class ApiService
     {
         try
         {
-            var res = await _backendHttp.PutAsJsonAsync("api/cashflow", entry, ct);
+            var res = await _inventoryHttp.PutAsJsonAsync($"api/cashflow/{entry.Id}", entry, ct);
             if (!res.IsSuccessStatusCode)
             {
                 var msg = await res.Content.ReadAsStringAsync(ct);

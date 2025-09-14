@@ -242,3 +242,4 @@ public class DatabaseIntegrationTests
         Console.WriteLine($"Transaction integrity test: {successCount}/{totalCount} operations successful");
     }
 }
+

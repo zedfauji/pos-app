@@ -58,3 +58,4 @@ public sealed record OrderAnalyticsRequestDto(
     DateTime? ToDate,
     string ReportType // "daily", "weekly", "monthly", "performance"
 );
+

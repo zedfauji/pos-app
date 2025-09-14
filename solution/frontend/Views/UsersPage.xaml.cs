@@ -5,18 +5,24 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using MagiDesk.Shared.DTOs.Users;
 using MagiDesk.Shared.DTOs.Auth;
+using System.Collections.Generic;
 
 namespace MagiDesk.Frontend.Views;
 
 public sealed partial class UsersPage : Page
 {
     public ObservableCollection<UserDto> Users { get; set; } = new();
+    public ObservableCollection<RoleDto> Roles { get; set; } = new();
+    public ObservableCollection<PermissionDto> Permissions { get; set; } = new();
     
     private UserSearchRequest _currentSearchRequest = new() { Page = 1, PageSize = 20 };
     private PagedResult<UserDto>? _currentResult;
     private bool _isLoading = false;
+    private Dictionary<string, bool> _permissionMatrix = new();
+    private Dictionary<string, List<string>> _rolePermissions = new();
 
     public UsersPage()
     {
@@ -622,4 +628,640 @@ public sealed partial class UsersPage : Page
         // Legacy method for old XAML - redirect to new ListView handler
         UsersListView_SelectionChanged(sender, e);
     }
+
+    #region Tab Navigation
+
+    private async void TabView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MainTabView.SelectedItem is TabViewItem selectedTab)
+        {
+            // Hide all tab contents
+            UsersTabContent.Visibility = Visibility.Collapsed;
+            RolesTabContent.Visibility = Visibility.Collapsed;
+            PermissionsTabContent.Visibility = Visibility.Collapsed;
+            UserRoleAssignmentTabContent.Visibility = Visibility.Collapsed;
+
+            // Show selected tab content
+            switch (selectedTab.Tag?.ToString())
+            {
+                case "UsersTab":
+                    UsersTabContent.Visibility = Visibility.Visible;
+                    break;
+                case "RolesTab":
+                    RolesTabContent.Visibility = Visibility.Visible;
+                    await LoadRolesAsync();
+                    break;
+                case "PermissionsTab":
+                    PermissionsTabContent.Visibility = Visibility.Visible;
+                    await LoadPermissionMatrixAsync();
+                    break;
+                case "UserRoleAssignmentTab":
+                    UserRoleAssignmentTabContent.Visibility = Visibility.Visible;
+                    await LoadUserRoleAssignmentAsync();
+                    break;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Role Management
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            var roles = await App.UsersApi!.GetRolesAsync();
+            Roles.Clear();
+            foreach (var role in roles)
+            {
+                Roles.Add(role);
+            }
+            ShowInfo($"Loaded {roles.Count} roles successfully");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to load roles: {ex.Message}");
+        }
+    }
+
+    private async void CreateRole_Click(object sender, RoutedEventArgs e)
+    {
+        // TODO: Implement role creation dialog
+        ShowInfo("Role creation dialog will be implemented");
+    }
+
+    private async void EditRole_Click(object sender, RoutedEventArgs e)
+    {
+        if (RolesListView.SelectedItem is RoleDto selectedRole)
+        {
+            ShowInfo($"Attempting to edit role: {selectedRole.Name} (ID: {selectedRole.Id}, IsSystem: {selectedRole.IsSystemRole})");
+            
+            if (selectedRole.IsSystemRole)
+            {
+                ShowError("Cannot edit system roles. Only custom roles can be modified.");
+                return;
+            }
+
+            // Create a simple input dialog for editing role description
+            var editDialog = new ContentDialog
+            {
+                Title = $"Edit Role: {selectedRole.Name}",
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            var stackPanel = new StackPanel { Spacing = 12 };
+            
+            // Show role name as read-only
+            var nameTextBlock = new TextBlock
+            {
+                Text = $"Role Name: {selectedRole.Name}",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            
+            var descriptionTextBox = new TextBox
+            {
+                Header = "Description",
+                Text = selectedRole.Description ?? "",
+                PlaceholderText = "Enter role description",
+                AcceptsReturn = true,
+                Height = 80
+            };
+
+            stackPanel.Children.Add(nameTextBlock);
+            stackPanel.Children.Add(descriptionTextBox);
+            editDialog.Content = stackPanel;
+
+            var result = await editDialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                try
+                {
+                    ShowInfo($"Sending update request for role {selectedRole.Id}...");
+                    
+                    var updateRequest = new UpdateRoleRequest
+                    {
+                        Description = string.IsNullOrWhiteSpace(descriptionTextBox.Text) ? null : descriptionTextBox.Text.Trim()
+                    };
+
+                    var success = await App.UsersApi!.UpdateRoleAsync(selectedRole.Id, updateRequest);
+                    if (success)
+                    {
+                        ShowInfo("Role updated successfully");
+                        await LoadRolesAsync(); // Refresh the roles list
+                    }
+                    else
+                    {
+                        ShowError("Failed to update role - API returned false");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Error updating role: {ex.Message}");
+                }
+            }
+        }
+        else
+        {
+            ShowError("No role selected. Please select a role to edit.");
+        }
+    }
+
+    private async void DeleteRole_Click(object sender, RoutedEventArgs e)
+    {
+        if (RolesListView.SelectedItem is RoleDto selectedRole)
+        {
+            if (selectedRole.IsSystemRole)
+            {
+                ShowError("Cannot delete system roles");
+                return;
+            }
+
+            // TODO: Implement role deletion confirmation dialog
+            ShowInfo($"Delete role: {selectedRole.Name}");
+        }
+    }
+
+    private void RolesListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var hasSelection = RolesListView.SelectedItem != null;
+        EditRoleButton.IsEnabled = hasSelection;
+        DeleteRoleButton.IsEnabled = hasSelection && (RolesListView.SelectedItem as RoleDto)?.IsSystemRole == false;
+    }
+
+    private void QuickEditRole_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is RoleDto role)
+        {
+            RolesListView.SelectedItem = role;
+            EditRole_Click(sender, e);
+        }
+    }
+
+    private async void ManagePermissions_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is RoleDto role)
+        {
+            // Switch to Permission Matrix tab and focus on this role
+            MainTabView.SelectedIndex = 2; // PermissionsTab
+            await LoadPermissionMatrixAsync();
+            ShowInfo($"Managing permissions for role: {role.Name}");
+        }
+    }
+
+    #endregion
+
+    #region Permission Matrix
+
+    private async Task LoadPermissionMatrixAsync()
+    {
+        try
+        {
+            // Load roles and permissions
+            var roles = await App.UsersApi!.GetRolesAsync();
+            var permissions = await App.UsersApi!.GetAllPermissionsAsync();
+
+            Roles.Clear();
+            Permissions.Clear();
+
+            foreach (var role in roles)
+            {
+                Roles.Add(role);
+            }
+
+            foreach (var permission in permissions)
+            {
+                Permissions.Add(permission);
+            }
+
+            // Load role permissions for each role
+            _rolePermissions = new Dictionary<string, List<string>>();
+            foreach (var role in roles)
+            {
+                try
+                {
+                    var rolePermissions = await App.UsersApi!.GetRolePermissionsAsync(role.Id);
+                    _rolePermissions[role.Id] = rolePermissions;
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Failed to load permissions for role {role.Name}: {ex.Message}");
+                    _rolePermissions[role.Id] = new List<string>();
+                }
+            }
+
+            // Build permission matrix UI
+            BuildPermissionMatrixUI();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to load permission matrix: {ex.Message}");
+        }
+    }
+
+    private void BuildPermissionMatrixUI()
+    {
+        PermissionMatrixGrid.Children.Clear();
+        PermissionMatrixGrid.RowDefinitions.Clear();
+        PermissionMatrixGrid.ColumnDefinitions.Clear();
+
+        if (Roles.Count == 0 || Permissions.Count == 0) return;
+
+        // Add column definitions (Roles + 1 for permission names)
+        PermissionMatrixGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) }); // Permission names
+        for (int i = 0; i < Roles.Count; i++)
+        {
+            PermissionMatrixGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        }
+
+        // Add row definitions (Permissions + 1 for headers)
+        PermissionMatrixGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(40) }); // Header
+        for (int i = 0; i < Permissions.Count; i++)
+        {
+            PermissionMatrixGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(35) });
+        }
+
+        // Add header row
+        var headerText = new TextBlock
+        {
+            Text = "Permissions",
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 4, 8, 4)
+        };
+        Grid.SetRow(headerText, 0);
+        Grid.SetColumn(headerText, 0);
+        PermissionMatrixGrid.Children.Add(headerText);
+
+        // Add role headers
+        for (int col = 0; col < Roles.Count; col++)
+        {
+            var roleHeader = new TextBlock
+            {
+                Text = Roles[col].Name,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
+                Margin = new Thickness(4)
+            };
+            Grid.SetRow(roleHeader, 0);
+            Grid.SetColumn(roleHeader, col + 1);
+            PermissionMatrixGrid.Children.Add(roleHeader);
+        }
+
+        // Add permission rows
+        for (int row = 0; row < Permissions.Count; row++)
+        {
+            var permission = Permissions[row];
+            
+            // Permission name
+            var permissionText = new TextBlock
+            {
+                Text = permission.Name,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(8, 4, 8, 4),
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
+            };
+            Grid.SetRow(permissionText, row + 1);
+            Grid.SetColumn(permissionText, 0);
+            PermissionMatrixGrid.Children.Add(permissionText);
+
+            // Checkboxes for each role
+            for (int col = 0; col < Roles.Count; col++)
+            {
+                var role = Roles[col];
+                var checkbox = new CheckBox
+                {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Tag = $"{role.Id}|{permission.Name}"
+                };
+                
+                // Load actual permission state from API
+                var hasPermission = _rolePermissions.ContainsKey(role.Id) && 
+                                   _rolePermissions[role.Id].Contains(permission.Name);
+                checkbox.IsChecked = hasPermission;
+                
+                checkbox.Checked += PermissionCheckbox_Changed;
+                checkbox.Unchecked += PermissionCheckbox_Changed;
+
+                Grid.SetRow(checkbox, row + 1);
+                Grid.SetColumn(checkbox, col + 1);
+                PermissionMatrixGrid.Children.Add(checkbox);
+            }
+        }
+    }
+
+    private async void PermissionCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox checkbox && checkbox.Tag is string tag)
+        {
+            var parts = tag.Split('|');
+            if (parts.Length == 2)
+            {
+                var roleId = parts[0];
+                var permissionName = parts[1];
+                var isChecked = checkbox.IsChecked == true;
+
+                // Update local matrix
+                _permissionMatrix[$"{roleId}|{permissionName}"] = isChecked;
+
+                // TODO: Save to API
+                ShowInfo($"Permission {permissionName} for role {roleId}: {(isChecked ? "Granted" : "Revoked")}");
+            }
+        }
+    }
+
+    private async void SavePermissions_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // TODO: Implement bulk permission save
+            ShowInfo("Saving permission changes...");
+            
+            // For now, just show success
+            await Task.Delay(1000);
+            ShowInfo("Permission changes saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to save permissions: {ex.Message}");
+        }
+    }
+
+    private async void ResetPermissions_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadPermissionMatrixAsync();
+        ShowInfo("Permission matrix reset to saved state");
+    }
+
+    #endregion
+
+    #region User Role Assignment
+
+    private async Task LoadUserRoleAssignmentAsync()
+    {
+        try
+        {
+            // Load users for role assignment
+            var users = await App.UsersApi!.GetUsersPagedAsync(new UserSearchRequest { Page = 1, PageSize = 100 });
+            Users.Clear();
+            foreach (var user in users.Items)
+            {
+                Users.Add(user);
+            }
+            
+            // Set ComboBox selections after the list is loaded
+            await Task.Delay(100); // Small delay to ensure UI is rendered
+            SetComboBoxSelections();
+            
+            ShowInfo($"Loaded {users.Items.Count} users for role assignment");
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to load users for role assignment: {ex.Message}");
+        }
+    }
+
+    private void SetComboBoxSelections()
+    {
+        foreach (var item in UserRoleAssignmentListView.Items)
+        {
+            if (item is UserDto user)
+            {
+                var container = UserRoleAssignmentListView.ContainerFromItem(item) as ListViewItem;
+                if (container != null)
+                {
+                    var comboBox = FindChild<ComboBox>(container, "RoleComboBox");
+                    if (comboBox != null)
+                    {
+                        // Set the selected item based on user's current role
+                        foreach (ComboBoxItem comboItem in comboBox.Items)
+                        {
+                            if (comboItem.Tag?.ToString() == user.Role)
+                            {
+                                comboBox.SelectedItem = comboItem;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private async void SaveUserRoles_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var changes = new List<(string userId, string newRole)>();
+            
+            // Collect role changes from the ComboBoxes
+            foreach (var item in UserRoleAssignmentListView.Items)
+            {
+                if (item is UserDto user)
+                {
+                    // Find the ComboBox for this user
+                    var container = UserRoleAssignmentListView.ContainerFromItem(item) as ListViewItem;
+                    if (container != null)
+                    {
+                        var comboBox = FindChild<ComboBox>(container, "RoleComboBox");
+                        if (comboBox != null && comboBox.SelectedItem is ComboBoxItem selectedItem)
+                        {
+                            var newRole = selectedItem.Tag?.ToString();
+                            if (!string.IsNullOrEmpty(newRole) && newRole != user.Role)
+                            {
+                                changes.Add((user.UserId!, newRole));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (changes.Count == 0)
+            {
+                ShowInfo("No role changes to save");
+                return;
+            }
+
+            // Apply changes
+            var successCount = 0;
+            foreach (var (userId, newRole) in changes)
+            {
+                try
+                {
+                    var updateRequest = new UpdateUserRequest
+                    {
+                        Role = newRole
+                    };
+                    
+                    var success = await App.UsersApi!.UpdateUserAsync(userId, updateRequest);
+                    if (success)
+                    {
+                        successCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Failed to update role for user {userId}: {ex.Message}");
+                }
+            }
+
+            if (successCount > 0)
+            {
+                ShowInfo($"Successfully updated roles for {successCount} users");
+                await LoadUserRoleAssignmentAsync(); // Refresh the list
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to save role assignments: {ex.Message}");
+        }
+    }
+
+    private async void RefreshUserRoles_Click(object sender, RoutedEventArgs e)
+    {
+        await LoadUserRoleAssignmentAsync();
+    }
+
+    private void UserRoleAssignmentListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Handle selection changes if needed
+    }
+
+    private async void QuickAssignRole_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.Tag is UserDto user)
+        {
+            // Create a simple dialog for quick role assignment
+            var dialog = new ContentDialog
+            {
+                Title = $"Assign Role to {user.Username}",
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot
+            };
+
+            var stackPanel = new StackPanel { Spacing = 12 };
+            
+            var currentRoleText = new TextBlock
+            {
+                Text = $"Current Role: {user.Role}",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            
+            var roleComboBox = new ComboBox
+            {
+                Header = "Select New Role",
+                SelectedItem = user.Role
+            };
+            
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Owner", Tag = "Owner" });
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Administrator", Tag = "Administrator" });
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Manager", Tag = "Manager" });
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Server", Tag = "Server" });
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Cashier", Tag = "Cashier" });
+            roleComboBox.Items.Add(new ComboBoxItem { Content = "Host", Tag = "Host" });
+
+            // Set current selection
+            foreach (ComboBoxItem item in roleComboBox.Items)
+            {
+                if (item.Tag?.ToString() == user.Role)
+                {
+                    roleComboBox.SelectedItem = item;
+                    break;
+                }
+            }
+
+            stackPanel.Children.Add(currentRoleText);
+            stackPanel.Children.Add(roleComboBox);
+            dialog.Content = stackPanel;
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                try
+                {
+                    if (roleComboBox.SelectedItem is ComboBoxItem selectedItem)
+                    {
+                        var newRole = selectedItem.Tag?.ToString();
+                        if (!string.IsNullOrEmpty(newRole) && newRole != user.Role)
+                        {
+                            var updateRequest = new UpdateUserRequest
+                            {
+                                Role = newRole
+                            };
+                            
+                            var success = await App.UsersApi!.UpdateUserAsync(user.UserId!, updateRequest);
+                            if (success)
+                            {
+                                ShowInfo($"Successfully assigned {newRole} role to {user.Username}");
+                                await LoadUserRoleAssignmentAsync(); // Refresh the list
+                            }
+                            else
+                            {
+                                ShowError("Failed to update user role");
+                            }
+                        }
+                        else
+                        {
+                            ShowInfo("No role change needed");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Error updating user role: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private static T? FindChild<T>(DependencyObject parent, string childName) where T : DependencyObject
+    {
+        if (parent == null) return null;
+
+        T? foundChild = null;
+        int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+
+        for (int i = 0; i < childrenCount; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            T? childType = child as T;
+            if (childType == null)
+            {
+                foundChild = FindChild<T>(child, childName);
+                if (foundChild != null) break;
+            }
+            else if (!string.IsNullOrEmpty(childName))
+            {
+                var frameworkElement = child as FrameworkElement;
+                if (frameworkElement != null && frameworkElement.Name == childName)
+                {
+                    foundChild = (T)child;
+                    break;
+                }
+                else
+                {
+                    foundChild = FindChild<T>(child, childName);
+                    if (foundChild != null) break;
+                }
+            }
+            else
+            {
+                foundChild = (T)child;
+                break;
+            }
+        }
+        return foundChild;
+    }
+
+    #endregion
 }

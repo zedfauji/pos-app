@@ -318,3 +318,4 @@ if ($overallSuccess) {
     Write-ColorOutput "👀 You witnessed the UI automation process!" -Color "UI"
     exit 1
 }
+

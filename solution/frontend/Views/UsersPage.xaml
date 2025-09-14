@@ -17,11 +17,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Header Section -->
@@ -37,12 +33,6 @@
             </StackPanel>
             
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                <Button x:Name="ExportButton" Click="Export_Click" Style="{ThemeResource AccentButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE896;" FontSize="16"/>
-                        <TextBlock Text="Export"/>
-                    </StackPanel>
-                </Button>
                 <Button x:Name="RefreshButton" Click="Refresh_Click">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon Glyph="&#xE149;" FontSize="16"/>
@@ -52,51 +42,86 @@
             </StackPanel>
         </Grid>
 
-        <!-- Action Toolbar -->
-        <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
-                CornerRadius="8" Padding="16">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <Button x:Name="NewButton" Click="New_Click" Style="{ThemeResource AccentButtonStyle}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE109;" FontSize="16"/>
-                        <TextBlock Text="Add User"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="EditButton" Click="Edit_Click" IsEnabled="False">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE104;" FontSize="16"/>
-                        <TextBlock Text="Edit"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="ToggleActiveButton" Click="ToggleActive_Click" IsEnabled="False">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE8FB;" FontSize="16"/>
-                        <TextBlock Text="Toggle Active"/>
-                    </StackPanel>
-                </Button>
-                <Button x:Name="DeleteButton" Click="Delete_Click" IsEnabled="False" Foreground="Red">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE107;" FontSize="16"/>
-                        <TextBlock Text="Delete"/>
-                    </StackPanel>
-                </Button>
-                
-                <Border Width="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="8,4"/>
-                
-                <ComboBox x:Name="BulkActionCombo" Header="Bulk Actions" MinWidth="140" SelectionChanged="BulkAction_SelectionChanged">
-                    <ComboBoxItem Content="Select Action" IsEnabled="False"/>
-                    <ComboBoxItem Content="Activate Selected" Tag="activate"/>
-                    <ComboBoxItem Content="Deactivate Selected" Tag="deactivate"/>
-                    <ComboBoxItem Content="Delete Selected" Tag="delete"/>
-                </ComboBox>
-            </StackPanel>
-        </Border>
+        <!-- Tab Navigation -->
+        <TabView Grid.Row="1" x:Name="MainTabView" TabWidthMode="SizeToContent" SelectionChanged="TabView_SelectionChanged">
+            <TabViewItem Header="Users" Tag="UsersTab">
+                <FontIcon Glyph="&#xE716;" FontSize="16"/>
+            </TabViewItem>
+            <TabViewItem Header="Role Management" Tag="RolesTab">
+                <FontIcon Glyph="&#xE8F1;" FontSize="16"/>
+            </TabViewItem>
+            <TabViewItem Header="Permission Matrix" Tag="PermissionsTab">
+                <FontIcon Glyph="&#xE8F2;" FontSize="16"/>
+            </TabViewItem>
+            <TabViewItem Header="User Role Assignment" Tag="UserRoleAssignmentTab">
+                <FontIcon Glyph="&#xE716;" FontSize="16"/>
+            </TabViewItem>
+        </TabView>
 
-        <!-- Search and Filter Section -->
-        <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
-                CornerRadius="8" Padding="16">
+        <!-- Tab Content -->
+        <Grid Grid.Row="2">
+            <!-- Users Tab Content -->
+            <Grid x:Name="UsersTabContent" Visibility="Visible">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Action Toolbar -->
+                <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button x:Name="ExportButton" Click="Export_Click" Style="{ThemeResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE896;" FontSize="16"/>
+                                <TextBlock Text="Export"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="NewButton" Click="New_Click" Style="{ThemeResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE109;" FontSize="16"/>
+                                <TextBlock Text="Add User"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EditButton" Click="Edit_Click" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE104;" FontSize="16"/>
+                                <TextBlock Text="Edit"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ToggleActiveButton" Click="ToggleActive_Click" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8FB;" FontSize="16"/>
+                                <TextBlock Text="Toggle Active"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DeleteButton" Click="Delete_Click" IsEnabled="False" Foreground="Red">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE107;" FontSize="16"/>
+                                <TextBlock Text="Delete"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <Border Width="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="8,4"/>
+                        
+                        <ComboBox x:Name="BulkActionCombo" Header="Bulk Actions" MinWidth="140" SelectionChanged="BulkAction_SelectionChanged">
+                            <ComboBoxItem Content="Select Action" IsEnabled="False"/>
+                            <ComboBoxItem Content="Activate Selected" Tag="activate"/>
+                            <ComboBoxItem Content="Deactivate Selected" Tag="deactivate"/>
+                            <ComboBoxItem Content="Delete Selected" Tag="delete"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- Search and Filter Section -->
+                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="16">
             <Grid ColumnSpacing="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
@@ -311,7 +336,281 @@
             </StackPanel>
         </Grid>
 
-        <!-- Status Bar -->
-        <InfoBar x:Name="StatusInfoBar" Grid.Row="6" IsOpen="False" Severity="Informational" Margin="0,8,0,0"/>
+                <!-- Status Bar -->
+                <InfoBar x:Name="StatusInfoBar" Grid.Row="5" IsOpen="False" Severity="Informational" Margin="0,8,0,0"/>
+            </Grid>
+
+            <!-- Role Management Tab Content -->
+            <Grid x:Name="RolesTabContent" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Role Management Toolbar -->
+                <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button x:Name="CreateRoleButton" Click="CreateRole_Click" Style="{ThemeResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE109;" FontSize="16"/>
+                                <TextBlock Text="Create Role"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="EditRoleButton" Click="EditRole_Click" IsEnabled="False">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE104;" FontSize="16"/>
+                                <TextBlock Text="Edit Role"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="DeleteRoleButton" Click="DeleteRole_Click" IsEnabled="False" Foreground="Red">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE107;" FontSize="16"/>
+                                <TextBlock Text="Delete Role"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Roles List -->
+                <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="1">
+                    <ListView x:Name="RolesListView" 
+                              ItemsSource="{Binding Roles}"
+                              SelectionMode="Single"
+                              SelectionChanged="RolesListView_SelectionChanged">
+                        <ListView.Header>
+                            <Grid Padding="16,12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="3*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Role Name" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="Description" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="Type" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="Permissions" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="Created" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="5" Text="Actions" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </Grid>
+                        </ListView.Header>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="16,12" Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="3*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Role Name -->
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                        <TextBlock Text="{Binding Id}" FontSize="11" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Description -->
+                                    <TextBlock Grid.Column="1" Text="{Binding Description}" 
+                                               VerticalAlignment="Center" FontSize="13" TextWrapping="Wrap"/>
+                                    
+                                    <!-- Type Badge -->
+                                    <Border Grid.Column="2" Background="{ThemeResource AccentFillColorDefaultBrush}" 
+                                            CornerRadius="12" Padding="8,4" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding IsSystemRole, Converter={StaticResource BoolToStatusTextConverter}}" 
+                                                   FontSize="12" FontWeight="Medium" 
+                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                    </Border>
+                                    
+                                    <!-- Permission Count -->
+                                    <TextBlock Grid.Column="3" Text="{Binding Permissions.Length}" 
+                                               VerticalAlignment="Center" FontSize="13" FontWeight="Medium"/>
+                                    
+                                    <!-- Created Date -->
+                                    <TextBlock Grid.Column="4" Text="{Binding CreatedAt, Converter={StaticResource DateTimeToStringConverter}}" 
+                                               VerticalAlignment="Center" FontSize="13"/>
+                                    
+                                    <!-- Quick Actions -->
+                                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4" 
+                                                Click="QuickEditRole_Click" Tag="{Binding}">
+                                            <FontIcon Glyph="&#xE104;" FontSize="14"/>
+                                        </Button>
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4" 
+                                                Click="ManagePermissions_Click" Tag="{Binding}">
+                                            <FontIcon Glyph="&#xE8F2;" FontSize="14"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+            </Grid>
+
+            <!-- Permission Matrix Tab Content -->
+            <Grid x:Name="PermissionsTabContent" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Permission Matrix Toolbar -->
+                <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="Permission Matrix" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Width="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="8,4"/>
+                        <Button x:Name="SavePermissionsButton" Click="SavePermissions_Click" Style="{ThemeResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE105;" FontSize="16"/>
+                                <TextBlock Text="Save Changes"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ResetPermissionsButton" Click="ResetPermissions_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE149;" FontSize="16"/>
+                                <TextBlock Text="Reset"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Permission Matrix Grid -->
+                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="1">
+                    <ScrollViewer HorizontalScrollMode="Auto" VerticalScrollMode="Auto">
+                        <Grid x:Name="PermissionMatrixGrid" Margin="16">
+                            <!-- This will be populated dynamically with roles and permissions -->
+                        </Grid>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+
+            <!-- User Role Assignment Tab Content -->
+            <Grid x:Name="UserRoleAssignmentTabContent" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- User Role Assignment Toolbar -->
+                <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <TextBlock Text="User Role Assignment" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Width="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="8,4"/>
+                        <Button x:Name="SaveUserRolesButton" Click="SaveUserRoles_Click" Style="{ThemeResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE105;" FontSize="16"/>
+                                <TextBlock Text="Save Role Assignments"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="RefreshUserRolesButton" Click="RefreshUserRoles_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE149;" FontSize="16"/>
+                                <TextBlock Text="Refresh"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- User Role Assignment Grid -->
+                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
+                        CornerRadius="8" Padding="1">
+                    <ListView x:Name="UserRoleAssignmentListView" 
+                              ItemsSource="{Binding Users}"
+                              SelectionMode="Single"
+                              SelectionChanged="UserRoleAssignmentListView_SelectionChanged">
+                        <ListView.Header>
+                            <Grid Padding="16,12" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1.5*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Username" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="Current Role" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="New Role" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="Actions" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </Grid>
+                        </ListView.Header>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="16,12" Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1.5*"/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Username -->
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <PersonPicture Width="32" Height="32" DisplayName="{Binding Username}"/>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Username}" FontWeight="Medium"/>
+                                            <TextBlock Text="{Binding UserId}" FontSize="11" 
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Current Role -->
+                                    <Border Grid.Column="1" Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="12" Padding="8,4" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Role}" FontSize="12" FontWeight="Medium"
+                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                    </Border>
+
+                                    <!-- Status -->
+                                    <Border Grid.Column="2" Background="{Binding IsActive, Converter={StaticResource BoolToStatusBrushConverter}}"
+                                            CornerRadius="12" Padding="8,4" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding IsActive, Converter={StaticResource BoolToStatusTextConverter}}" 
+                                                   FontSize="12" FontWeight="Medium"
+                                                   Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                    </Border>
+
+                                    <!-- New Role ComboBox -->
+                                    <ComboBox Grid.Column="3" x:Name="RoleComboBox" 
+                                              HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="Owner" Tag="Owner"/>
+                                        <ComboBoxItem Content="Administrator" Tag="Administrator"/>
+                                        <ComboBoxItem Content="Manager" Tag="Manager"/>
+                                        <ComboBoxItem Content="Server" Tag="Server"/>
+                                        <ComboBoxItem Content="Cashier" Tag="Cashier"/>
+                                        <ComboBoxItem Content="Host" Tag="Host"/>
+                                    </ComboBox>
+
+                                    <!-- Quick Actions -->
+                                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4"
+                                                Click="QuickAssignRole_Click" Tag="{Binding}">
+                                            <FontIcon Glyph="&#xE105;" FontSize="14"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>
