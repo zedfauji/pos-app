@@ -79,21 +79,29 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
+            // Initialize configuration if not already done
+            if (_config == null)
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                _config = builder.Build();
+            }
+
             var settingsBase = _config?["SettingsApi:BaseUrl"]
-                ?? App.Api?.BackendBase?.ToString()
                 ?? "https://magidesk-settings-904541739138.us-central1.run.app/";
             
             _logger.LogInformation($"Settings API base URL: {settingsBase}");
             
-                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsBase) }, null);
-                _logger.LogInformation("SettingsApiService created successfully");
-            }
-            catch (Exception ex)
-            {
+            _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri(settingsBase) }, null);
+            _logger.LogInformation("SettingsApiService created successfully");
+        }
+        catch (Exception ex)
+        {
             _logger.LogError(ex, "Failed to create SettingsApiService, using fallback");
-                _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://localhost:5001/") }, null);
-                System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
-            }
+            _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://magidesk-settings-904541739138.us-central1.run.app/") }, null);
+            System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
+        }
     }
 
     private void InitializeViewModel()
