@@ -1,5 +1,7 @@
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.IO;
 using MagiDesk.Frontend.Services;
@@ -295,6 +297,25 @@ namespace MagiDesk.Frontend
                 InventorySettingsService = new Services.InventorySettingsService(new HttpClient(logInventorySettings) { BaseAddress = new Uri(inventoryBase.TrimEnd('/') + "/") }, new Services.SimpleLogger<Services.InventorySettingsService>());
                 
                 // ReceiptService is already initialized in constructor
+                
+                // Initialize Enhanced Menu Management Services
+                var innerAnalytics = new HttpClientHandler();
+                innerAnalytics.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logAnalytics = new Services.HttpLoggingHandler(innerAnalytics);
+                
+                var innerBulk = new HttpClientHandler();
+                innerBulk.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logBulk = new Services.HttpLoggingHandler(innerBulk);
+                
+                // Create service collection for dependency injection
+                var serviceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+                serviceCollection.AddSingleton<Services.MenuApiService>(provider => Menu!);
+                serviceCollection.AddSingleton<Services.MenuAnalyticsService>(provider => 
+                    new Services.MenuAnalyticsService(new HttpClient(logAnalytics) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") }));
+                serviceCollection.AddSingleton<Services.MenuBulkOperationService>(provider => 
+                    new Services.MenuBulkOperationService(new HttpClient(logBulk) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") }));
+                
+                Services = serviceCollection.BuildServiceProvider();
             }
             catch (Exception ex)
             {
@@ -336,6 +357,12 @@ namespace MagiDesk.Frontend
                 InventorySettingsService = new Services.InventorySettingsService(new HttpClient(logInventorySettingsFallback) { BaseAddress = new Uri("https://localhost:7016/") }, new Services.SimpleLogger<Services.InventorySettingsService>());
                 
                 // ReceiptService is already initialized in constructor
+                
+                // Create fallback service collection for dependency injection
+                var fallbackServiceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+                fallbackServiceCollection.AddSingleton<Services.MenuApiService>(provider => Menu!);
+                
+                Services = fallbackServiceCollection.BuildServiceProvider();
             }
             finally
             {

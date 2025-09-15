@@ -85,7 +85,10 @@ public sealed class MenuApiService
         {
             return await res.Content.ReadFromJsonAsync<MenuItemDto>(cancellationToken: ct);
         }
-        return null;
+        
+        // Get error details for debugging
+        var errorContent = await res.Content.ReadAsStringAsync(ct);
+        throw new HttpRequestException($"API call failed with status {res.StatusCode}: {errorContent}");
     }
 
     // Combos

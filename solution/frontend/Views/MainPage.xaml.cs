@@ -198,6 +198,12 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(MenuManagementPage));
 #endif
                             break;
+                        case "EnhancedMenuManagementPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(EnhancedMenuManagementPage));
+#endif
+                            break;
                         case "DashboardPage":
 #if XAML_ONLY_MAIN
                             // skip navigation in isolation

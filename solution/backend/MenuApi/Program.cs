@@ -12,6 +12,11 @@ builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 
+// Enhanced Menu Management Services
+builder.Services.AddScoped<IMenuAnalyticsService, MenuAnalyticsService>();
+builder.Services.AddScoped<IMenuBulkOperationService, MenuBulkOperationService>();
+builder.Services.AddScoped<IMenuVersioningService, MenuVersioningService>();
+
 // HttpClient for InventoryApi with retry policy
 builder.Services.AddHttpClient("InventoryApi", (sp, http) =>
 {

@@ -9,6 +9,13 @@
 
     <ScrollViewer MaxHeight="400">
         <StackPanel Spacing="16" Padding="16">
+            <!-- Error Message -->
+            <TextBlock x:Name="ErrorMessageText" 
+                       Foreground="Red" 
+                       TextWrapping="Wrap"
+                       Visibility="Collapsed"
+                       Margin="0,0,0,8"/>
+            
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
