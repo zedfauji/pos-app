@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Views.DiscountEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Create/Edit Discount"
+    PrimaryButtonText="Save"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <ScrollViewer MaxHeight="600" MaxWidth="500">
+        <StackPanel Spacing="16" Padding="4">
+            <!-- Basic Information -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Basic Information" FontWeight="SemiBold" FontSize="16"/>
+                
+                <TextBox x:Name="NameTextBox" 
+                         Header="Discount Name*" 
+                         PlaceholderText="e.g., VIP Customer Discount"/>
+                
+                <TextBox x:Name="DescriptionTextBox" 
+                         Header="Description" 
+                         PlaceholderText="Brief description of the discount"
+                         AcceptsReturn="True"
+                         Height="60"/>
+            </StackPanel>
+
+            <!-- Discount Type -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Discount Type" FontWeight="SemiBold" FontSize="16"/>
+                
+                <ComboBox x:Name="DiscountTypeComboBox" 
+                          Header="Type*"
+                          SelectionChanged="DiscountTypeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="Percentage Discount" Tag="Percentage"/>
+                    <ComboBoxItem Content="Fixed Amount Discount" Tag="FixedAmount"/>
+                    <ComboBoxItem Content="Free Item" Tag="FreeItem"/>
+                    <ComboBoxItem Content="Buy X Get Y" Tag="BuyXGetY"/>
+                </ComboBox>
+
+                <!-- Percentage Discount -->
+                <StackPanel x:Name="PercentagePanel" Visibility="Collapsed" Spacing="8">
+                    <NumberBox x:Name="PercentageNumberBox" 
+                               Header="Discount Percentage (%)*"
+                               Minimum="1" 
+                               Maximum="100"
+                               SpinButtonPlacementMode="Inline"/>
+                </StackPanel>
+
+                <!-- Fixed Amount Discount -->
+                <StackPanel x:Name="FixedAmountPanel" Visibility="Collapsed" Spacing="8">
+                    <NumberBox x:Name="FixedAmountNumberBox" 
+                               Header="Discount Amount ($)*"
+                               Minimum="0.01"
+                               SpinButtonPlacementMode="Inline"/>
+                </StackPanel>
+
+                <!-- Free Item -->
+                <StackPanel x:Name="FreeItemPanel" Visibility="Collapsed" Spacing="8">
+                    <TextBox x:Name="FreeItemTextBox" 
+                             Header="Free Item*" 
+                             PlaceholderText="Item name or ID"/>
+                </StackPanel>
+
+                <!-- Buy X Get Y -->
+                <StackPanel x:Name="BuyXGetYPanel" Visibility="Collapsed" Spacing="8">
+                    <NumberBox x:Name="BuyQuantityNumberBox" 
+                               Header="Buy Quantity*"
+                               Minimum="1"
+                               SpinButtonPlacementMode="Inline"/>
+                    <NumberBox x:Name="GetQuantityNumberBox" 
+                               Header="Get Quantity*"
+                               Minimum="1"
+                               SpinButtonPlacementMode="Inline"/>
+                    <TextBox x:Name="GetItemTextBox" 
+                             Header="Get Item" 
+                             PlaceholderText="Leave blank for same item"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Conditions -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Conditions" FontWeight="SemiBold" FontSize="16"/>
+                
+                <NumberBox x:Name="MinimumOrderValueNumberBox" 
+                           Header="Minimum Order Value ($)"
+                           Minimum="0"
+                           SpinButtonPlacementMode="Inline"/>
+                
+                <NumberBox x:Name="MaxUsagePerCustomerNumberBox" 
+                           Header="Max Usage Per Customer"
+                           Minimum="1"
+                           SpinButtonPlacementMode="Inline"/>
+                
+                <NumberBox x:Name="TotalUsageLimitNumberBox" 
+                           Header="Total Usage Limit"
+                           Minimum="1"
+                           SpinButtonPlacementMode="Inline"/>
+            </StackPanel>
+
+            <!-- Validity Period -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Validity Period" FontWeight="SemiBold" FontSize="16"/>
+                
+                <DatePicker x:Name="StartDatePicker" 
+                            Header="Start Date*"/>
+                
+                <DatePicker x:Name="EndDatePicker" 
+                            Header="End Date*"/>
+            </StackPanel>
+
+            <!-- Target Audience -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Target Audience" FontWeight="SemiBold" FontSize="16"/>
+                
+                <ComboBox x:Name="TargetAudienceComboBox" 
+                          Header="Target Audience">
+                    <ComboBoxItem Content="All Customers" Tag="All"/>
+                    <ComboBoxItem Content="New Customers" Tag="New"/>
+                    <ComboBoxItem Content="VIP Customers" Tag="VIP"/>
+                    <ComboBoxItem Content="Frequent Customers" Tag="Frequent"/>
+                    <ComboBoxItem Content="Returning Customers" Tag="Returning"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Settings -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Settings" FontWeight="SemiBold" FontSize="16"/>
+                
+                <CheckBox x:Name="IsActiveCheckBox" 
+                          Content="Active" 
+                          IsChecked="True"/>
+                
+                <CheckBox x:Name="AutoApplyCheckBox" 
+                          Content="Auto-apply when eligible"/>
+                
+                <ComboBox x:Name="PriorityComboBox" 
+                          Header="Priority">
+                    <ComboBoxItem Content="High (1)" Tag="1"/>
+                    <ComboBoxItem Content="Medium (2)" Tag="2"/>
+                    <ComboBoxItem Content="Low (3)" Tag="3"/>
+                </ComboBox>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

@@ -24,23 +24,33 @@ namespace MagiDesk.Frontend.Views
         private decimal _originalAmount;
         private decimal _currentAmount;
         private decimal _tipAmount;
-        private decimal _discountAmount;
-        private string? _discountReason;
-        private PaymentApiService? _paymentService;
-        private PaymentIdResolver? _idResolver;
-        private SplitPaymentCalculator? _splitCalculator;
-        private bool _isProcessing = false;
+        private decimal _digitalAmount;
+        private bool _isProcessing;
+
+        // Customer and Wallet
+        private object? _selectedCustomer;
+        private object? _customerWallet;
+        private List<object> _customerSearchResults = new();
+        private bool _isSearching;
+
+        // Services
+        private readonly PaymentApiService? _paymentService;
+        private readonly PaymentIdResolver? _idResolver;
+        private readonly SplitPaymentCalculator? _splitCalculator;
         private ObservableCollection<OrderItemViewModel> _orderItems = new();
         
         // Split payment properties
         private decimal _cashAmount = 0;
         private decimal _cardAmount = 0;
-        private decimal _digitalAmount = 0;
         
         // Customer amount and change properties
         private decimal _customerAmount = 0;
         private decimal _changeAmount = 0;
         private decimal _tipPercentage = 0;
+        
+        // Discount properties
+        private decimal _discountAmount = 0;
+        private string? _discountReason;
 
         // Events for parent page communication
         public event EventHandler<PaymentCompletedEventArgs>? PaymentCompleted;
@@ -594,13 +604,349 @@ namespace MagiDesk.Frontend.Views
             await errorDialog.ShowAsync();
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private async void UseWalletButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_selectedCustomer == null || _customerWallet == null)
+            {
+                var dialog1 = new ContentDialog()
+                {
+                    Title = "Validation Error",
+                    Content = "Please select a customer first to use wallet payment.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog1.ShowAsync();
+                return;
+            }
+
+            var walletBalance = (decimal)(_customerWallet.GetType().GetProperty("Balance")?.GetValue(_customerWallet) ?? 0);
+            if (walletBalance <= 0)
+            {
+                var dialog2 = new ContentDialog()
+                {
+                    Title = "Validation Error",
+                    Content = "Customer has no wallet balance available.",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog2.ShowAsync();
+                return;
+            }
+
+            try
+            {
+                var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+                var totalDue = itemsTotal + _tipAmount - _discountAmount;
+                
+                // Calculate how much can be paid from wallet
+                var walletPaymentAmount = Math.Min(walletBalance, totalDue);
+                
+                // Show wallet payment confirmation dialog
+                var dialog = new ContentDialog()
+                {
+                    Title = "Use Wallet Balance",
+                    Content = CreateWalletPaymentContent(walletPaymentAmount, totalDue, walletBalance),
+                    PrimaryButtonText = "Use Wallet",
+                    SecondaryButtonText = "Cancel",
+                    XamlRoot = this.XamlRoot
+                };
+
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    await ProcessWalletPayment(walletPaymentAmount, totalDue);
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog()
+                {
+                    Title = "Error",
+                    Content = $"Error processing wallet payment: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+
+
+        private async void CustomerSearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                var query = sender.Text;
+                if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+                {
+                    sender.ItemsSource = null;
+                    return;
+                }
+
+                if (_isSearching) return;
+
+                try
+                {
+                    _isSearching = true;
+                    
+                    // Simulate customer search results for now
+                    var mockResults = new List<string>
+                    {
+                        $"John Doe - john.doe@email.com (Gold Member)",
+                        $"Jane Smith - jane.smith@email.com (Silver Member)",
+                        $"Mike Johnson - mike.j@email.com (Standard Member)"
+                    }.Where(r => r.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
+                    
+                    sender.ItemsSource = mockResults.Any() ? mockResults : null;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Customer search error: {ex.Message}");
+                    sender.ItemsSource = null;
+                }
+                finally
+                {
+                    _isSearching = false;
+                }
+            }
+        }
+
+        private async void CustomerSearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            if (args.SelectedItem is string selectedText)
+            {
+                await SelectCustomerFromText(selectedText);
+            }
+        }
+
+        private async void CustomerSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            if (!string.IsNullOrWhiteSpace(args.QueryText))
+            {
+                await SelectCustomerFromText(args.QueryText);
+            }
+        }
+
+        private async Task SelectCustomerFromText(string customerText)
+        {
+            try
+            {
+                // Parse customer info from text (mock implementation)
+                var parts = customerText.Split(" - ");
+                if (parts.Length >= 2)
+                {
+                    var name = parts[0];
+                    var membershipInfo = parts.Length > 2 ? parts[2] : "Standard Member";
+                    
+                    // Create mock customer object
+                    var mockCustomer = new
+                    {
+                        FullName = name,
+                        Email = parts[1].Split(" ")[0],
+                        MembershipLevel = new
+                        {
+                            Name = membershipInfo.Replace("(", "").Replace(")", "").Replace(" Member", ""),
+                            DiscountPercentage = GetDiscountForMembership(membershipInfo)
+                        }
+                    };
+
+                    var mockWallet = new
+                    {
+                        Balance = 50.00m // Mock wallet balance
+                    };
+
+                    _selectedCustomer = mockCustomer;
+                    _customerWallet = mockWallet;
+                    
+                    // Apply membership discount
+                    ApplyMembershipDiscount();
+                    
+                    // Clear search
+                    CustomerSearchBox.Text = "";
+                    CustomerSearchBox.ItemsSource = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog()
+                {
+                    Title = "Error",
+                    Content = $"Error selecting customer: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+
+        private decimal GetDiscountForMembership(string membershipInfo)
+        {
+            if (membershipInfo.Contains("Gold")) return 15m;
+            if (membershipInfo.Contains("Silver")) return 10m;
+            if (membershipInfo.Contains("Bronze")) return 5m;
+            return 0m;
+        }
+
+        private void ApplyMembershipDiscount()
+        {
+            if (_selectedCustomer != null)
+            {
+                var membershipLevel = _selectedCustomer.GetType().GetProperty("MembershipLevel")?.GetValue(_selectedCustomer);
+                if (membershipLevel != null)
+                {
+                    var discountPercentage = (decimal)(membershipLevel.GetType().GetProperty("DiscountPercentage")?.GetValue(membershipLevel) ?? 0);
+                    if (discountPercentage > 0)
+                    {
+                        var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+                        var discountAmount = itemsTotal * (discountPercentage / 100m);
+                        
+                        _discountAmount = discountAmount;
+                        _discountReason = $"Membership Discount ({discountPercentage}%)";
+                        
+                        UpdatePaymentSummary();
+                    }
+                }
+            }
+        }
+
+        private void ClearCustomerButton_Click(object sender, RoutedEventArgs e)
+        {
+            _selectedCustomer = null;
+            _customerWallet = null;
+            _customerSearchResults.Clear();
+            
+            // Clear any membership discounts
+            if (_discountReason?.Contains("Membership") == true)
+            {
+                _discountAmount = 0;
+                _discountReason = null;
+                UpdatePaymentSummary();
+            }
+        }
+
+        private StackPanel CreateWalletPaymentContent(decimal walletAmount, decimal totalDue, decimal walletBalance)
+        {
+            var panel = new StackPanel { Spacing = 12 };
+            
+            var customerName = _selectedCustomer?.GetType().GetProperty("FullName")?.GetValue(_selectedCustomer)?.ToString() ?? "Unknown Customer";
+            
+            panel.Children.Add(new TextBlock 
+            { 
+                Text = $"Customer: {customerName}",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            
+            panel.Children.Add(new TextBlock 
+            { 
+                Text = $"Available Wallet Balance: {walletBalance:C}",
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green)
+            });
+            
+            panel.Children.Add(new TextBlock 
+            { 
+                Text = $"Total Due: {totalDue:C}"
+            });
+            
+            panel.Children.Add(new TextBlock 
+            { 
+                Text = $"Wallet Payment: {walletAmount:C}",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue)
+            });
+            
+            if (walletAmount < totalDue)
+            {
+                panel.Children.Add(new TextBlock 
+                { 
+                    Text = $"Remaining Balance: {totalDue - walletAmount:C}",
+                    Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange)
+                });
+                
+                panel.Children.Add(new TextBlock 
+                { 
+                    Text = "You will need to pay the remaining balance with another payment method.",
+                    FontStyle = Windows.UI.Text.FontStyle.Italic,
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+            
+            return panel;
+        }
+
+        private async Task ProcessWalletPayment(decimal walletAmount, decimal totalDue)
+        {
+            try
+            {
+                // If wallet covers full amount, process complete payment
+                if (walletAmount >= totalDue)
+                {
+                    await CompleteWalletPayment(walletAmount);
+                }
+                else
+                {
+                    // Partial wallet payment - set up for remaining payment
+                    await ProcessPartialWalletPayment(walletAmount, totalDue - walletAmount);
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorDialog = new ContentDialog()
+                {
+                    Title = "Error",
+                    Content = $"Failed to process wallet payment: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                };
+                await errorDialog.ShowAsync();
+            }
+        }
+
+        private async Task CompleteWalletPayment(decimal amount)
+        {
+            // Show success dialog
+            var successDialog = new ContentDialog()
+            {
+                Title = "Payment Successful",
+                Content = $"Payment of {amount:C} has been processed successfully using wallet!",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+
+            await successDialog.ShowAsync();
+
+            // Notify parent and close
+            PaymentCompleted?.Invoke(this, new PaymentCompletedEventArgs
+            {
+                BillId = _bill?.BillId ?? Guid.Empty,
+                AmountPaid = amount,
+                PaymentMethod = "Wallet",
+                TipAmount = _tipAmount,
+                DiscountAmount = _discountAmount,
+                DiscountReason = _discountReason
+            });
+
             // Navigate back to previous page
             if (Frame.CanGoBack)
             {
                 Frame.GoBack();
             }
+        }
+
+        private async Task ProcessPartialWalletPayment(decimal walletAmount, decimal remainingAmount)
+        {
+            // Update current amount to remaining balance
+            _currentAmount = remainingAmount;
+            UpdatePaymentSummary();
+
+            // Show success message and prompt for remaining payment
+            var dialog = new ContentDialog()
+            {
+                Title = "Wallet Payment Applied",
+                Content = $"${walletAmount:F2} has been deducted from the wallet.\n\nRemaining balance: ${remainingAmount:F2}\n\nPlease select a payment method for the remaining amount.",
+                CloseButtonText = "Continue",
+                XamlRoot = this.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
@@ -610,7 +956,19 @@ namespace MagiDesk.Frontend.Views
                 BillId = _bill?.BillId ?? Guid.Empty
             });
             
-            // Navigate back to previous page
+            if (Frame.CanGoBack)
+            {
+                Frame.GoBack();
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            PaymentCancelled?.Invoke(this, new PaymentCancelledEventArgs
+            {
+                BillId = _bill?.BillId ?? Guid.Empty
+            });
+            
             if (Frame.CanGoBack)
             {
                 Frame.GoBack();

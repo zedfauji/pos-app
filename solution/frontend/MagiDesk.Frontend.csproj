@@ -153,6 +153,29 @@
         <Page Include="Views\DashboardPage.xaml" />
         <Compile Include="Views\DashboardPage.xaml.cs" />
     </ItemGroup>
+    <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCustomers)'=='true'">
+        <Page Include="Views\CustomerDashboardPage.xaml" />
+        <Compile Include="Views\CustomerDashboardPage.xaml.cs" />
+        <Page Include="Views\CustomerRegistrationPage.xaml" />
+        <Compile Include="Views\CustomerRegistrationPage.xaml.cs" />
+        <Page Include="Views\CustomerDetailsPage.xaml" />
+        <Compile Include="Views\CustomerDetailsPage.xaml.cs" />
+        <Page Include="Views\WalletManagementPage.xaml" />
+        <Compile Include="Views\WalletManagementPage.xaml.cs" />
+        <!-- Customer Intelligence UI Components -->
+        <Page Include="Views\CampaignManagementPage.xaml" />
+        <Compile Include="Views\CampaignManagementPage.xaml.cs" />
+        <Page Include="Views\CampaignEditDialog.xaml" />
+        <Compile Include="Views\CampaignEditDialog.xaml.cs" />
+        <Page Include="Views\CampaignAnalyticsDialog.xaml" />
+        <Compile Include="Views\CampaignAnalyticsDialog.xaml.cs" />
+        <Page Include="Views\SegmentDashboardPage.xaml" />
+        <Compile Include="Views\SegmentDashboardPage.xaml.cs" />
+        <Page Include="Views\SegmentEditDialog.xaml" />
+        <Compile Include="Views\SegmentEditDialog.xaml.cs" />
+        <Page Include="Views\SegmentCustomersDialog.xaml" />
+        <Compile Include="Views\SegmentCustomersDialog.xaml.cs" />
+    </ItemGroup>
     <!-- OrderBuilderDialog removed -->
 
     <PropertyGroup Condition="'$(XamlOnlyMain)'=='true'">

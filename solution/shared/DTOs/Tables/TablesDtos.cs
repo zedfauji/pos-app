@@ -18,6 +18,7 @@ public class BillResult
     public Guid? BillingId { get; set; }
     public Guid? SessionId { get; set; }
     public string TableLabel { get; set; } = string.Empty;
+    public string? OriginalTableLabel { get; set; }
     public string ServerId { get; set; } = string.Empty;
     public string ServerName { get; set; } = string.Empty;
     public DateTime StartTime { get; set; }

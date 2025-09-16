@@ -285,7 +285,7 @@ namespace MagiDesk.Frontend.Services
         }
 
         /// <summary>
-        /// Draw footer message
+        /// Draw footer message with multi-line support
         /// </summary>
         public void DrawFooter(string? footerText = null)
         {
@@ -296,11 +296,21 @@ namespace MagiDesk.Frontend.Services
                 if (!string.IsNullOrEmpty(footerText))
                 {
                     var footerFont = new XFont(Configuration.FontFamily, Configuration.FooterFontSize, XFontStyle.Regular);
-                    var footerSize = _graphics!.MeasureString(footerText, footerFont);
-                    var footerX = (_pageWidth - footerSize.Width) / 2;
+                    var contentWidth = _pageWidth - Configuration.MarginLeft - Configuration.MarginRight;
                     
-                    _graphics.DrawString(footerText, footerFont, XBrushes.Black, footerX, _currentY);
-                    _currentY += footerSize.Height + Configuration.LineSpacing;
+                    // Break footer into multiple lines if needed
+                    var footerLines = BreakTextIntoLines(footerText, footerFont, contentWidth, _graphics!);
+                    
+                    foreach (var line in footerLines)
+                    {
+                        var lineSize = _graphics.MeasureString(line, footerFont);
+                        var footerX = (_pageWidth - lineSize.Width) / 2;
+                        
+                        _graphics.DrawString(line, footerFont, XBrushes.Black, footerX, _currentY);
+                        _currentY += lineSize.Height + Configuration.LineSpacing * 0.5; // Tighter line spacing for footer
+                    }
+                    
+                    _currentY += Configuration.LineSpacing * 0.5; // Add some space after footer
                 }
                 
                 _logger.LogDebug($"Drew footer: {footerText ?? "None"}");
@@ -310,6 +320,48 @@ namespace MagiDesk.Frontend.Services
                 _logger.LogError(ex, "Failed to draw footer");
                 throw new InvalidOperationException($"Failed to draw footer: {ex.Message}", ex);
             }
+        }
+
+        /// <summary>
+        /// Helper method to break text into multiple lines based on available width
+        /// </summary>
+        private List<string> BreakTextIntoLines(string text, XFont font, double maxWidth, XGraphics graphics)
+        {
+            var lines = new List<string>();
+            var words = text.Split(' ');
+            var currentLine = "";
+
+            foreach (var word in words)
+            {
+                var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+                var testWidth = graphics.MeasureString(testLine, font).Width;
+
+                if (testWidth <= maxWidth)
+                {
+                    currentLine = testLine;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(currentLine))
+                    {
+                        lines.Add(currentLine);
+                        currentLine = word;
+                    }
+                    else
+                    {
+                        // Word is too long for the line, add it anyway
+                        lines.Add(word);
+                        currentLine = "";
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentLine))
+            {
+                lines.Add(currentLine);
+            }
+
+            return lines;
         }
 
         /// <summary>
@@ -386,9 +438,9 @@ namespace MagiDesk.Frontend.Services
         }
 
         /// <summary>
-        /// Print the PDF to a specific printer
+        /// Print the PDF to a specific printer with optional preview
         /// </summary>
-        public async Task PrintAsync(string printerName)
+        public async Task PrintAsync(string printerName, bool showPreview = true)
         {
             ValidateInitialized();
             
@@ -408,73 +460,111 @@ namespace MagiDesk.Frontend.Services
                     // Save to temporary file
                     await File.WriteAllBytesAsync(tempPath, pdfBytes);
                     
-                    // Use system print command
-                    var startInfo = new System.Diagnostics.ProcessStartInfo
+                    if (showPreview)
                     {
-                        FileName = tempPath,
-                        UseShellExecute = true,
-                        Verb = "print",
-                        Arguments = $"/p /h"
-                    };
-                    
-                    var process = System.Diagnostics.Process.Start(startInfo);
-                    if (process != null)
-                    {
-                        await process.WaitForExitAsync();
-                        
-                        // Check if print was successful
-                        if (process.ExitCode != 0)
-                        {
-                            throw new InvalidOperationException($"Print process failed with exit code: {process.ExitCode}");
-                        }
+                        // Open print preview - this will show the system print dialog
+                        await OpenPrintPreviewAsync(tempPath);
                     }
                     else
                     {
-                        throw new InvalidOperationException("Failed to start print process");
+                        // Try direct printing (fallback to preview if fails)
+                        await PrintDirectlyAsync(tempPath, printerName);
                     }
                     
-                    _logger.LogInformation($"PDF printed successfully to printer: {printerName}");
+                    _logger.LogInformation($"PDF print initiated for printer: {printerName}");
                 }
                 finally
                 {
-                    // Clean up temporary file with enhanced race condition handling
-                    await CleanupTempFileAsync(tempPath);
+                    // Clean up temporary file after a delay to allow printing to complete
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(10000); // Wait 10 seconds
+                        try
+                        {
+                            if (File.Exists(tempPath))
+                            {
+                                File.Delete(tempPath);
+                            }
+                        }
+                        catch (Exception cleanupEx)
+                        {
+                            _logger.LogWarning(cleanupEx, $"Failed to delete temporary file: {tempPath}");
+                        }
+                    });
                 }
-            }
-            catch (COMException ex)
-            {
-                _logger.LogError(ex, "COM exception while printing PDF - printer driver issue");
-                throw new InvalidOperationException($"Printer driver error for {printerName}: {ex.Message}", ex);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.LogError(ex, "Access denied while printing PDF - insufficient permissions");
-                throw new InvalidOperationException($"Access denied to printer {printerName}: {ex.Message}", ex);
-            }
-            catch (IOException ex)
-            {
-                _logger.LogError(ex, "IO exception while printing PDF - printer communication error");
-                throw new InvalidOperationException($"Communication error with printer {printerName}: {ex.Message}", ex);
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogError(ex, "Invalid argument while printing PDF");
-                throw; // Re-throw argument exceptions as-is
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogError(ex, "Invalid operation while printing PDF");
-                throw; // Re-throw invalid operation exceptions as-is
-            }
-            catch (SystemException ex)
-            {
-                _logger.LogError(ex, "System exception while printing PDF - printer unavailable");
-                throw new InvalidOperationException($"Printer {printerName} is unavailable: {ex.Message}", ex);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while printing PDF");
-                throw new InvalidOperationException($"Unexpected error printing to {printerName}: {ex.Message}", ex);
+                _logger.LogError(ex, $"Failed to print PDF to printer: {printerName}");
+                throw new InvalidOperationException($"Failed to print PDF: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Open print preview dialog
+        /// </summary>
+        private async Task OpenPrintPreviewAsync(string pdfPath)
+        {
+            try
+            {
+                // Use Windows shell to open the PDF with default application
+                // This will typically open with Edge, Adobe Reader, or other PDF viewer
+                // which provides print preview functionality
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pdfPath,
+                    UseShellExecute = true,
+                    Verb = "open"
+                };
+                
+                var process = System.Diagnostics.Process.Start(startInfo);
+                if (process != null)
+                {
+                    _logger.LogInformation($"PDF opened for preview: {pdfPath}");
+                }
+                else
+                {
+                    throw new InvalidOperationException("Failed to open PDF for preview");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open print preview");
+                // Fallback: try to print directly
+                await PrintDirectlyAsync(pdfPath, "Default");
+            }
+        }
+
+        /// <summary>
+        /// Attempt direct printing without preview
+        /// </summary>
+        private async Task PrintDirectlyAsync(string pdfPath, string printerName)
+        {
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pdfPath,
+                    UseShellExecute = true,
+                    Verb = "print"
+                };
+                
+                var process = System.Diagnostics.Process.Start(startInfo);
+                if (process != null)
+                {
+                    await process.WaitForExitAsync();
+                    _logger.LogInformation($"PDF sent to print queue for printer: {printerName}");
+                }
+                else
+                {
+                    // Fallback to opening for manual printing
+                    await OpenPrintPreviewAsync(pdfPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Direct printing failed, falling back to preview");
+                await OpenPrintPreviewAsync(pdfPath);
             }
         }
 
@@ -683,16 +773,16 @@ namespace MagiDesk.Frontend.Services
                 Width = 58,
                 Height = 200,
                 FontFamily = "Arial",
-                HeaderFontSize = 10,
-                BodyFontSize = 8,
-                TotalFontSize = 9,
-                FooterFontSize = 7,
-                MarginLeft = 3,
-                MarginRight = 3,
-                MarginTop = 3,
-                MarginBottom = 3,
-                LineHeight = 10,
-                LineSpacing = 1
+                HeaderFontSize = 7,
+                BodyFontSize = 6,
+                TotalFontSize = 7,
+                FooterFontSize = 5,
+                MarginLeft = 2,
+                MarginRight = 2,
+                MarginTop = 2,
+                MarginBottom = 2,
+                LineHeight = 8,
+                LineSpacing = 0.5
             };
         }
         

@@ -181,8 +181,20 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- Receipt Settings -->
-                <StackPanel x:Name="ReceiptPanel" Spacing="8">
+                <!-- Receipt Format Designer -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Receipt Format Designer" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Customize receipt layout, business information, and preview formats" 
+                               Opacity="0.7" TextWrapping="Wrap"/>
+                    <Button Content="Open Receipt Format Designer" 
+                            Click="ReceiptFormatDesigner_Click" 
+                            Width="220" 
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource AccentButtonStyle}"/>
+                </StackPanel>
+
+                <!-- Billing Settings -->
+                <StackPanel x:Name="BillingPanel" Spacing="8">
                     <TextBlock Text="Receipt Settings" FontSize="18" FontWeight="SemiBold"/>
                     
                     <Grid>

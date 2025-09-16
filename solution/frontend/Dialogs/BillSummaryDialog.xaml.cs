@@ -38,10 +38,14 @@ public sealed partial class BillSummaryDialog : ContentDialog
     public string ServerName => _bill.ServerName ?? "Unknown Server";
     public string StartTimeFormatted => _bill.StartTime.ToString("yyyy-MM-dd HH:mm:ss");
     public string DurationText => GetDurationText();
-    public string SubtotalFormatted => $"${_bill.ItemsCost:F2}";
+    public string SubtotalFormatted => $"${CalculatedItemsCost:F2}";
     public string TaxFormatted => "$0.00"; // Tax not calculated separately in current system
     public string ServiceChargeFormatted => $"${_bill.TimeCost:F2}";
-    public string TotalAmountFormatted => $"${_bill.TotalAmount:F2}";
+    public string TotalAmountFormatted => $"${CalculatedTotalAmount:F2}";
+    
+    // Calculate totals from actual items
+    private decimal CalculatedItemsCost => _bill.Items?.Sum(item => item.price * item.quantity) ?? 0m;
+    private decimal CalculatedTotalAmount => CalculatedItemsCost + _bill.TimeCost;
 
     public List<BillItemViewModel> Items => _bill.Items?.Select(item => new BillItemViewModel(item)).ToList() ?? new List<BillItemViewModel>();
 
@@ -144,26 +148,58 @@ public sealed partial class BillSummaryDialog : ContentDialog
 
     private async Task ShowSuccessDialog(string message)
     {
-        var dialog = new ContentDialog()
+        // Prevent multiple dialogs from opening simultaneously
+        if (_isDialogOpen) return;
+        
+        try
         {
-            Title = "Success",
-            Content = message,
-            CloseButtonText = "OK",
-            XamlRoot = this.XamlRoot
-        };
-        await dialog.ShowAsync();
+            _isDialogOpen = true;
+            var dialog = new ContentDialog()
+            {
+                Title = "Success",
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to show success dialog");
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
     }
 
+    private static bool _isDialogOpen = false;
+    
     private async Task ShowErrorDialog(string message)
     {
-        var dialog = new ContentDialog()
+        // Prevent multiple dialogs from opening simultaneously
+        if (_isDialogOpen) return;
+        
+        try
         {
-            Title = "Error",
-            Content = message,
-            CloseButtonText = "OK",
-            XamlRoot = this.XamlRoot
-        };
-        await dialog.ShowAsync();
+            _isDialogOpen = true;
+            var dialog = new ContentDialog()
+            {
+                Title = "Error",
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to show error dialog");
+        }
+        finally
+        {
+            _isDialogOpen = false;
+        }
     }
 
     #endregion

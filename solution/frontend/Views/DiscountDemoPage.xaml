@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="MagiDesk.Frontend.Views.DiscountDemoPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style x:Key="DemoCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <StackPanel Padding="24" MaxWidth="1200">
+            <!-- Header -->
+            <StackPanel Margin="0,0,0,32">
+                <TextBlock Text="🎯 Discount &amp; Promotion System Demo" 
+                           FontSize="32" 
+                           FontWeight="Bold" 
+                           Margin="0,0,0,8"/>
+                <TextBlock Text="Complete customer intelligence-driven discount system with automatic application" 
+                           FontSize="16" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Column - Main Demo -->
+                <StackPanel Grid.Column="0">
+                    <!-- Mock Order Summary -->
+                    <Border Style="{StaticResource DemoCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="📋 Current Order" Style="{StaticResource SectionTitleStyle}"/>
+                            
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Table 5 - John Smith" FontSize="16" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Customer ID: 12345 • VIP Member" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                    <TextBlock Text="$45.50" FontSize="18" FontWeight="Bold"/>
+                                    <TextBlock Text="Subtotal" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Order Items -->
+                            <StackPanel Spacing="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Burger Deluxe" FontSize="14"/>
+                                    <TextBlock Grid.Column="1" Text="x2" FontSize="14" Margin="8,0"/>
+                                    <TextBlock Grid.Column="2" Text="$24.00" FontSize="14"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="French Fries" FontSize="14"/>
+                                    <TextBlock Grid.Column="1" Text="x2" FontSize="14" Margin="8,0"/>
+                                    <TextBlock Grid.Column="2" Text="$12.00" FontSize="14"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Soft Drink" FontSize="14"/>
+                                    <TextBlock Grid.Column="1" Text="x3" FontSize="14" Margin="8,0"/>
+                                    <TextBlock Grid.Column="2" Text="$9.50" FontSize="14"/>
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Discount Panel Integration -->
+                    <Border Style="{StaticResource DemoCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="💰 Smart Discount System" Style="{StaticResource SectionTitleStyle}"/>
+                            
+                            <!-- This is where the DiscountPanel would be integrated -->
+                            <local:DiscountPanel x:Name="DemoDiscountPanel"/>
+                            
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
+                                <Button Content="🎯 Browse All Discounts" 
+                                        Click="BrowseDiscounts_Click"
+                                        Style="{StaticResource AccentButtonStyle}"/>
+                                <Button Content="⚡ Auto-Apply Best Offers" 
+                                        Click="AutoApply_Click"/>
+                                <Button Content="🎫 Redeem Voucher" 
+                                        Click="RedeemVoucher_Click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Final Total -->
+                    <Border Style="{StaticResource DemoCardStyle}" 
+                            Background="{ThemeResource AccentFillColorDefaultBrush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Final Total" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                <TextBlock x:Name="SavingsText"
+                                           Text="You saved: $0.00" 
+                                           FontSize="12"
+                                           Foreground="{ThemeResource TextOnAccentFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            
+                            <TextBlock Grid.Column="1" 
+                                       x:Name="FinalTotalText"
+                                       Text="$45.50" 
+                                       FontSize="24" 
+                                       FontWeight="Bold"
+                                       Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Column - Customer Intelligence -->
+                <StackPanel Grid.Column="2">
+                    <!-- Customer Profile -->
+                    <Border Style="{StaticResource DemoCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="👤 Customer Profile" Style="{StaticResource SectionTitleStyle}"/>
+                            
+                            <StackPanel Spacing="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Total Visits:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" Text="15" FontSize="12" FontWeight="SemiBold"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Total Spent:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" Text="$1,250.00" FontSize="12" FontWeight="SemiBold"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Avg Order:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" Text="$83.33" FontSize="12" FontWeight="SemiBold"/>
+                                </Grid>
+                                
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Last Visit:" FontSize="12"/>
+                                    <TextBlock Grid.Column="1" Text="2 days ago" FontSize="12" FontWeight="SemiBold"/>
+                                </Grid>
+                                
+                                <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                        CornerRadius="4"
+                                        Padding="8,4"
+                                        Margin="0,8,0,0">
+                                    <TextBlock Text="🌟 VIP Customer" 
+                                               FontSize="12" 
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                               HorizontalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Available Discounts Preview -->
+                    <Border Style="{StaticResource DemoCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🎁 Available Offers" Style="{StaticResource SectionTitleStyle}"/>
+                            
+                            <StackPanel Spacing="8">
+                                <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
+                                        CornerRadius="6"
+                                        Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="VIP Discount" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="25% off entire order" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Frequent Customer" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="15% off for loyalty" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Combo Deal" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Burger + Fries + Drink" FontSize="10" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Integration Guide -->
+                    <Border Style="{StaticResource DemoCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="🔧 Integration Guide" Style="{StaticResource SectionTitleStyle}"/>
+                            
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="1. Add DiscountPanel to payment UI" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock Text="2. Call InitializeAsync(billingId, customerId)" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock Text="3. Handle discount events for total updates" FontSize="12" TextWrapping="Wrap"/>
+                                <TextBlock Text="4. Connect to receipt generation" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

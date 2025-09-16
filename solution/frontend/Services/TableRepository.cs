@@ -378,13 +378,26 @@ public class TableRepository
         if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
         try
         {
-            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/bills/unsettled");
+            var baseUri = new Uri(new Uri(_apiBaseUrl!), "/bills");
             var query = new List<string>();
-            // filters are not needed for unsettled listing, keep hooks for future
+            
+            if (from.HasValue) query.Add($"from={from.Value:yyyy-MM-ddTHH:mm:ssZ}");
+            if (to.HasValue) query.Add($"to={to.Value:yyyy-MM-ddTHH:mm:ssZ}");
+            if (!string.IsNullOrWhiteSpace(table)) query.Add($"table={Uri.EscapeDataString(table)}");
+            if (!string.IsNullOrWhiteSpace(server)) query.Add($"server={Uri.EscapeDataString(server)}");
+            
             var url = new Uri(baseUri + (query.Count > 0 ? ("?" + string.Join("&", query)) : string.Empty));
+            System.Diagnostics.Debug.WriteLine($"TableRepository.GetBillsAsync calling: {url}");
+            
             var res = await _http.GetAsync(url, ct);
-            if (!res.IsSuccessStatusCode) return list;
+            if (!res.IsSuccessStatusCode) 
+            {
+                System.Diagnostics.Debug.WriteLine($"GetBillsAsync failed with status {res.StatusCode}");
+                return list;
+            }
+            
             var data = await res.Content.ReadFromJsonAsync<List<BillResult>>(cancellationToken: ct) ?? new();
+            System.Diagnostics.Debug.WriteLine($"GetBillsAsync returned {data.Count} bills");
             return data;
         }
         catch (Exception ex)
@@ -545,5 +558,26 @@ public class TableRepository
             if (!t.Occupied) labels.Add(t.Label);
         }
         return labels;
+    }
+
+    // --- Get order items by billing ID for receipt generation ---
+    public async Task<List<ItemLine>> GetOrderItemsByBillingIdAsync(Guid billingId, CancellationToken ct = default)
+    {
+        var items = new List<ItemLine>();
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return items;
+        
+        try
+        {
+            var url = new Uri(new Uri(_apiBaseUrl!), $"/bills/{billingId:D}/items");
+            var res = await _http.GetAsync(url, ct);
+            if (!res.IsSuccessStatusCode) return items;
+            var data = await res.Content.ReadFromJsonAsync<List<ItemLine>>(cancellationToken: ct) ?? new();
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"GetOrderItemsByBillingIdAsync failed for billing ID {billingId}", ex);
+            return items;
+        }
     }
 }
