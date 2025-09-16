@@ -1,0 +1,441 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.SegmentDashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+              Padding="24,16" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Customer Segments" 
+                          Style="{ThemeResource TitleTextBlockStyle}" 
+                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                <TextBlock Text="View and manage customer segments for targeted marketing" 
+                          Style="{ThemeResource BodyTextBlockStyle}" 
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                          Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                <Button x:Name="RefreshButton" 
+                        Style="{ThemeResource DefaultButtonStyle}"
+                        Click="RefreshButton_Click">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                            <TextBlock Text="Refresh"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+                <Button x:Name="CreateSegmentButton" 
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Click="CreateSegmentButton_Click">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontSize="16"/>
+                            <TextBlock Text="Create Segment"/>
+                        </StackPanel>
+                    </Button.Content>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" Padding="24,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Summary Cards -->
+                <Grid Grid.Row="0" Margin="0,0,0,24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Total Segments -->
+                    <Border Grid.Column="0" 
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,12,0">
+                        <StackPanel>
+                            <TextBlock Text="Total Segments" 
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="TotalSegmentsText" 
+                                       Text="0"
+                                       Style="{ThemeResource HeaderTextBlockStyle}"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Active Segments -->
+                    <Border Grid.Column="1" 
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,12,0">
+                        <StackPanel>
+                            <TextBlock Text="Active Segments" 
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="ActiveSegmentsText" 
+                                       Text="0"
+                                       Style="{ThemeResource HeaderTextBlockStyle}"
+                                       Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Total Customers -->
+                    <Border Grid.Column="2" 
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,12,0">
+                        <StackPanel>
+                            <TextBlock Text="Total Customers" 
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="TotalCustomersText" 
+                                       Text="0"
+                                       Style="{ThemeResource HeaderTextBlockStyle}"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Avg Segment Size -->
+                    <Border Grid.Column="3" 
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20">
+                        <StackPanel>
+                            <TextBlock Text="Avg Segment Size" 
+                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="AvgSegmentSizeText" 
+                                       Text="0"
+                                       Style="{ThemeResource HeaderTextBlockStyle}"
+                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Filters -->
+                <Grid Grid.Row="1" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="SearchBox" 
+                             Grid.Column="0"
+                             PlaceholderText="Search segments..." 
+                             Margin="0,0,12,0"
+                             TextChanged="SearchBox_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Grid>
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        CornerRadius="4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <FontIcon Grid.Column="0" 
+                                                                  Glyph="&#xE721;" 
+                                                                  FontSize="16" 
+                                                                  Margin="12,0,8,0"
+                                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                        <ScrollViewer Grid.Column="1" 
+                                                                      x:Name="ContentElement" 
+                                                                      Margin="0,8,12,8"/>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                    <ComboBox x:Name="StatusFilterComboBox" 
+                              Grid.Column="1"
+                              PlaceholderText="Status" 
+                              Width="120" 
+                              Margin="0,0,12,0"
+                              SelectionChanged="StatusFilterComboBox_SelectionChanged">
+                        <ComboBoxItem Content="All"/>
+                        <ComboBoxItem Content="Active"/>
+                        <ComboBoxItem Content="Inactive"/>
+                    </ComboBox>
+
+                    <ComboBox x:Name="SizeFilterComboBox" 
+                              Grid.Column="2"
+                              PlaceholderText="Size" 
+                              Width="120"
+                              SelectionChanged="SizeFilterComboBox_SelectionChanged">
+                        <ComboBoxItem Content="All"/>
+                        <ComboBoxItem Content="Small (1-50)"/>
+                        <ComboBoxItem Content="Medium (51-200)"/>
+                        <ComboBoxItem Content="Large (201+)"/>
+                    </ComboBox>
+                </Grid>
+
+                <!-- Segments List -->
+                <ListView x:Name="SegmentsListView" 
+                          Grid.Row="2"
+                          SelectionMode="Single"
+                          SelectionChanged="SegmentsListView_SelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="20"
+                                    Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Segment Header -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   Style="{ThemeResource SubtitleTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <TextBlock Text="{Binding Description}" 
+                                                   Style="{ThemeResource BodyTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   Margin="0,4,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <!-- Status Badge -->
+                                    <Border Grid.Row="0" Grid.Column="1" 
+                                            Background="{Binding IsActive, Converter={StaticResource BooleanToStatusBrushConverter}}"
+                                            CornerRadius="12"
+                                            Padding="12,4"
+                                            VerticalAlignment="Top">
+                                        <TextBlock Text="{Binding IsActive, Converter={StaticResource BooleanToStatusTextConverter}}" 
+                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                   Foreground="White"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+
+                                    <!-- Segment Metrics -->
+                                    <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,8,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Customers" 
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding CustomerCountFormatted}" 
+                                                       Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Avg Order Value" 
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding AverageOrderValueFormatted}" 
+                                                       Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Total Revenue" 
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding TotalRevenueFormatted}" 
+                                                       Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="3">
+                                            <TextBlock Text="Last Updated" 
+                                                       Style="{ThemeResource CaptionTextBlockStyle}"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Text="{Binding LastUpdatedFormatted}" 
+                                                       Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                                       Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Segment Criteria Preview -->
+                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,8,0,8">
+                                        <TextBlock Text="Criteria" 
+                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   Margin="0,0,0,4"/>
+                                        <ItemsControl ItemsSource="{Binding CriteriaPreview}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            CornerRadius="4"
+                                                            Padding="8,4"
+                                                            Margin="0,0,8,0">
+                                                        <TextBlock Text="{Binding}" 
+                                                                   Style="{ThemeResource CaptionTextBlockStyle}"
+                                                                   Foreground="White"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <!-- Action Buttons -->
+                                    <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                        <Button Style="{ThemeResource DefaultButtonStyle}"
+                                                Click="ViewCustomersButton_Click"
+                                                Tag="{Binding}">
+                                            <Button.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE716;" FontSize="14"/>
+                                                    <TextBlock Text="View Customers"/>
+                                                </StackPanel>
+                                            </Button.Content>
+                                        </Button>
+                                        <Button Style="{ThemeResource DefaultButtonStyle}"
+                                                Click="CreateCampaignButton_Click"
+                                                Tag="{Binding}">
+                                            <Button.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE8F1;" FontSize="14"/>
+                                                    <TextBlock Text="Create Campaign"/>
+                                                </StackPanel>
+                                            </Button.Content>
+                                        </Button>
+                                        <Button Style="{ThemeResource DefaultButtonStyle}"
+                                                Click="EditSegmentButton_Click"
+                                                Tag="{Binding}">
+                                            <Button.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE70F;" FontSize="14"/>
+                                                    <TextBlock Text="Edit"/>
+                                                </StackPanel>
+                                            </Button.Content>
+                                        </Button>
+                                        <Button Style="{ThemeResource AccentButtonStyle}"
+                                                Click="RefreshSegmentButton_Click"
+                                                Tag="{Binding}">
+                                            <Button.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE72C;" FontSize="14"/>
+                                                    <TextBlock Text="Refresh"/>
+                                                </StackPanel>
+                                            </Button.Content>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <!-- Empty State -->
+                <StackPanel x:Name="EmptyStatePanel" 
+                            Grid.Row="2"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Spacing="16"
+                            Visibility="Collapsed">
+                    <FontIcon Glyph="&#xE716;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="No segments found" 
+                               Style="{ThemeResource SubtitleTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Create your first customer segment to start targeted marketing" 
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
+                    <Button Style="{ThemeResource AccentButtonStyle}"
+                            Click="CreateSegmentButton_Click">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontSize="16"/>
+                                <TextBlock Text="Create Segment"/>
+                            </StackPanel>
+                        </Button.Content>
+                    </Button>
+                </StackPanel>
+
+                <!-- Loading State -->
+                <StackPanel x:Name="LoadingPanel" 
+                            Grid.Row="2"
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Center"
+                            Spacing="16"
+                            Visibility="Collapsed">
+                    <ProgressRing IsActive="True" Width="48" Height="48"/>
+                    <TextBlock Text="Loading segments..." 
+                               Style="{ThemeResource BodyTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</Page>

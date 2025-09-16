@@ -46,9 +46,9 @@ namespace MagiDesk.Frontend.Services
                 // Convert BillResult to ReceiptService.ReceiptData
                 var receiptData = ConvertBillResultToReceiptData(bill, paperWidthMm, taxPercent, isProForma);
 
-                // Generate PDF using ReceiptService
+                // Generate PDF using custom formatted receipt with proper paper size
                 var fileName = $"receipt_{bill.BillId}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-                var filePath = await _receiptService.SavePdfAsync(receiptData, fileName);
+                var filePath = await _receiptService.GenerateCustomFormattedReceiptAsync(receiptData, fileName, paperWidthMm);
 
                 _logger.LogInformation("GenerateReceiptFromBillAsync: Receipt generated successfully: {FilePath}", filePath);
                 return filePath;
@@ -88,7 +88,11 @@ namespace MagiDesk.Frontend.Services
                 // Convert BillResult to ReceiptService.ReceiptData
                 var receiptData = ConvertBillResultToReceiptData(bill, paperWidthMm, taxPercent, isProForma);
 
-                // Print using ReceiptService
+                // Generate PDF with proper paper size configuration first, then print
+                var tempFileName = $"temp_print_{bill.BillId}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                var tempFilePath = await _receiptService.GenerateCustomFormattedReceiptAsync(receiptData, tempFileName, paperWidthMm);
+                
+                // Print the generated PDF
                 await _receiptService.PrintPdfAsync(receiptData, printerName);
 
                 _logger.LogInformation("PrintBillAsync: Bill printed successfully to {PrinterName}", printerName);
@@ -121,12 +125,12 @@ namespace MagiDesk.Frontend.Services
                 if (taxPercent < 0 || taxPercent > 100)
                     throw new ArgumentException("Tax percent must be between 0 and 100", nameof(taxPercent));
 
-                // Calculate totals
+                // Calculate totals from actual items (not the cached values which may be outdated)
                 decimal timeCost = bill.TimeCost;
-                decimal itemsCost = bill.ItemsCost;
+                decimal itemsCost = bill.Items?.Sum(item => item.price * item.quantity) ?? 0m;
                 decimal subtotal = timeCost + itemsCost;
                 decimal tax = Math.Round(subtotal * (taxPercent / 100m), 2);
-                decimal total = bill.TotalAmount > 0m ? bill.TotalAmount : subtotal + tax;
+                decimal total = subtotal + tax;
 
                 // Convert items
                 var receiptItems = new List<ReceiptService.ReceiptItem>();
@@ -147,9 +151,14 @@ namespace MagiDesk.Frontend.Services
                 {
                     foreach (var item in bill.Items)
                     {
+                        // Clean and validate item name
+                        string cleanName = item.name?.Trim() ?? item.itemId ?? "Item";
+                        // Remove any control characters that might cause formatting issues
+                        cleanName = new string(cleanName.Where(c => !char.IsControl(c) || char.IsWhiteSpace(c)).ToArray());
+                        
                         receiptItems.Add(new ReceiptService.ReceiptItem
                         {
-                            Name = item.name?.Trim() ?? item.itemId ?? "Item",
+                            Name = cleanName,
                             Quantity = item.quantity,
                             Price = item.price
                         });

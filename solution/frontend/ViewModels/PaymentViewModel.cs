@@ -1,10 +1,12 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MagiDesk.Frontend.Services;
-using Microsoft.UI.Xaml;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
+using MagiDesk.Frontend.Models;
 using System.Collections.Generic;
 
 namespace MagiDesk.Frontend.ViewModels
@@ -689,10 +691,31 @@ namespace MagiDesk.Frontend.ViewModels
                 {
                     Name = item.Name,
                     Quantity = item.Quantity,
-                    Price = item.Price
+                    Price = item.Price,
+                    UnitPrice = item.Price
                 }).ToList();
                 
                 var tableNumber = receiptData.TableNumber ?? "Unknown";
+                
+                // Create proper ReceiptService.ReceiptData with all items and totals
+                var receiptServiceData = new ReceiptService.ReceiptData
+                {
+                    BillId = receiptData.BillId,
+                    StoreName = receiptData.BusinessName,
+                    Address = receiptData.BusinessAddress,
+                    Phone = receiptData.BusinessPhone,
+                    TableNumber = tableNumber,
+                    ServerName = receiptData.ServerName ?? "Server",
+                    Date = DateTime.Now,
+                    IsProForma = false, // Final receipt
+                    Items = receiptItems,
+                    Subtotal = receiptData.Subtotal,
+                    DiscountAmount = receiptData.DiscountAmount,
+                    TaxAmount = receiptData.TaxAmount,
+                    TotalAmount = receiptData.TotalAmount,
+                    PaymentMethod = receiptData.PaymentMethod,
+                    Footer = "Thank you for your business!"
+                };
                 
                 // Create PaymentData for GenerateFinalReceiptAsync
                 var paymentData = new PaymentData
@@ -716,10 +739,8 @@ namespace MagiDesk.Frontend.ViewModels
                     PrinterName = "Default Printer"
                 };
                 
-                var filePath = await _receiptService.GenerateFinalReceiptAsync(
-                    receiptData.BillId ?? "UNKNOWN",
-                    paymentData
-                );
+                var fileName = $"receipt_{receiptData.BillId}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                var filePath = await _receiptService.GenerateCustomFormattedReceiptAsync(receiptServiceData, fileName);
                 
                 _logger.LogInformation("PrintFinalReceiptAsync: Final receipt generated: {FilePath}", filePath);
                 
@@ -753,7 +774,37 @@ namespace MagiDesk.Frontend.ViewModels
                     _logger.LogError("CreateReceiptDataAsync returned null for final receipt");
                     return null;
                 }
-                var filePath = await _receiptService.SavePdfAsync(receiptData);
+                
+                // Convert to ReceiptService format with all items and totals
+                var receiptItems = receiptData.Items.Select(item => new ReceiptService.ReceiptItem
+                {
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                    UnitPrice = item.Price
+                }).ToList();
+                
+                var receiptServiceData = new ReceiptService.ReceiptData
+                {
+                    BillId = receiptData.BillId,
+                    StoreName = receiptData.BusinessName,
+                    Address = receiptData.BusinessAddress,
+                    Phone = receiptData.BusinessPhone,
+                    TableNumber = receiptData.TableNumber ?? "Unknown",
+                    ServerName = receiptData.ServerName ?? "Server",
+                    Date = DateTime.Now,
+                    IsProForma = true, // Pre-bill receipt
+                    Items = receiptItems,
+                    Subtotal = receiptData.Subtotal,
+                    DiscountAmount = receiptData.DiscountAmount,
+                    TaxAmount = receiptData.TaxAmount,
+                    TotalAmount = receiptData.TotalAmount,
+                    PaymentMethod = receiptData.PaymentMethod,
+                    Footer = "Thank you for your business!"
+                };
+                
+                var fileName = $"prebill_{receiptData.BillId}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                var filePath = await _receiptService.GenerateCustomFormattedReceiptAsync(receiptServiceData, fileName);
                 
                 if (!string.IsNullOrEmpty(filePath))
                 {
@@ -780,124 +831,161 @@ namespace MagiDesk.Frontend.ViewModels
         {
             try
             {
-                // Add UI feedback to show we're creating receipt data
-                Error = "Creating receipt data...";
-                OnPropertyChanged(nameof(Error));
-                OnPropertyChanged(nameof(HasError));
-                
-                _logger.LogInformation("Starting CreateReceiptDataAsync for isProForma: {IsProForma}", isProForma);
-                
-                // Get business settings from configuration
+                // Load business settings
                 var businessName = _configuration?["ReceiptSettings:BusinessName"] ?? "MagiDesk Billiard Club";
-                var businessAddress = _configuration?["ReceiptSettings:BusinessAddress"] ?? "123 Main Street, City, State 12345";
+                var businessAddress = _configuration?["ReceiptSettings:BusinessAddress"] ?? "123 Main Street, City";
                 var businessPhone = _configuration?["ReceiptSettings:BusinessPhone"] ?? "(555) 123-4567";
-                
-                _logger.LogInformation("Business settings loaded - Name: {BusinessName}", businessName);
 
-                // Check if Items collection is available
-                if (Items == null)
+                if (BillingId == null || BillingId == Guid.Empty)
                 {
-                    Error = "Items collection is null";
+                    _logger.LogError("No billing ID available for receipt generation");
+                    Error = "No billing ID available for receipt generation";
                     OnPropertyChanged(nameof(Error));
                     OnPropertyChanged(nameof(HasError));
-                    _logger.LogError("Items collection is null");
                     return null;
                 }
 
-                // Convert items to receipt items
-                _logger.LogInformation("Converting {ItemCount} items to receipt items", _items.Count);
+                _logger.LogInformation("Creating receipt data for billing ID {BillingId}", BillingId);
                 
-                // Debug each item individually
-                for (int i = 0; i < _items.Count; i++)
-                {
-                    var item = _items[i];
-                    _logger.LogInformation("Item {Index}: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, LineTotal={LineTotal}", 
-                        i, item?.Name ?? "NULL", item?.Quantity ?? -1, item?.UnitPrice ?? -1, item?.LineTotal ?? -1);
-                }
-                
+                // Use new BillingService for accurate data retrieval
                 var receiptItems = new List<ReceiptService.ReceiptItem>();
-                for (int i = 0; i < _items.Count; i++)
-                {
-                    try
-                    {
-                        var item = _items[i];
-                        if (item == null) continue;
-                        
-                        _logger.LogInformation("Creating ReceiptItem {Index} from OrderItemLineVm", i);
-                        
-                        var receiptItem = new ReceiptService.ReceiptItem
-                        {
-                            Name = item.Name ?? "Unknown",
-                            Quantity = item.Quantity,
-                            UnitPrice = item.UnitPrice,
-                            Subtotal = item.LineTotal
-                        };
-                        
-                        _logger.LogInformation("ReceiptItem {Index} created: Name='{Name}', Quantity={Quantity}, UnitPrice={UnitPrice}, Subtotal={Subtotal}", 
-                            i, receiptItem.Name, receiptItem.Quantity, receiptItem.UnitPrice, receiptItem.Subtotal);
-                        
-                        receiptItems.Add(receiptItem);
-                    }
-                    catch (Exception itemEx)
-                    {
-                        _logger.LogError(itemEx, "Failed to create ReceiptItem {Index}", i);
-                        Error = $"Failed to create receipt item {i}: {itemEx.Message}";
-                        OnPropertyChanged(nameof(Error));
-                        OnPropertyChanged(nameof(HasError));
-                        return null;
-                    }
-                }
+                decimal calculatedSubtotal = 0m;
                 
-                _logger.LogInformation("Receipt items created successfully - Count: {Count}", receiptItems.Count);
-
-                // Calculate totals
-                var subtotal = receiptItems.Sum(item => item.Subtotal);
-                var taxAmount = subtotal * 0.08m; // 8% tax rate
-                var totalAmount = subtotal + taxAmount - LedgerDiscount;
-                
-                _logger.LogInformation("Totals calculated - Subtotal: {Subtotal}, Tax: {Tax}, Total: {Total}", subtotal, taxAmount, totalAmount);
-
-                _logger.LogInformation("Creating ReceiptData object...");
-                _logger.LogInformation("ReceiptData properties: BusinessName='{BusinessName}', BillingId='{BillingId}', SelectedMethod='{SelectedMethod}', LedgerDiscount={LedgerDiscount}, Paid={Paid}", 
-                    businessName, BillingId?.ToString() ?? "NULL", SelectedMethod ?? "NULL", LedgerDiscount, Paid);
-
                 try
                 {
-                    var receiptData = new ReceiptService.ReceiptData
+                    // Query database directly using the new BillingService
+                    var billingService = new Services.BillingService();
+                    var dbItems = await billingService.GetOrderItemsByBillingIdAsync(BillingId.Value);
+                    
+                    if (dbItems != null && dbItems.Any())
                     {
-                        BusinessName = businessName,
-                        BusinessAddress = businessAddress,
-                        BusinessPhone = businessPhone,
-                        TableNumber = "Table 1", // This should come from the session data
-                        ServerName = "Server", // This should come from the session data
-                        StartTime = DateTime.Now.AddHours(-2), // This should come from the session data
-                        EndTime = DateTime.Now,
-                        Items = receiptItems,
-                        Subtotal = subtotal,
-                        DiscountAmount = LedgerDiscount,
-                        TaxAmount = taxAmount,
-                        TotalAmount = totalAmount,
-                        BillId = BillingId?.ToString() ?? "Unknown",
-                        PaymentMethod = SelectedMethod ?? "Cash",
-                        AmountPaid = isProForma ? 0 : Paid,
-                        Change = isProForma ? 0 : Math.Max(0, Paid - totalAmount),
-                        IsProForma = isProForma
-                    };
-                    
-                    _logger.LogInformation("ReceiptData object created successfully");
-                    _logger.LogInformation("ReceiptData final values: BillId='{BillId}', ItemsCount={ItemsCount}, TotalAmount={TotalAmount}, IsProForma={IsProForma}", 
-                        receiptData.BillId, receiptData.Items?.Count ?? -1, receiptData.TotalAmount, receiptData.IsProForma);
-                    
-                    return receiptData;
+                        _logger.LogInformation("Found {ItemCount} items from billing service", dbItems.Count);
+                        
+                        foreach (var item in dbItems)
+                        {
+                            if (item == null) continue;
+                            
+                            _logger.LogInformation("Adding DB item: {ItemName} x{Quantity} @ ${UnitPrice:F2}", 
+                                item.name, item.quantity, item.price);
+                            
+                            var receiptItem = new ReceiptService.ReceiptItem
+                            {
+                                Name = item.name ?? "Unknown Item",
+                                Quantity = item.quantity,
+                                Price = item.price,
+                                UnitPrice = item.price,
+                                Subtotal = item.price * item.quantity
+                            };
+                            receiptItems.Add(receiptItem);
+                            calculatedSubtotal += receiptItem.Subtotal;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No items found from billing service, falling back to UI items");
+                        
+                        // Fallback to UI collection if database query fails
+                        if (_items != null && _items.Count > 0)
+                        {
+                            _logger.LogInformation("Using fallback UI collection with {ItemCount} items", _items.Count);
+                            
+                            foreach (var item in _items)
+                            {
+                                if (item == null) continue;
+                                
+                                _logger.LogInformation("Adding UI item: {ItemName} x{Quantity} @ ${UnitPrice:F2}", 
+                                    item.Name, item.Quantity, item.UnitPrice);
+                                
+                                var receiptItem = new ReceiptService.ReceiptItem
+                                {
+                                    Name = item.Name ?? "Unknown Item",
+                                    Quantity = item.Quantity,
+                                    Price = item.UnitPrice,
+                                    UnitPrice = item.UnitPrice,
+                                    Subtotal = item.UnitPrice * item.Quantity
+                                };
+                                receiptItems.Add(receiptItem);
+                                calculatedSubtotal += receiptItem.Subtotal;
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogError("No items found in either billing service or UI collection");
+                        }
+                    }
                 }
-                catch (Exception receiptDataEx)
+                catch (Exception billingEx)
                 {
-                    _logger.LogError(receiptDataEx, "Failed to create ReceiptData object");
-                    Error = $"Failed to create ReceiptData: {receiptDataEx.Message}";
+                    _logger.LogError(billingEx, "Failed to query billing service for order items, falling back to UI items");
+                    
+                    // Final fallback to UI items if billing service fails
+                    if (_items != null && _items.Count > 0)
+                    {
+                        _logger.LogInformation("Using UI collection fallback with {ItemCount} items", _items.Count);
+                        
+                        foreach (var item in _items)
+                        {
+                            if (item == null) continue;
+                            
+                            _logger.LogInformation("Adding fallback UI item: {ItemName} x{Quantity} @ ${UnitPrice:F2}", 
+                                item.Name, item.Quantity, item.UnitPrice);
+                            
+                            var receiptItem = new ReceiptService.ReceiptItem
+                            {
+                                Name = item.Name ?? "Unknown Item",
+                                Quantity = item.Quantity,
+                                Price = item.UnitPrice,
+                                UnitPrice = item.UnitPrice,
+                                Subtotal = item.UnitPrice * item.Quantity
+                            };
+                            receiptItems.Add(receiptItem);
+                            calculatedSubtotal += receiptItem.Subtotal;
+                        }
+                    }
+                }
+
+                if (receiptItems.Count == 0)
+                {
+                    _logger.LogError("No items found for receipt generation");
+                    Error = "No items found for receipt generation";
                     OnPropertyChanged(nameof(Error));
                     OnPropertyChanged(nameof(HasError));
                     return null;
                 }
+
+                _logger.LogInformation("Total receipt items: {ItemCount}, Calculated subtotal: ${Subtotal:F2}", 
+                    receiptItems.Count, calculatedSubtotal);
+
+                // Use calculated subtotal or TotalDue if available
+                var subtotal = TotalDue > 0 ? TotalDue : calculatedSubtotal;
+                var taxAmount = subtotal * 0.08m; // 8% tax rate
+                var totalAmount = subtotal + taxAmount - LedgerDiscount;
+
+                var receiptData = new ReceiptService.ReceiptData
+                {
+                    BusinessName = businessName,
+                    BusinessAddress = businessAddress,
+                    BusinessPhone = businessPhone,
+                    TableNumber = "Table", // This should come from the session data
+                    ServerName = "Server", // This should come from the session data
+                    StartTime = DateTime.Now.AddHours(-2), // This should come from the session data
+                    EndTime = DateTime.Now,
+                    Items = receiptItems,
+                    Subtotal = subtotal,
+                    DiscountAmount = LedgerDiscount,
+                    TaxAmount = taxAmount,
+                    TotalAmount = totalAmount,
+                    BillId = BillingId.Value.ToString(),
+                    PaymentMethod = SelectedMethod ?? "Cash",
+                    AmountPaid = isProForma ? 0 : Paid,
+                    Change = isProForma ? 0 : Math.Max(0, Paid - totalAmount),
+                    IsProForma = isProForma
+                };
+                
+                _logger.LogInformation("Receipt data created - Subtotal: ${Subtotal:F2}, Total: ${Total:F2}", 
+                    receiptData.Subtotal, receiptData.TotalAmount);
+                
+                return receiptData;
             }
             catch (Exception ex)
             {
@@ -905,7 +993,7 @@ namespace MagiDesk.Frontend.ViewModels
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 _logger.LogError(ex, "Failed to create receipt data");
-                return null; // Return null instead of throwing
+                return null;
             }
         }
 

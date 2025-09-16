@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="MagiDesk.Frontend.Views.CustomerDashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style x:Key="CustomerCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <Style x:Key="StatCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Customer Management" 
+                               FontSize="28" 
+                               FontWeight="Bold" 
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="Manage customers, memberships, and loyalty programs" 
+                               FontSize="14" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="AddCustomerButton" 
+                            Style="{StaticResource ActionButtonStyle}"
+                            Click="AddCustomerButton_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <FontIcon Glyph="&#xE109;" FontSize="16" Margin="0,0,8,0"/>
+                            <TextBlock Text="Add Customer"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="RefreshButton" 
+                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                            CornerRadius="6"
+                            Padding="12,8"
+                            Click="RefreshButton_Click">
+                        <FontIcon Glyph="&#xE149;" FontSize="16"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Statistics Cards -->
+        <ScrollViewer Grid.Row="1" 
+                      HorizontalScrollMode="Auto" 
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollMode="Disabled"
+                      VerticalScrollBarVisibility="Disabled"
+                      Padding="24,16">
+            <StackPanel Orientation="Horizontal">
+                <Border Style="{StaticResource StatCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock x:Name="TotalCustomersText" 
+                                   Text="0" 
+                                   FontSize="32" 
+                                   FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="Total Customers" 
+                                   FontSize="14" 
+                                   Foreground="White" 
+                                   Opacity="0.9"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource StatCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock x:Name="ActiveCustomersText" 
+                                   Text="0" 
+                                   FontSize="32" 
+                                   FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="Active Customers" 
+                                   FontSize="14" 
+                                   Foreground="White" 
+                                   Opacity="0.9"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource StatCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock x:Name="TotalRevenueText" 
+                                   Text="$0.00" 
+                                   FontSize="32" 
+                                   FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="Total Revenue" 
+                                   FontSize="14" 
+                                   Foreground="White" 
+                                   Opacity="0.9"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource StatCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock x:Name="ExpiredMembershipsText" 
+                                   Text="0" 
+                                   FontSize="32" 
+                                   FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="Expired Memberships" 
+                                   FontSize="14" 
+                                   Foreground="White" 
+                                   Opacity="0.9"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="2" Padding="24,0,24,24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Search and Filters -->
+            <Border Grid.Column="0" Style="{StaticResource CustomerCardStyle}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Search and Filters" 
+                               FontSize="18" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,16"/>
+
+                    <!-- Search Box -->
+                    <TextBox x:Name="SearchTextBox" 
+                             PlaceholderText="Search customers..." 
+                             Margin="0,0,0,12"
+                             TextChanged="SearchTextBox_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="TextBox">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                    <!-- Membership Level Filter -->
+                    <TextBlock Text="Membership Level" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,8"/>
+                    <ComboBox x:Name="MembershipLevelComboBox" 
+                              PlaceholderText="All Levels"
+                              HorizontalAlignment="Stretch"
+                              Margin="0,0,0,12"
+                              SelectionChanged="MembershipLevelComboBox_SelectionChanged">
+                        <ComboBox.Resources>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </ComboBox.Resources>
+                    </ComboBox>
+
+                    <!-- Status Filter -->
+                    <TextBlock Text="Status" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,8"/>
+                    <ComboBox x:Name="StatusComboBox" 
+                              PlaceholderText="All Statuses"
+                              HorizontalAlignment="Stretch"
+                              Margin="0,0,0,12"
+                              SelectionChanged="StatusComboBox_SelectionChanged">
+                        <ComboBoxItem Content="All Statuses" Tag=""/>
+                        <ComboBoxItem Content="Active" Tag="active"/>
+                        <ComboBoxItem Content="Inactive" Tag="inactive"/>
+                        <ComboBoxItem Content="Expired Membership" Tag="expired"/>
+                        <ComboBox.Resources>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </ComboBox.Resources>
+                    </ComboBox>
+
+                    <!-- Sort Options -->
+                    <TextBlock Text="Sort By" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Margin="0,0,0,8"/>
+                    <ComboBox x:Name="SortComboBox" 
+                              HorizontalAlignment="Stretch"
+                              Margin="0,0,0,12"
+                              SelectionChanged="SortComboBox_SelectionChanged">
+                        <ComboBoxItem Content="Name (A-Z)" Tag="firstname_asc" IsSelected="True"/>
+                        <ComboBoxItem Content="Name (Z-A)" Tag="firstname_desc"/>
+                        <ComboBoxItem Content="Total Spent (High-Low)" Tag="totalspent_desc"/>
+                        <ComboBoxItem Content="Total Spent (Low-High)" Tag="totalspent_asc"/>
+                        <ComboBoxItem Content="Loyalty Points (High-Low)" Tag="loyaltypoints_desc"/>
+                        <ComboBoxItem Content="Recently Added" Tag="createdat_desc"/>
+                        <ComboBox.Resources>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </ComboBox.Resources>
+                    </ComboBox>
+
+                    <!-- Clear Filters -->
+                    <Button x:Name="ClearFiltersButton" 
+                            Content="Clear Filters" 
+                            HorizontalAlignment="Stretch"
+                            Background="{ThemeResource ControlFillColorDefaultBrush}"
+                            Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                            BorderThickness="1"
+                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                            CornerRadius="6"
+                            Padding="12,8"
+                            Click="ClearFiltersButton_Click"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Customer List -->
+            <Border Grid.Column="1" Style="{StaticResource CustomerCardStyle}" Margin="16,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- List Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" 
+                                   Text="Customers" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"/>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <TextBlock x:Name="ResultsCountText" 
+                                       Text="0 customers" 
+                                       FontSize="14" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,16,0"/>
+                            <ProgressRing x:Name="LoadingRing" 
+                                          Width="20" 
+                                          Height="20" 
+                                          IsActive="False"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Customer ListView -->
+                    <ListView x:Name="CustomersListView" 
+                              Grid.Row="1"
+                              SelectionMode="Single"
+                              SelectionChanged="CustomersListView_SelectionChanged"
+                              ItemsSource="{x:Bind Customers, Mode=OneWay}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:CustomerItemViewModel">
+                                <Grid Padding="12" Background="Transparent">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Avatar -->
+                                    <Border Grid.Column="0" 
+                                            Width="48" 
+                                            Height="48" 
+                                            CornerRadius="24" 
+                                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            Margin="0,0,12,0">
+                                        <TextBlock Text="{x:Bind Initials}" 
+                                                   FontSize="18" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="White" 
+                                                   HorizontalAlignment="Center" 
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- Customer Info -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{x:Bind FullName}" 
+                                                   FontSize="16" 
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="{x:Bind ContactInfo}" 
+                                                   FontSize="14" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <Border Background="{x:Bind MembershipColor}" 
+                                                    CornerRadius="4" 
+                                                    Padding="6,2">
+                                                <TextBlock Text="{x:Bind MembershipLevel}" 
+                                                           FontSize="12" 
+                                                           Foreground="White"/>
+                                            </Border>
+                                            <TextBlock Text="{x:Bind StatusText}" 
+                                                       FontSize="12" 
+                                                       Foreground="{x:Bind StatusColor}" 
+                                                       Margin="8,0,0,0" 
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Stats -->
+                                    <StackPanel Grid.Column="2" 
+                                                HorizontalAlignment="Right" 
+                                                VerticalAlignment="Center" 
+                                                Margin="0,0,16,0">
+                                        <TextBlock Text="{x:Bind TotalSpentText}" 
+                                                   FontSize="16" 
+                                                   FontWeight="SemiBold" 
+                                                   HorizontalAlignment="Right"/>
+                                        <TextBlock Text="{x:Bind LoyaltyPointsText}" 
+                                                   FontSize="14" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                                   HorizontalAlignment="Right"/>
+                                    </StackPanel>
+
+                                    <!-- Actions -->
+                                    <Button Grid.Column="3" 
+                                            Background="Transparent" 
+                                            BorderThickness="0" 
+                                            Padding="8"
+                                            VerticalAlignment="Center">
+                                        <FontIcon Glyph="&#xE712;" FontSize="16"/>
+                                        <Button.Flyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="View Details" 
+                                                                Icon="Contact" 
+                                                                Click="ViewCustomerDetails_Click" 
+                                                                Tag="{x:Bind CustomerId}"/>
+                                                <MenuFlyoutItem Text="Edit Customer" 
+                                                                Icon="Edit" 
+                                                                Click="EditCustomer_Click" 
+                                                                Tag="{x:Bind CustomerId}"/>
+                                                <MenuFlyoutItem Text="Manage Wallet" 
+                                                                Icon="Calculator" 
+                                                                Click="ManageWallet_Click" 
+                                                                Tag="{x:Bind CustomerId}"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Deactivate" 
+                                                                Icon="Cancel" 
+                                                                Click="DeactivateCustomer_Click" 
+                                                                Tag="{x:Bind CustomerId}"/>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- Pagination -->
+                    <Grid Grid.Row="2" Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="PreviousPageButton" 
+                                Grid.Column="0"
+                                Content="Previous" 
+                                IsEnabled="False"
+                                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                Click="PreviousPageButton_Click"/>
+
+                        <TextBlock x:Name="PageInfoText" 
+                                   Grid.Column="1"
+                                   Text="Page 1 of 1" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"
+                                   FontSize="14"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                        <Button x:Name="NextPageButton" 
+                                Grid.Column="2"
+                                Content="Next" 
+                                IsEnabled="False"
+                                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                Click="NextPageButton_Click"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

@@ -142,68 +142,169 @@
                             
                             <NumberBox x:Name="TipAmountInput" PlaceholderText="Enter tip amount" FontSize="14" Margin="0,0,0,8" 
                                        MinHeight="40"/>
-                            <TextBlock x:Name="TipPercentageText" Text="0%" FontSize="14" FontWeight="Bold" 
-                                       HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                            <TextBlock x:Name="TipPercentageText" Text="0%" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Customer Selection -->
+                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="Customer (Optional)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                 
+                                <AutoSuggestBox x:Name="CustomerSearchBox"
+                                                Grid.Column="0"
+                                                PlaceholderText="Search customer by name, email, or phone..."
+                                                QueryIcon="Find"
+                                                TextChanged="CustomerSearchBox_TextChanged"
+                                                SuggestionChosen="CustomerSearchBox_SuggestionChosen"
+                                                QuerySubmitted="CustomerSearchBox_QuerySubmitted"
+                                                Margin="0,0,8,0"/>
+                                 
+                                <Button x:Name="ClearCustomerButton"
+                                        Grid.Column="1"
+                                        Content="Clear"
+                                        Click="ClearCustomerButton_Click"
+                                        IsEnabled="False"
+                                        Background="Transparent"
+                                        BorderBrush="Gray"
+                                        Padding="12,8"/>
+                            </Grid>
+                            
+                            <!-- Selected Customer Info -->
+                            <Border x:Name="SelectedCustomerPanel" 
+                                    Visibility="Collapsed"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="6"
+                                    Padding="12"
+                                    Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                     
+                                    <Border Grid.Column="0" 
+                                            Width="32" 
+                                            Height="32" 
+                                            CornerRadius="16" 
+                                            Background="White"
+                                            Margin="0,0,12,0">
+                                        <TextBlock x:Name="SelectedCustomerInitials" 
+                                                   Text="--" 
+                                                   FontSize="14" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                                   HorizontalAlignment="Center" 
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                     
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock x:Name="SelectedCustomerName" 
+                                                   Text="Customer Name" 
+                                                   FontSize="14" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="White"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <TextBlock x:Name="SelectedCustomerMembership" 
+                                                       Text="Gold Member" 
+                                                       FontSize="12" 
+                                                       Foreground="White" 
+                                                       Opacity="0.9"/>
+                                            <TextBlock x:Name="SelectedCustomerWallet" 
+                                                       Text="Wallet: $25.00" 
+                                                       FontSize="12" 
+                                                       Foreground="White" 
+                                                       Opacity="0.9"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                     
+                                    <Button x:Name="UseWalletButton"
+                                            Grid.Column="2"
+                                            Content="Use Wallet"
+                                            Background="White"
+                                            Foreground="{ThemeResource AccentFillColorDefaultBrush}"
+                                            BorderThickness="0"
+                                            CornerRadius="4"
+                                            Padding="12,6"
+                                            FontSize="12"
+                                            FontWeight="SemiBold"
+                                            Click="UseWalletButton_Click"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <!-- Payment Methods -->
                     <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
                         <StackPanel>
-                            <TextBlock Text="Payment Method" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                            
+                            <TextBlock Text="Payment Method" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                
-                                <Button Grid.Row="0" Grid.Column="0" Content="💵 Cash" Tag="Cash" Click="PaymentMethod_Click" 
-                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="0,0,4,4" x:Name="CashButton"/>
-                                <Button Grid.Row="0" Grid.Column="1" Content="💳 Card" Tag="Card" Click="PaymentMethod_Click" 
-                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="4,0,0,4" x:Name="CardButton"/>
-                                <Button Grid.Row="1" Grid.Column="0" Content="📱 Mobile" Tag="Mobile" Click="PaymentMethod_Click" 
-                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="0,4,4,0" x:Name="MobileButton"/>
-                                <Button Grid.Row="1" Grid.Column="1" Content="🔀 Split" Tag="Split" Click="PaymentMethod_Click" 
-                                        Background="#F0F0F0" Foreground="Black" Padding="12,8" FontSize="14" Margin="4,4,0,0" x:Name="SplitButton"/>
+                                 
+                                <Button x:Name="CashButton" Grid.Row="0" Grid.Column="0" Content="💵 Cash" Tag="Cash" 
+                                        Margin="0,0,4,4" Height="50" Click="PaymentMethod_Click"
+                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
+                                <Button x:Name="CardButton" Grid.Row="0" Grid.Column="1" Content="💳 Card" Tag="Card" 
+                                        Margin="4,0,0,4" Height="50" Click="PaymentMethod_Click"
+                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
+                                <Button x:Name="MobileButton" Grid.Row="1" Grid.Column="0" Content="📱 Mobile" Tag="Mobile" 
+                                        Margin="0,4,4,0" Height="50" Click="PaymentMethod_Click"
+                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
+                                <Button x:Name="SplitButton" Grid.Row="1" Grid.Column="1" Content="🔄 Split" Tag="Split" 
+                                        Margin="4,4,0,0" Height="50" Click="PaymentMethod_Click"
+                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
+                                <Button x:Name="WalletButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Content="💰 Wallet" Tag="Wallet" 
+                                        Margin="0,4,0,0" Height="50" Click="PaymentMethod_Click"
+                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"
+                                        IsEnabled="False"/>
                             </Grid>
+                        </StackPanel>
+                    </Border>
 
-                            <!-- Split Payment Panel -->
-                            <Border x:Name="SplitPaymentPanel" Padding="12" Margin="0,8,0,0" 
-                                    BorderBrush="#E0E0E0" BorderThickness="1" Visibility="Collapsed">
+                    <!-- Split Payment Panel -->
+                    <Border x:Name="SplitPaymentPanel" Padding="12" Margin="0,8,0,0" 
+                            BorderBrush="#E0E0E0" BorderThickness="1" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Split Amounts" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                             
+                            <StackPanel Spacing="4">
                                 <StackPanel>
-                                    <TextBlock Text="Split Amounts" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    
-                                    <StackPanel Spacing="4">
-                                        <StackPanel>
-                                            <TextBlock Text="Cash" FontSize="12" Foreground="Gray"/>
-                                            <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                        <StackPanel>
-                                            <TextBlock Text="Card" FontSize="12" Foreground="Gray"/>
-                                            <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                        <StackPanel>
-                                            <TextBlock Text="Digital" FontSize="12" Foreground="Gray"/>
-                                            <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                    
-                                    <Border Padding="8" Margin="0,8,0,0">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="Split Total:" FontSize="12" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="1" x:Name="SplitTotalText" Text="$0.00" FontSize="12" FontWeight="Bold"/>
-                                        </Grid>
-                                    </Border>
+                                    <TextBlock Text="Cash" FontSize="12" Foreground="Gray"/>
+                                    <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
                                 </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Card" FontSize="12" Foreground="Gray"/>
+                                    <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Digital" FontSize="12" Foreground="Gray"/>
+                                    <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                                
+                            <Border Padding="8" Margin="0,8,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Split Total:" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="1" x:Name="SplitTotalText" Text="$0.00" FontSize="12" FontWeight="Bold"/>
+                                </Grid>
                             </Border>
                         </StackPanel>
                     </Border>

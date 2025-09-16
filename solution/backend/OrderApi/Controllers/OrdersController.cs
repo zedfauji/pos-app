@@ -45,6 +45,13 @@ public class OrdersController : ControllerBase
         return Ok(list);
     }
 
+    [HttpGet("by-billing/{billingId:guid}/items")]
+    public async Task<ActionResult<IReadOnlyList<OrderItemDto>>> GetItemsByBillingAsync([FromRoute] Guid billingId, CancellationToken ct)
+    {
+        var items = await _service.GetOrderItemsByBillingIdAsync(billingId, ct);
+        return Ok(items);
+    }
+
     [HttpPost("{orderId:long}/items")]
     public async Task<ActionResult<OrderDto>> AddItemsAsync([FromRoute] long orderId, [FromBody] IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
     {

@@ -46,7 +46,10 @@ namespace MagiDesk.Frontend
         public static Services.SettingsApiService? SettingsApi { get; private set; }
         public static Services.HeartbeatService? HeartbeatService { get; private set; }
         public static Services.InventorySettingsService? InventorySettingsService { get; private set; }
+        public static Services.CustomerApiService? CustomerApi { get; private set; }
         public static IServiceProvider? Services { get; private set; }
+        
+        public IServiceProvider ServiceProvider => Services ?? throw new InvalidOperationException("Services not initialized");
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -247,11 +250,14 @@ namespace MagiDesk.Frontend
                 ordersBase = config["OrderApi:BaseUrl"] ?? backendBase;
                 vendorOrdersBase = config["VendorOrdersApi:BaseUrl"] ?? backendBase;
                 usersBase = config["UsersApi:BaseUrl"] ?? "https://magidesk-users-23sbzjsxaq-pv.a.run.app";
+                var customerBase = config["CustomerApi:BaseUrl"] ?? "http://localhost:5001";
                 
                 // Debug logging
                 Log.Info($"Configuration loaded:");
                 Log.Info($"  UsersApi:BaseUrl = {config["UsersApi:BaseUrl"]}");
                 Log.Info($"  usersBase = {usersBase}");
+                Log.Info($"  CustomerApi:BaseUrl = {config["CustomerApi:BaseUrl"]}");
+                Log.Info($"  customerBase = {customerBase}");
                 Api = new Services.ApiService(backendBase, inventoryBase);
 
                 var inner = new HttpClientHandler();
@@ -307,6 +313,12 @@ namespace MagiDesk.Frontend
                 innerBulk.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logBulk = new Services.HttpLoggingHandler(innerBulk);
                 
+                // Initialize CustomerApiService
+                var innerCustomer = new HttpClientHandler();
+                innerCustomer.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logCustomer = new Services.HttpLoggingHandler(innerCustomer);
+                CustomerApi = new Services.CustomerApiService(new HttpClient(logCustomer) { BaseAddress = new Uri(customerBase.TrimEnd('/') + "/") }, new Services.SimpleLogger<Services.CustomerApiService>());
+                
                 // Create service collection for dependency injection
                 var serviceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
                 serviceCollection.AddSingleton<Services.MenuApiService>(provider => Menu!);
@@ -314,6 +326,11 @@ namespace MagiDesk.Frontend
                     new Services.MenuAnalyticsService(new HttpClient(logAnalytics) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") }));
                 serviceCollection.AddSingleton<Services.MenuBulkOperationService>(provider => 
                     new Services.MenuBulkOperationService(new HttpClient(logBulk) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") }));
+                serviceCollection.AddSingleton<Services.CustomerApiService>(provider => CustomerApi!);
+                serviceCollection.AddSingleton<Microsoft.Extensions.Logging.ILogger<Services.CustomerApiService>>(provider => 
+                    new Services.SimpleLogger<Services.CustomerApiService>());
+                serviceCollection.AddSingleton<Microsoft.Extensions.Logging.ILogger<Views.CustomerManagementPage>>(provider => 
+                    new Services.SimpleLogger<Views.CustomerManagementPage>());
                 
                 Services = serviceCollection.BuildServiceProvider();
             }
@@ -355,6 +372,12 @@ namespace MagiDesk.Frontend
                 innerInventorySettingsFallback.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logInventorySettingsFallback = new Services.HttpLoggingHandler(innerInventorySettingsFallback);
                 InventorySettingsService = new Services.InventorySettingsService(new HttpClient(logInventorySettingsFallback) { BaseAddress = new Uri("https://localhost:7016/") }, new Services.SimpleLogger<Services.InventorySettingsService>());
+                
+                // Initialize CustomerApiService (fallback)
+                var innerCustomerFallback = new HttpClientHandler();
+                innerCustomerFallback.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logCustomerFallback = new Services.HttpLoggingHandler(innerCustomerFallback);
+                CustomerApi = new Services.CustomerApiService(new HttpClient(logCustomerFallback) { BaseAddress = new Uri("http://localhost:5001/") }, new Services.SimpleLogger<Services.CustomerApiService>());
                 
                 // ReceiptService is already initialized in constructor
                 

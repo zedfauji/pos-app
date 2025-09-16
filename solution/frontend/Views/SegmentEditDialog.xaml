@@ -1,0 +1,260 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Views.SegmentEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Segment Details"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    IsPrimaryButtonEnabled="{x:Bind IsFormValid, Mode=OneWay}"
+    MaxWidth="700"
+    MaxHeight="600">
+
+    <ScrollViewer>
+        <StackPanel Spacing="20" Padding="4">
+            <!-- Basic Information -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Basic Information" 
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                
+                <TextBox x:Name="NameTextBox"
+                         Header="Segment Name"
+                         PlaceholderText="Enter segment name"
+                         Text="{x:Bind SegmentName, Mode=TwoWay}"
+                         TextChanged="OnFormFieldChanged"/>
+                
+                <TextBox x:Name="DescriptionTextBox"
+                         Header="Description"
+                         PlaceholderText="Enter segment description"
+                         Text="{x:Bind SegmentDescription, Mode=TwoWay}"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         Height="80"
+                         TextChanged="OnFormFieldChanged"/>
+
+                <CheckBox x:Name="IsActiveCheckBox"
+                          Content="Segment is active"
+                          IsChecked="{x:Bind IsActive, Mode=TwoWay}"
+                          Checked="OnFormFieldChanged"
+                          Unchecked="OnFormFieldChanged"/>
+            </StackPanel>
+
+            <!-- Segmentation Criteria -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Segmentation Criteria" 
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                
+                <!-- Customer Behavior Criteria -->
+                <Expander Header="Customer Behavior" IsExpanded="True">
+                    <StackPanel Spacing="12" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <NumberBox x:Name="MinOrdersNumberBox"
+                                       Grid.Column="0"
+                                       Header="Minimum Orders"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="1000"
+                                       Value="{x:Bind MinOrders, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                            
+                            <NumberBox x:Name="MaxOrdersNumberBox"
+                                       Grid.Column="2"
+                                       Header="Maximum Orders"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="1000"
+                                       Value="{x:Bind MaxOrders, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <NumberBox x:Name="MinSpentNumberBox"
+                                       Grid.Column="0"
+                                       Header="Minimum Total Spent"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="100000"
+                                       Value="{x:Bind MinTotalSpent, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                            
+                            <NumberBox x:Name="MaxSpentNumberBox"
+                                       Grid.Column="2"
+                                       Header="Maximum Total Spent"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="100000"
+                                       Value="{x:Bind MaxTotalSpent, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                        </Grid>
+
+                        <NumberBox x:Name="DaysSinceLastOrderNumberBox"
+                                   Header="Days Since Last Order (Max)"
+                                   PlaceholderText="Any"
+                                   Minimum="0"
+                                   Maximum="365"
+                                   Value="{x:Bind DaysSinceLastOrder, Mode=TwoWay}"
+                                   ValueChanged="OnFormFieldChanged"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Demographics Criteria -->
+                <Expander Header="Demographics">
+                    <StackPanel Spacing="12" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <NumberBox x:Name="MinAgeNumberBox"
+                                       Grid.Column="0"
+                                       Header="Minimum Age"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="120"
+                                       Value="{x:Bind MinAge, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                            
+                            <NumberBox x:Name="MaxAgeNumberBox"
+                                       Grid.Column="2"
+                                       Header="Maximum Age"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="120"
+                                       Value="{x:Bind MaxAge, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                        </Grid>
+
+                        <ComboBox x:Name="GenderComboBox"
+                                  Header="Gender"
+                                  PlaceholderText="Any"
+                                  HorizontalAlignment="Stretch"
+                                  SelectedIndex="{x:Bind SelectedGenderIndex, Mode=TwoWay}"
+                                  SelectionChanged="OnFormFieldChanged">
+                            <ComboBoxItem Content="Any"/>
+                            <ComboBoxItem Content="Male"/>
+                            <ComboBoxItem Content="Female"/>
+                            <ComboBoxItem Content="Other"/>
+                        </ComboBox>
+
+                        <TextBox x:Name="LocationTextBox"
+                                 Header="Location (City/Region)"
+                                 PlaceholderText="Any location"
+                                 Text="{x:Bind Location, Mode=TwoWay}"
+                                 TextChanged="OnFormFieldChanged"/>
+                    </StackPanel>
+                </Expander>
+
+                <!-- Loyalty Program Criteria -->
+                <Expander Header="Loyalty Program">
+                    <StackPanel Spacing="12" Margin="0,12,0,0">
+                        <ComboBox x:Name="MembershipLevelComboBox"
+                                  Header="Membership Level"
+                                  PlaceholderText="Any level"
+                                  HorizontalAlignment="Stretch"
+                                  SelectedIndex="{x:Bind SelectedMembershipLevelIndex, Mode=TwoWay}"
+                                  SelectionChanged="OnFormFieldChanged">
+                            <ComboBoxItem Content="Any"/>
+                            <ComboBoxItem Content="Bronze"/>
+                            <ComboBoxItem Content="Silver"/>
+                            <ComboBoxItem Content="Gold"/>
+                            <ComboBoxItem Content="Platinum"/>
+                        </ComboBox>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <NumberBox x:Name="MinLoyaltyPointsNumberBox"
+                                       Grid.Column="0"
+                                       Header="Minimum Loyalty Points"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="100000"
+                                       Value="{x:Bind MinLoyaltyPoints, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                            
+                            <NumberBox x:Name="MaxLoyaltyPointsNumberBox"
+                                       Grid.Column="2"
+                                       Header="Maximum Loyalty Points"
+                                       PlaceholderText="Any"
+                                       Minimum="0"
+                                       Maximum="100000"
+                                       Value="{x:Bind MaxLoyaltyPoints, Mode=TwoWay}"
+                                       ValueChanged="OnFormFieldChanged"/>
+                        </Grid>
+                    </StackPanel>
+                </Expander>
+            </StackPanel>
+
+            <!-- Preview -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="Segment Preview" 
+                           Style="{ThemeResource SubtitleTextBlockStyle}"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                
+                <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0"
+                                       Text="Estimated Customer Count" 
+                                       Style="{ThemeResource BodyTextBlockStyle}"/>
+                            
+                            <Button Grid.Column="1"
+                                    x:Name="PreviewButton"
+                                    Content="Calculate"
+                                    Style="{ThemeResource DefaultButtonStyle}"
+                                    Click="PreviewButton_Click"/>
+                        </Grid>
+                        
+                        <TextBlock x:Name="EstimatedCountText"
+                                   Text="Click 'Calculate' to see estimated customer count"
+                                   Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        
+                        <ProgressBar x:Name="PreviewProgressBar"
+                                     IsIndeterminate="True"
+                                     Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Validation Messages -->
+            <InfoBar x:Name="ValidationInfoBar"
+                     Severity="Error"
+                     IsOpen="False"
+                     Message="Please fill in all required fields"/>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

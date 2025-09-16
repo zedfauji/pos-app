@@ -160,6 +160,40 @@ public sealed partial class OrderRepository : IOrderRepository
         return outList;
     }
 
+    public async Task<IReadOnlyList<OrderItemDto>> GetOrderItemsByBillingIdAsync(Guid billingId, CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand(@"
+            SELECT oi.order_item_id, oi.menu_item_id, oi.combo_id, oi.quantity, oi.base_price, oi.vendor_price, 
+                   oi.price_delta, oi.line_discount, oi.line_total, oi.profit,
+                   COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name
+            FROM ord.order_items oi
+            INNER JOIN ord.orders o ON oi.order_id = o.order_id
+            LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
+            WHERE o.billing_id = @billingId AND oi.is_deleted = false
+            ORDER BY oi.created_at", conn);
+        cmd.Parameters.AddWithValue("@billingId", billingId);
+        
+        var items = new List<OrderItemDto>();
+        await using var rdr = await cmd.ExecuteReaderAsync(ct);
+        while (await rdr.ReadAsync(ct))
+        {
+            var item = new OrderItemDto(
+                Id: rdr.GetInt64(0),
+                MenuItemId: rdr.IsDBNull(1) ? null : rdr.GetInt64(1),
+                ComboId: rdr.IsDBNull(2) ? null : rdr.GetInt64(2),
+                Quantity: rdr.GetInt32(3),
+                DeliveredQuantity: 0, // Not tracked in this query
+                BasePrice: rdr.GetDecimal(4),
+                PriceDelta: rdr.GetDecimal(6),
+                LineTotal: rdr.GetDecimal(8),
+                Profit: rdr.GetDecimal(9)
+            );
+            items.Add(item);
+        }
+        return items;
+    }
+
     public async Task AddOrderItemsAsync(long orderId, IReadOnlyList<OrderItemDto> items, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);

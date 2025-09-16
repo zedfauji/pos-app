@@ -13,6 +13,8 @@
         <!-- Converters -->
         <converters:StringToBrushConverter x:Key="StringToBrushConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:CurrencyConverter x:Key="CurrencyConverter"/>
+        <converters:ItemCountConverter x:Key="ItemCountConverter"/>
         
         <!-- Modern Color Palette -->
         <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
@@ -283,7 +285,7 @@
                                 <ColumnDefinition Width="80"/>
                                 <ColumnDefinition Width="200"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Bill ID" FontWeight="SemiBold" 
+                            <TextBlock Grid.Column="0" Text="Billing ID" FontWeight="SemiBold" 
                                      Foreground="{StaticResource TextPrimaryBrush}"/>
                             <TextBlock Grid.Column="1" Text="Table" FontWeight="SemiBold" 
                                      Foreground="{StaticResource TextPrimaryBrush}"/>
@@ -304,68 +306,117 @@
                     
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <Grid Padding="16,12" Background="Transparent">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="120"/>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="80"/>
-                                    <ColumnDefinition Width="200"/>
-                                </Grid.ColumnDefinitions>
+                            <Expander>
+                                <Expander.Header>
+                                    <Grid Padding="16,12" Background="Transparent">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="200"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Billing ID -->
+                                        <TextBlock Grid.Column="0" Text="{Binding ShortBillingId}" 
+                                                 FontFamily="Consolas" FontSize="12"
+                                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        
+                                        <!-- Table -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="{Binding TableDisplayText}" 
+                                                     FontWeight="SemiBold"
+                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding MovementIndicator}" 
+                                                     FontSize="10"
+                                                     VerticalAlignment="Center"
+                                                     ToolTipService.ToolTip="{Binding MovementTooltip}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Server -->
+                                        <TextBlock Grid.Column="2" Text="{Binding ServerName}" 
+                                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        
+                                        <!-- Duration -->
+                                        <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
+                                                 FontFamily="Consolas" FontSize="12"
+                                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        
+                                        <!-- Amount -->
+                                        <TextBlock Grid.Column="4" Text="{Binding AmountText}" 
+                                                 FontWeight="SemiBold" FontSize="14"
+                                                 Foreground="{StaticResource SuccessBrush}"/>
+                                        
+                                        <!-- Status -->
+                                        <Border Grid.Column="5" Style="{StaticResource StatusBadgeStyle}"
+                                              Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}">
+                                            <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold" 
+                                                     Foreground="White"/>
+                                        </Border>
+                                        
+                                        <!-- Start Time -->
+                                        <TextBlock Grid.Column="6" Text="{Binding StartLocal}" 
+                                                 FontSize="11" FontFamily="Consolas"
+                                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        
+                                        <!-- Actions -->
+                                        <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="4">
+                                            <Button Content="View" FontSize="12" Padding="8,4" 
+                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Click="ViewReceipt_Click" Tag="{Binding}"/>
+                                            <Button Content="Print" FontSize="12" Padding="8,4" 
+                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Click="Reprint_Click" Tag="{Binding}"/>
+                                            <Button Content="Close" FontSize="12" Padding="8,4" 
+                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Click="CloseBill_Click" Tag="{Binding}"
+                                                  Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Expander.Header>
                                 
-                                <!-- Bill ID -->
-                                <TextBlock Grid.Column="0" Text="{Binding ShortBillId}" 
-                                         FontFamily="Consolas" FontSize="12"
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                
-                                <!-- Table -->
-                                <TextBlock Grid.Column="1" Text="{Binding TableLabel}" 
-                                         FontWeight="SemiBold"
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                
-                                <!-- Server -->
-                                <TextBlock Grid.Column="2" Text="{Binding ServerName}" 
-                                         Foreground="{StaticResource TextSecondaryBrush}"/>
-                                
-                                <!-- Duration -->
-                                <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
-                                         FontFamily="Consolas" FontSize="12"
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                
-                                <!-- Amount -->
-                                <TextBlock Grid.Column="4" Text="{Binding AmountText}" 
-                                         FontWeight="SemiBold" FontSize="14"
-                                         Foreground="{StaticResource SuccessBrush}"/>
-                                
-                                <!-- Status -->
-                                <Border Grid.Column="5" Style="{StaticResource StatusBadgeStyle}"
-                                      Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}">
-                                    <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold" 
-                                             Foreground="White"/>
-                                </Border>
-                                
-                                <!-- Start Time -->
-                                <TextBlock Grid.Column="6" Text="{Binding StartLocal}" 
-                                         FontSize="11" FontFamily="Consolas"
-                                         Foreground="{StaticResource TextSecondaryBrush}"/>
-                                
-                                <!-- Actions -->
-                                <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="4">
-                                    <Button Content="View" FontSize="12" Padding="8,4" 
-                                          Style="{StaticResource SecondaryButtonStyle}"
-                                          Click="ViewReceipt_Click" Tag="{Binding}"/>
-                                    <Button Content="Print" FontSize="12" Padding="8,4" 
-                                          Style="{StaticResource SecondaryButtonStyle}"
-                                          Click="Reprint_Click" Tag="{Binding}"/>
-                                    <Button Content="Close" FontSize="12" Padding="8,4" 
-                                          Style="{StaticResource SecondaryButtonStyle}"
-                                          Click="CloseBill_Click" Tag="{Binding}"
-                                          Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
-                                </StackPanel>
-                            </Grid>
+                                <!-- Order Items Details -->
+                                <Expander.Content>
+                                    <Border Style="{StaticResource ModernCardStyle}" Margin="20,8,8,8" Background="#1A1A1A">
+                                        <StackPanel>
+                                            <TextBlock Text="Order Items" FontWeight="SemiBold" FontSize="14" 
+                                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,4" Padding="12,8" Background="#2A2A2A" CornerRadius="6">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="80"/>
+                                                                <ColumnDefinition Width="100"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <TextBlock Grid.Column="0" Text="{Binding name}" 
+                                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding quantity}" 
+                                                                     HorizontalAlignment="Center"
+                                                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding price, Converter={StaticResource CurrencyConverter}}" 
+                                                                     HorizontalAlignment="Right" FontWeight="SemiBold"
+                                                                     Foreground="{StaticResource SuccessBrush}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            
+                                            <!-- Show count if no items to expand -->
+                                            <TextBlock Text="{Binding Items.Count, Converter={StaticResource ItemCountConverter}}" 
+                                                     FontSize="12" FontStyle="Italic"
+                                                     Foreground="{StaticResource TextSecondaryBrush}"
+                                                     HorizontalAlignment="Right" Margin="0,8,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Expander.Content>
+                            </Expander>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>

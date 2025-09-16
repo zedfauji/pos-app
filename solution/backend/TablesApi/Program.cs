@@ -707,7 +707,7 @@ app.MapGet("/bills", async (string? from, string? to, string? table, string? ser
     if (DateTime.TryParse(to, out var toDt)) { where.Add("end_time <= @to"); cmd.Parameters.AddWithValue("@to", toDt.ToUniversalTime()); }
 
     var whereSql = where.Count > 0 ? (" WHERE " + string.Join(" AND ", where)) : string.Empty;
-    cmd.CommandText = $@"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, is_settled, payment_state
+    cmd.CommandText = $@"SELECT bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, session_id, billing_id, is_settled, payment_state
                          FROM public.bills{whereSql}
                          ORDER BY end_time DESC
                          LIMIT 500";
@@ -733,6 +733,17 @@ app.MapGet("/bills", async (string? from, string? to, string? table, string? ser
         br.TimeCost = rdr.IsDBNull(8) ? 0m : rdr.GetDecimal(8);
         br.ItemsCost = rdr.IsDBNull(9) ? 0m : rdr.GetDecimal(9);
         br.TotalAmount = rdr.IsDBNull(10) ? 0m : rdr.GetDecimal(10);
+        
+        // Map session_id and billing_id fields (indices 11 and 12)
+        if (!rdr.IsDBNull(11))
+        {
+            br.SessionId = rdr.GetFieldValue<Guid>(11);
+        }
+        if (!rdr.IsDBNull(12))
+        {
+            br.BillingId = rdr.GetFieldValue<Guid>(12);
+        }
+        
         // extra fields are available to clients that need them
         list.Add(br);
     }

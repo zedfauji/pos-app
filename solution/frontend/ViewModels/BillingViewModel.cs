@@ -9,12 +9,14 @@ using MagiDesk.Frontend.Services;
 using MagiDesk.Shared.DTOs.Tables;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
+using Npgsql;
 
 namespace MagiDesk.Frontend.ViewModels
 {
     public sealed class BillingViewModel : INotifyPropertyChanged, IDisposable
     {
         private readonly TableRepository _tableRepository;
+        private readonly BillingService _billingService;
         private readonly ILogger<BillingViewModel>? _logger;
         private readonly DispatcherQueue _dispatcher;
         private bool _disposed = false;
@@ -24,6 +26,7 @@ namespace MagiDesk.Frontend.ViewModels
         public BillingViewModel(TableRepository tableRepository, ILogger<BillingViewModel>? logger = null)
         {
             _tableRepository = tableRepository ?? throw new ArgumentNullException(nameof(tableRepository));
+            _billingService = new BillingService();
             _logger = logger;
             _dispatcher = DispatcherQueue.GetForCurrentThread();
             
@@ -227,6 +230,60 @@ namespace MagiDesk.Frontend.ViewModels
 
         #region Methods
 
+        private async Task<List<BillResult>> GetBillingDataFromOrdersAsync()
+        {
+            _logger?.LogInformation("Getting billing data via API and aggregating order items");
+            
+            // Get basic billing data from API
+            var bills = await _tableRepository.GetBillsAsync(
+                FromDate, 
+                ToDate, 
+                string.IsNullOrWhiteSpace(TableFilter) ? null : TableFilter,
+                string.IsNullOrWhiteSpace(ServerFilter) ? null : ServerFilter);
+
+            _logger?.LogInformation("Retrieved {BillCount} bills from TableRepository API", bills.Count);
+
+            // For each bill, get the detailed order items using BillingService
+            _logger?.LogInformation("Starting to process {BillCount} bills for order items", bills.Count);
+            
+            foreach (var bill in bills)
+            {
+                System.Diagnostics.Debug.WriteLine($"Processing bill: BillingId={bill.BillingId}, TableLabel={bill.TableLabel}, TotalAmount={bill.TotalAmount}");
+                _logger?.LogInformation("Processing bill: BillingId={BillingId}, TableLabel={TableLabel}, TotalAmount={TotalAmount}", 
+                    bill.BillingId, bill.TableLabel, bill.TotalAmount);
+                    
+                if (bill.BillingId != null && bill.BillingId != Guid.Empty)
+                {
+                    try
+                    {
+                        System.Diagnostics.Debug.WriteLine($"About to call BillingService.GetOrderItemsByBillingIdAsync for {bill.BillingId}");
+                        _logger?.LogInformation("Calling BillingService.GetOrderItemsByBillingIdAsync for {BillingId}", bill.BillingId);
+                        var orderItems = await _billingService.GetOrderItemsByBillingIdAsync(bill.BillingId.Value);
+                        bill.Items = orderItems ?? new List<ItemLine>();
+                        System.Diagnostics.Debug.WriteLine($"Got {bill.Items.Count} items for billing {bill.BillingId}");
+                        _logger?.LogInformation("Successfully added {ItemCount} items to billing {BillingId}. Items: {@Items}", 
+                            bill.Items.Count, bill.BillingId, bill.Items.Take(3).Select(i => new { i.itemId, i.name, i.quantity, i.price }));
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ERROR getting items for billing {bill.BillingId}: {ex.Message}");
+                        _logger?.LogError(ex, "Failed to get order items for billing {BillingId}: {ErrorMessage}", bill.BillingId, ex.Message);
+                        bill.Items = new List<ItemLine>();
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Bill has null or empty BillingId: {bill.TableLabel}");
+                    _logger?.LogWarning("Bill has null or empty BillingId: {BillInfo}", new { bill.TableLabel, bill.TotalAmount, bill.StartTime });
+                    bill.Items = new List<ItemLine>();
+                }
+            }
+            
+            _logger?.LogInformation("Finished processing all bills for order items");
+
+            return bills;
+        }
+
         public async Task LoadBillsAsync()
         {
             try
@@ -234,13 +291,25 @@ namespace MagiDesk.Frontend.ViewModels
                 IsLoading = true;
                 ErrorMessage = null;
 
-                _logger?.LogInformation("Loading bills from {FromDate} to {ToDate}", FromDate, ToDate);
+                _logger?.LogInformation("Starting LoadBillsAsync - From: {FromDate} to {ToDate}", FromDate, ToDate);
 
-                var bills = await _tableRepository.GetBillsAsync(
-                    FromDate, 
-                    ToDate, 
-                    string.IsNullOrWhiteSpace(TableFilter) ? null : TableFilter,
-                    string.IsNullOrWhiteSpace(ServerFilter) ? null : ServerFilter);
+                // Verify BillingService is initialized
+                if (_billingService == null)
+                {
+                    throw new InvalidOperationException("BillingService is not initialized");
+                }
+
+                var connectionString = _billingService.GetConnectionString();
+                _logger?.LogInformation("BillingService connection string length: {Length}", connectionString?.Length ?? 0);
+
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    throw new InvalidOperationException("Database connection string is empty or null");
+                }
+
+                // Get billing data directly from database by aggregating orders
+                var bills = await GetBillingDataFromOrdersAsync();
+                _logger?.LogInformation("Retrieved {BillCount} bills from database", bills.Count);
 
                 _dispatcher.TryEnqueue(() =>
                 {
@@ -252,12 +321,23 @@ namespace MagiDesk.Frontend.ViewModels
                     
                     CalculateAnalytics();
                     ApplyFiltersInternal();
+                    _logger?.LogInformation("UI updated with {BillCount} bills", Bills.Count);
                 });
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Failed to load bills");
-                ErrorMessage = $"Failed to load bills: {ex.Message}";
+                _logger?.LogError(ex, "LoadBillsAsync failed - Exception: {ExceptionType}, Message: {ExceptionMessage}", 
+                    ex.GetType().Name, ex.Message);
+                _logger?.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+                ErrorMessage = $"Failed to load bill details: {ex.Message}";
+                
+                // Also log inner exceptions if any
+                var innerEx = ex.InnerException;
+                while (innerEx != null)
+                {
+                    _logger?.LogError("Inner exception: {InnerType} - {InnerMessage}", innerEx.GetType().Name, innerEx.Message);
+                    innerEx = innerEx.InnerException;
+                }
             }
             finally
             {
@@ -400,7 +480,50 @@ namespace MagiDesk.Frontend.ViewModels
         {
             try
             {
-                return await _tableRepository.GetBillByIdAsync(billId);
+                var bill = await _tableRepository.GetBillByIdAsync(billId);
+                if (bill == null) return null;
+                
+                // Fetch order items if we have a billing ID
+                if (bill.BillingId != null && bill.BillingId != Guid.Empty)
+                {
+                    try
+                    {
+                        _logger?.LogInformation("Fetching order items for bill details - BillingId: {BillingId}", bill.BillingId);
+                        var orderItems = await _billingService.GetOrderItemsByBillingIdAsync(bill.BillingId.Value);
+                        bill.Items = orderItems ?? new List<ItemLine>();
+                        _logger?.LogInformation("Fetched {ItemCount} order items for bill details", bill.Items.Count);
+                        
+                        // Debug: Log item prices to see what we're getting
+                        decimal calculatedTotal = 0;
+                        foreach (var item in bill.Items)
+                        {
+                            var itemTotal = item.price * item.quantity;
+                            calculatedTotal += itemTotal;
+                            _logger?.LogInformation("Item: {Name}, Qty: {Qty}, Price: {Price}, Total: {Total}", 
+                                item.name, item.quantity, item.price, itemTotal);
+                        }
+                        _logger?.LogInformation("Calculated items total: {CalculatedTotal}, Original bill total: {OriginalTotal}", 
+                            calculatedTotal, bill.TotalAmount);
+                        
+                        // Update the bill totals with calculated values
+                        bill.ItemsCost = calculatedTotal;
+                        bill.TotalAmount = bill.ItemsCost + bill.TimeCost;
+                        _logger?.LogInformation("Updated bill totals - ItemsCost: {ItemsCost}, TotalAmount: {TotalAmount}", 
+                            bill.ItemsCost, bill.TotalAmount);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogError(ex, "Failed to fetch order items for bill details - BillingId: {BillingId}", bill.BillingId);
+                        bill.Items = new List<ItemLine>();
+                    }
+                }
+                else
+                {
+                    _logger?.LogWarning("Bill {BillId} has no BillingId, cannot fetch order items", billId);
+                    bill.Items = new List<ItemLine>();
+                }
+                
+                return bill;
             }
             catch (Exception ex)
             {
@@ -465,18 +588,39 @@ namespace MagiDesk.Frontend.ViewModels
 
         public BillItemViewModel(BillResult bill)
         {
+            // Use BillingId as the primary identifier, fall back to BillId if needed
+            BillingId = bill.BillingId ?? bill.BillId;
             BillId = bill.BillId;
             TableLabel = bill.TableLabel;
             ServerName = bill.ServerName;
             TotalTimeMinutes = bill.TotalTimeMinutes;
             StartTime = bill.StartTime;
             EndTime = bill.EndTime;
-            Amount = bill.TotalAmount;
+            SessionId = bill.SessionId;
+            Items = bill.Items ?? new List<ItemLine>();
+            
+            // Calculate total from actual items instead of using pre-calculated amount
+            Amount = CalculateTotal();
+            
             // For now, assume bills are closed if they have an EndTime
             IsClosed = bill.EndTime != default(DateTime);
+            
+            // Session movement tracking
+            OriginalTableLabel = bill.OriginalTableLabel ?? bill.TableLabel;
+            HasSessionMoved = !string.IsNullOrEmpty(bill.OriginalTableLabel) && 
+                             bill.OriginalTableLabel != bill.TableLabel;
         }
 
+        private decimal CalculateTotal()
+        {
+            return Items?.Sum(item => item.price * item.quantity) ?? 0m;
+        }
+
+        public Guid BillingId { get; }
         public Guid BillId { get; }
+        public Guid? SessionId { get; }
+        public List<ItemLine> Items { get; }
+        public string ShortBillingId => BillingId.ToString()[..8];
         public string ShortBillId => BillId.ToString()[..8];
         public string TableLabel { get; }
         public string ServerName { get; }
@@ -485,6 +629,10 @@ namespace MagiDesk.Frontend.ViewModels
         public DateTime EndTime { get; }
         public decimal Amount { get; }
         public bool IsClosed { get; set; }
+        
+        // Session movement tracking
+        public string OriginalTableLabel { get; }
+        public bool HasSessionMoved { get; }
 
         public string StartLocal => StartTime.ToLocalTime().ToString("MM/dd HH:mm");
         public string EndLocal => EndTime.ToLocalTime().ToString("MM/dd HH:mm");
@@ -492,6 +640,11 @@ namespace MagiDesk.Frontend.ViewModels
         public string AmountText => Amount.ToString("C");
         public string StatusText => IsClosed ? "Closed" : "Open";
         public string StatusColor => IsClosed ? "#107C10" : "#FF8C00";
+        
+        // Session movement display properties
+        public string TableDisplayText => HasSessionMoved ? $"{OriginalTableLabel} → {TableLabel}" : TableLabel;
+        public string MovementIndicator => HasSessionMoved ? "📍" : "";
+        public string MovementTooltip => HasSessionMoved ? $"Session moved from {OriginalTableLabel} to {TableLabel}" : "";
 
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {

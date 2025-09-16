@@ -510,6 +510,33 @@ public sealed partial class SettingsPage : Page
         }
     }
 
+    private async void ReceiptFormatDesigner_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Create a new window for the Receipt Format Designer
+            var newWindow = new Window
+            {
+                Title = "Receipt Format Designer - MagiDesk POS",
+                Content = new ReceiptFormatDesignerPage()
+            };
+            
+            // Set window size
+            newWindow.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
+            
+            // Activate the window
+            newWindow.Activate();
+            
+            _logger.LogInformation("Opened Receipt Format Designer in new window");
+            ShowStatusMessage("Receipt Format Designer opened in new window");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error opening Receipt Format Designer");
+            ShowStatusMessage($"Error opening Receipt Format Designer: {ex.Message}", "Error");
+        }
+    }
+
     private async void AuditRefresh_Click(object sender, RoutedEventArgs e)
     {
         try

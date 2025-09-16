@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="MagiDesk.Frontend.Views.CustomerDetailsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style x:Key="StatCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+        <Grid MaxWidth="1200" HorizontalAlignment="Center" Padding="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="24,16" CornerRadius="8" Margin="0,0,0,24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Back Button -->
+                    <Button Grid.Column="0" 
+                            x:Name="BackButton"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="8"
+                            Margin="0,0,16,0"
+                            Click="BackButton_Click">
+                        <FontIcon Glyph="&#xE72B;" FontSize="16"/>
+                    </Button>
+
+                    <!-- Customer Avatar and Info -->
+                    <Border Grid.Column="1" 
+                            Width="64" 
+                            Height="64" 
+                            CornerRadius="32" 
+                            Background="{ThemeResource AccentFillColorDefaultBrush}"
+                            Margin="0,0,16,0">
+                        <TextBlock x:Name="CustomerInitialsText" 
+                                   Text="--" 
+                                   FontSize="24" 
+                                   FontWeight="Bold" 
+                                   Foreground="White" 
+                                   HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <TextBlock x:Name="CustomerNameText" 
+                                   Text="Loading..." 
+                                   FontSize="24" 
+                                   FontWeight="Bold" 
+                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Border x:Name="MembershipBadge" 
+                                    Background="#6B7280" 
+                                    CornerRadius="4" 
+                                    Padding="8,4"
+                                    Margin="0,0,12,0">
+                                <TextBlock x:Name="MembershipLevelText" 
+                                           Text="Standard" 
+                                           FontSize="12" 
+                                           Foreground="White"/>
+                            </Border>
+                            <TextBlock x:Name="CustomerStatusText" 
+                                       Text="Active" 
+                                       FontSize="14" 
+                                       Foreground="#10B981" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="EditCustomerButton" 
+                                Style="{StaticResource ActionButtonStyle}"
+                                Click="EditCustomerButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <FontIcon Glyph="&#xE70F;" FontSize="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="Edit"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="ManageWalletButton" 
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Click="ManageWalletButton_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <FontIcon Glyph="&#xE8C7;" FontSize="16" Margin="0,0,8,0"/>
+                                <TextBlock Text="Wallet"/>
+                            </StackPanel>
+                        </Button>
+                        <ProgressRing x:Name="LoadingRing" 
+                                      Width="24" 
+                                      Height="24" 
+                                      IsActive="False"
+                                      Margin="16,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Statistics Cards -->
+            <ScrollViewer Grid.Row="1" 
+                          HorizontalScrollMode="Auto" 
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollMode="Disabled"
+                          VerticalScrollBarVisibility="Disabled"
+                          Margin="0,0,0,24">
+                <StackPanel Orientation="Horizontal">
+                    <Border Style="{StaticResource StatCardStyle}" MinWidth="180">
+                        <StackPanel>
+                            <TextBlock x:Name="TotalSpentText" 
+                                       Text="$0.00" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"/>
+                            <TextBlock Text="Total Spent" 
+                                       FontSize="12" 
+                                       Foreground="White" 
+                                       Opacity="0.9"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource StatCardStyle}" MinWidth="180">
+                        <StackPanel>
+                            <TextBlock x:Name="LoyaltyPointsText" 
+                                       Text="0 pts" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"/>
+                            <TextBlock Text="Loyalty Points" 
+                                       FontSize="12" 
+                                       Foreground="White" 
+                                       Opacity="0.9"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource StatCardStyle}" MinWidth="180">
+                        <StackPanel>
+                            <TextBlock x:Name="WalletBalanceText" 
+                                       Text="$0.00" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"/>
+                            <TextBlock Text="Wallet Balance" 
+                                       FontSize="12" 
+                                       Foreground="White" 
+                                       Opacity="0.9"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource StatCardStyle}" MinWidth="180">
+                        <StackPanel>
+                            <TextBlock x:Name="TotalVisitsText" 
+                                       Text="0" 
+                                       FontSize="24" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"/>
+                            <TextBlock Text="Total Visits" 
+                                       FontSize="12" 
+                                       Foreground="White" 
+                                       Opacity="0.9"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Main Content -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="400"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left Column - Customer Information -->
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                    <!-- Personal Information -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Personal Information" 
+                                       FontSize="18" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,16"/>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Full Name:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="FullNameText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Email:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="EmailText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Phone:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="PhoneText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Date of Birth:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="DateOfBirthText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Member Since:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="MemberSinceText" Text="--"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Membership Information -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Membership Information" 
+                                       FontSize="18" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,16"/>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="120"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Level:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="MembershipDetailsText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Expires:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="MembershipExpiryText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Discount:" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="DiscountText" Text="--" Margin="0,0,0,8"/>
+
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Multiplier:" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="LoyaltyMultiplierText" Text="--"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Notes -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Notes" 
+                                       FontSize="18" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,16"/>
+                            <TextBlock x:Name="NotesText" 
+                                       Text="No notes available" 
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Column - Transactions and Activity -->
+                <StackPanel Grid.Column="1">
+                    <!-- Recent Transactions -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" 
+                                           Text="Recent Wallet Transactions" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold"/>
+                                
+                                <Button Grid.Column="1" 
+                                        x:Name="ViewAllTransactionsButton"
+                                        Content="View All" 
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Click="ViewAllTransactionsButton_Click"/>
+                            </Grid>
+
+                            <ListView x:Name="WalletTransactionsListView" 
+                                      MaxHeight="300"
+                                      SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="local:WalletTransactionItemViewModel">
+                                        <Grid Padding="0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0" 
+                                                    Width="32" 
+                                                    Height="32" 
+                                                    CornerRadius="16" 
+                                                    Background="{x:Bind TypeColor}"
+                                                    Margin="0,0,12,0">
+                                                <FontIcon Glyph="{x:Bind TypeIcon}" 
+                                                          FontSize="14" 
+                                                          Foreground="White"/>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{x:Bind Description}" 
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{x:Bind DateText}" 
+                                                           FontSize="12" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="2" 
+                                                       Text="{x:Bind AmountText}" 
+                                                       FontWeight="SemiBold" 
+                                                       Foreground="{x:Bind AmountColor}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <TextBlock x:Name="NoTransactionsText" 
+                                       Text="No wallet transactions found" 
+                                       HorizontalAlignment="Center" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       Visibility="Collapsed"
+                                       Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Loyalty Points History -->
+                    <Border Style="{StaticResource SectionCardStyle}">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" 
+                                           Text="Recent Loyalty Activity" 
+                                           FontSize="18" 
+                                           FontWeight="SemiBold"/>
+                                
+                                <Button Grid.Column="1" 
+                                        x:Name="ViewAllLoyaltyButton"
+                                        Content="View All" 
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Click="ViewAllLoyaltyButton_Click"/>
+                            </Grid>
+
+                            <ListView x:Name="LoyaltyTransactionsListView" 
+                                      MaxHeight="300"
+                                      SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="local:LoyaltyTransactionItemViewModel">
+                                        <Grid Padding="0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0" 
+                                                    Width="32" 
+                                                    Height="32" 
+                                                    CornerRadius="16" 
+                                                    Background="{x:Bind TypeColor}"
+                                                    Margin="0,0,12,0">
+                                                <FontIcon Glyph="{x:Bind TypeIcon}" 
+                                                          FontSize="14" 
+                                                          Foreground="White"/>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{x:Bind Description}" 
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{x:Bind DateText}" 
+                                                           FontSize="12" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="2" 
+                                                       Text="{x:Bind PointsText}" 
+                                                       FontWeight="SemiBold" 
+                                                       Foreground="{x:Bind PointsColor}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <TextBlock x:Name="NoLoyaltyText" 
+                                       Text="No loyalty transactions found" 
+                                       HorizontalAlignment="Center" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       Visibility="Collapsed"
+                                       Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</Page>

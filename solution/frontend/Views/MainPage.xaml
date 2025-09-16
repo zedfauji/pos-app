@@ -44,7 +44,7 @@
 
                 <!-- Top-level operations -->
                 <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
-                <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="List"/>
+                <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="Document"/>
                 <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
                 <NavigationViewItem Content="Payments" Tag="PaymentPage" Icon="Shop">
                     <NavigationViewItem.MenuItems>
@@ -59,6 +59,17 @@
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Enhanced Menu" Tag="EnhancedMenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Customers" Tag="CustomerManagementPage" Icon="Contact">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="Customer Management" Tag="CustomerManagementPage" Icon="Contact"/>
+                        <NavigationViewItem Content="Customer Dashboard" Tag="CustomerDashboardPage" Icon="ContactInfo"/>
+                        <NavigationViewItem Content="Campaign Management" Tag="CampaignManagementPage" Icon="Flag"/>
+                        <NavigationViewItem Content="Customer Segments" Tag="SegmentDashboardPage" Icon="People"/>
+                        <NavigationViewItemSeparator/>
+                        <NavigationViewItem Content="Discount Management" Tag="DiscountManagementPage" Icon="Shop"/>
+                        <NavigationViewItem Content="Discount System Demo" Tag="DiscountDemoPage" Icon="Play"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
                 <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
                 <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
                 <NavigationViewItem Content="Orders Analytics" Tag="OrdersPage" Icon="Document"/>

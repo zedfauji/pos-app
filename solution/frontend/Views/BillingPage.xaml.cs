@@ -152,10 +152,16 @@ public sealed partial class BillingPage : Page
         return null;
     }
 
+    private static bool _isBillSummaryDialogOpen = false;
+
     private async Task ShowBillSummaryDialog(BillResult bill)
     {
+        // Prevent multiple dialogs from opening simultaneously
+        if (_isBillSummaryDialogOpen) return;
+        
         try
         {
+            _isBillSummaryDialogOpen = true;
             var dialog = new BillSummaryDialog(bill);
             dialog.XamlRoot = this.XamlRoot;
             
@@ -170,6 +176,10 @@ public sealed partial class BillingPage : Page
         {
             Log.Error("Bill summary dialog failed", ex);
             await ShowErrorDialog($"Failed to show bill summary: {ex.Message}");
+        }
+        finally
+        {
+            _isBillSummaryDialogOpen = false;
         }
     }
 
