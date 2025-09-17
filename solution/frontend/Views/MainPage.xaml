@@ -79,7 +79,20 @@
                 <!-- Administration Group -->
                 <NavigationViewItemHeader Content="Administration"/>
                 <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
-                <NavigationViewItem Content="Settings" Tag="SettingsPage" Icon="Setting"/>
+                <NavigationViewItem Content="Settings" Tag="HierarchicalSettingsPage" Icon="Setting">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="General" Tag="HierarchicalSettingsPage?category=general" Icon="Home"/>
+                        <NavigationViewItem Content="Point of Sale" Tag="HierarchicalSettingsPage?category=pos" Icon="Calculator"/>
+                        <NavigationViewItem Content="Inventory" Tag="HierarchicalSettingsPage?category=inventory" Icon="List"/>
+                        <NavigationViewItem Content="Customers" Tag="HierarchicalSettingsPage?category=customers" Icon="Contact"/>
+                        <NavigationViewItem Content="Payments" Tag="HierarchicalSettingsPage?category=payments" Icon="Calculator"/>
+                        <NavigationViewItem Content="Printers and Devices" Tag="HierarchicalSettingsPage?category=printers" Icon="Print"/>
+                        <NavigationViewItem Content="Notifications" Tag="HierarchicalSettingsPage?category=notifications" Icon="Mail"/>
+                        <NavigationViewItem Content="Security and Roles" Tag="HierarchicalSettingsPage?category=security" Icon="Contact"/>
+                        <NavigationViewItem Content="Integrations" Tag="HierarchicalSettingsPage?category=integrations" Icon="Setting"/>
+                        <NavigationViewItem Content="System" Tag="HierarchicalSettingsPage?category=system" Icon="Setting"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
                 
                 <NavigationViewItemSeparator/>
                 

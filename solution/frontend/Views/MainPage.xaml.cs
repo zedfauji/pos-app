@@ -325,6 +325,12 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(DiscountManagementPage));
 #endif
                             break;
+                        case "HierarchicalSettingsPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(HierarchicalSettingsPage));
+#endif
+                            break;
                     }
                     // Update back button after navigation
                     NavView.IsBackEnabled = ContentFrame.CanGoBack;

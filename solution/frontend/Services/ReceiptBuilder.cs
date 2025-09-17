@@ -33,7 +33,7 @@ namespace MagiDesk.Frontend.Services
 
         public ReceiptBuilder(ILogger<ReceiptBuilder>? logger = null)
         {
-            _logger = logger ?? new NullLogger<ReceiptBuilder>();
+            _logger = logger ?? NullLoggerFactory.Create<ReceiptBuilder>();
         }
 
         /// <summary>
@@ -818,13 +818,4 @@ namespace MagiDesk.Frontend.Services
         public decimal LineTotal { get; set; } = 0;
     }
 
-    /// <summary>
-    /// Null logger implementation
-    /// </summary>
-    public class NullLogger<T> : ILogger<T>
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => false;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
-    }
 }

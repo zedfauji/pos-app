@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$false)][string]$ProjectId,
     [Parameter(Mandatory=$false)][string]$Region = "us-central1",
-    [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-settings"
+    [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-settings",
+    [Parameter(Mandatory=$false)][string]$CloudSqlInstance = "bola8pos:northamerica-south1:pos-app-1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,6 +58,7 @@ $EnvVars = "ASPNETCORE_URLS=http://0.0.0.0:8080,ASPNETCORE_ENVIRONMENT=Productio
     --platform managed `
     --allow-unauthenticated `
     --port 8080 `
+    --add-cloudsql-instances $CloudSqlInstance `
     --set-env-vars $EnvVars
 if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Run deployment failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
 

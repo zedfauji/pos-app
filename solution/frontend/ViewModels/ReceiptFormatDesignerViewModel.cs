@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Text.Json;
+using MagiDesk.Frontend.Services;
 
 namespace MagiDesk.Frontend.ViewModels
 {
@@ -59,7 +60,7 @@ namespace MagiDesk.Frontend.ViewModels
 
         public ReceiptFormatDesignerViewModel(ILogger<ReceiptFormatDesignerViewModel>? logger = null, IConfiguration? configuration = null)
         {
-            _logger = logger ?? new NullLogger<ReceiptFormatDesignerViewModel>();
+            _logger = logger ?? NullLoggerFactory.Create<ReceiptFormatDesignerViewModel>();
             _configuration = configuration ?? new ConfigurationBuilder().Build();
             
             LoadSettingsAsync();
