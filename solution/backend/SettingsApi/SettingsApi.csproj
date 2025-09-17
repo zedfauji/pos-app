@@ -10,5 +10,10 @@
     <PackageReference Include="Grpc.Auth" Version="2.71.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.19" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\shared\MagiDesk.Shared.csproj" />
   </ItemGroup>
 </Project>

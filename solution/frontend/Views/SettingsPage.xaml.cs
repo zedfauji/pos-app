@@ -19,26 +19,12 @@ public sealed partial class SettingsPage : Page
     private SettingsViewModel _viewModel = null!;
     private readonly ILogger<SettingsPage> _logger;
 
-    // Fallback logger for when DI is not available
-    private class NullLogger<T> : ILogger<T>
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            System.Diagnostics.Debug.WriteLine($"[{logLevel}] {formatter(state, exception)}");
-            if (exception != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"Exception: {exception}");
-            }
-        }
-    }
 
     public SettingsPage()
     {
         try
         {
-            _logger = new NullLogger<SettingsPage>();
+            _logger = NullLoggerFactory.Create<SettingsPage>();
             _logger.LogInformation("SettingsPage constructor started");
             
             this.InitializeComponent();
@@ -108,7 +94,7 @@ public sealed partial class SettingsPage : Page
     {
         try
         {
-            var logger = new NullLogger<SettingsViewModel>();
+            var logger = NullLoggerFactory.Create<SettingsViewModel>();
             _viewModel = new SettingsViewModel(_settingsApi, logger);
             
             // Bind ViewModel to UI

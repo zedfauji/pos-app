@@ -11,15 +11,6 @@ using System.Collections.Generic;
 
 namespace MagiDesk.Frontend.ViewModels
 {
-    /// <summary>
-    /// Null logger implementation for when DI is not available
-    /// </summary>
-    public class NullLogger<T> : ILogger<T>
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => false;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
-    }
 
     public sealed class PaymentLineVm : INotifyPropertyChanged
     {
@@ -106,7 +97,7 @@ namespace MagiDesk.Frontend.ViewModels
     {
         _payments = paymentService;
         _receiptService = receiptService;
-        _logger = logger ?? new NullLogger<PaymentViewModel>();
+        _logger = logger ?? NullLoggerFactory.Create<PaymentViewModel>();
         _configuration = configuration ?? new ConfigurationBuilder().Build();
     }
 

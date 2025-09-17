@@ -1,0 +1,177 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.HierarchicalSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Converters -->
+        <local:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <local:BooleanToColorConverter x:Key="BooleanToColorConverter"/>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Navigation Tree -->
+        <Border Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Padding="16" Spacing="8">
+                    <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="HostKeyText" Text="Host: Loading..." FontSize="12" Opacity="0.7"/>
+                </StackPanel>
+
+                <!-- Navigation Tree -->
+                <ScrollViewer Grid.Row="1" Padding="8,0">
+                    <TreeView x:Name="SettingsTreeView" SelectionChanged="SettingsTreeView_SelectionChanged">
+                        <TreeView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="{Binding Content.Icon}" FontSize="16"/>
+                                    <TextBlock Text="{Binding Content.DisplayName}" VerticalAlignment="Center"/>
+                                    <Border x:Name="ChangeIndicator" Background="Orange" CornerRadius="6" 
+                                            Width="12" Height="12" Visibility="{Binding Content.HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </ScrollViewer>
+
+                <!-- Bottom Actions -->
+                <StackPanel Grid.Row="2" Padding="16" Spacing="8">
+                    <Button x:Name="SaveAllButton" Content="Save All Changes" 
+                            Click="SaveAll_Click" Style="{StaticResource AccentButtonStyle}"
+                            IsEnabled="True"/>
+                    <Button x:Name="ResetButton" Content="Reset to Defaults" 
+                            Click="Reset_Click"/>
+                    <Button x:Name="TestConnectionsButton" Content="Test Connections" 
+                            Click="TestConnections_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Right Content Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Content Header -->
+            <Border Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" 
+                    Padding="24,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock x:Name="CategoryTitleText" Text="Select a category" 
+                                   FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="CategoryDescriptionText" Text="Choose a settings category from the left panel" 
+                                   Opacity="0.7"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="SaveCategoryButton" Content="Save Category" 
+                                Click="SaveCategory_Click" 
+                                IsEnabled="True"/>
+                        <Button x:Name="ResetCategoryButton" Content="Reset Category" 
+                                Click="ResetCategory_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Dynamic Content Frame -->
+            <ScrollViewer Grid.Row="1" Padding="24">
+                <Frame x:Name="SettingsContentFrame"/>
+            </ScrollViewer>
+
+            <!-- Status Bar -->
+            <Border Grid.Row="2" Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" 
+                    Padding="24,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse x:Name="ConnectionStatusDot" Width="8" Height="8" Fill="Gray"/>
+                            <TextBlock x:Name="ConnectionStatusText" Text="Connection: Unknown" FontSize="12"/>
+                        </StackPanel>
+                        <TextBlock x:Name="LastSavedText" Text="Last saved: Never" FontSize="12" Opacity="0.7"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <ProgressRing x:Name="LoadingRing" IsActive="False" Width="16" Height="16"/>
+                        <TextBlock x:Name="StatusText" Text="Ready" FontSize="12"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Toast Notifications -->
+        <TeachingTip x:Name="SaveSuccessTeachingTip" 
+                     Title="Settings Saved" 
+                     Subtitle="Your settings have been saved successfully."
+                     IsLightDismissEnabled="True"
+                     PreferredPlacement="TopRight"/>
+
+        <TeachingTip x:Name="ValidationErrorTeachingTip" 
+                     Title="Validation Error" 
+                     Subtitle="Please check your settings and try again."
+                     IsLightDismissEnabled="True"
+                     PreferredPlacement="TopRight"/>
+
+        <!-- Connection Test Results Dialog -->
+        <ContentDialog x:Name="ConnectionTestDialog" 
+                       Title="Connection Test Results"
+                       CloseButtonText="Close"
+                       DefaultButton="Close">
+            <ScrollViewer MaxHeight="400">
+                <ListView x:Name="ConnectionResultsList">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Padding="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Ellipse Width="12" Height="12">
+                                        <Ellipse.Fill>
+                                            <SolidColorBrush Color="{Binding IsConnected, Converter={StaticResource BooleanToColorConverter}}"/>
+                                        </Ellipse.Fill>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding Status}" FontSize="12"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </ScrollViewer>
+        </ContentDialog>
+    </Grid>
+</Page>
