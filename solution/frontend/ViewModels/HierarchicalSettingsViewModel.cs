@@ -284,6 +284,63 @@ public class HierarchicalSettingsViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(HasCategoryChanges));
     }
 
+    public async Task<string> ExportSettingsToJsonAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Exporting settings...";
+
+            var json = await _settingsApi.ExportSettingsToJsonAsync(_hostKey);
+            
+            StatusMessage = "Settings exported successfully";
+            return json;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to export settings to JSON");
+            StatusMessage = $"Error exporting settings: {ex.Message}";
+            throw;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    public async Task<bool> ImportSettingsFromFileAsync(string filePath)
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Importing settings...";
+
+            var success = await _settingsApi.ImportSettingsFromFileAsync(filePath, _hostKey);
+            
+            if (success)
+            {
+                await LoadSettingsAsync();
+                StatusMessage = "Settings imported successfully";
+            }
+            else
+            {
+                StatusMessage = "Failed to import settings";
+            }
+            
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to import settings from file {FilePath}", filePath);
+            StatusMessage = $"Error importing settings: {ex.Message}";
+            return false;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     #endregion
 
     #region Private Methods

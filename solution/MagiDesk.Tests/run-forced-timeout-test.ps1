@@ -52,3 +52,5 @@ Get-Process -Name "MagiDesk.Frontend" -ErrorAction SilentlyContinue | ForEach-Ob
 Write-Host ""
 Write-Host "🎉 Test execution completed!" -ForegroundColor Green
 
+
+

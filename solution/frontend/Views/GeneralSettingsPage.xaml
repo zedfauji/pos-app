@@ -60,12 +60,27 @@
 
                         <StackPanel Grid.Row="2" Grid.Column="1" Spacing="4" Margin="12,16,0,0">
                             <TextBlock Text="Time Zone"/>
-                            <ComboBox x:Name="TimeZoneCombo" PlaceholderText="Select time zone">
-                                <ComboBoxItem Content="Eastern Time"/>
-                                <ComboBoxItem Content="Central Time"/>
-                                <ComboBoxItem Content="Mountain Time"/>
-                                <ComboBoxItem Content="Pacific Time"/>
-                            </ComboBox>
+                            <ComboBox x:Name="TimeZoneCombo" PlaceholderText="Select time zone"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Business Email"/>
+                            <TextBox x:Name="EmailBox" PlaceholderText="Enter contact email"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Grid.Column="1" Spacing="4" Margin="12,16,0,0">
+                            <TextBlock Text="Website"/>
+                            <TextBox x:Name="WebsiteBox" PlaceholderText="Enter business website"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Theme"/>
+                            <ComboBox x:Name="ThemeCombo" PlaceholderText="Select theme"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4" Grid.Column="1" Spacing="4" Margin="12,16,0,0">
+                            <TextBlock Text="Language"/>
+                            <ComboBox x:Name="LanguageCombo" PlaceholderText="Select language"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>

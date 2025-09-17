@@ -510,7 +510,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Active Sessions & Reminders -->
+                    <!-- Active Sessions &amp; Reminders -->
                     <Border Grid.Column="1" Style="{StaticResource ModernCardStyle}">
                         <StackPanel>
                             <TextBlock Text="📋 Active Sessions &amp; Reminders" FontSize="16" FontWeight="SemiBold" 

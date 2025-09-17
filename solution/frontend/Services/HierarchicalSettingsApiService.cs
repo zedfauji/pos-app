@@ -413,6 +413,101 @@ public sealed class HierarchicalSettingsApiService
         }
     }
 
+    /// <summary>
+    /// Export settings to JSON string
+    /// </summary>
+    public async Task<string> ExportSettingsToJsonAsync(string? hostKey = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = "api/v2/settings/export";
+            if (!string.IsNullOrEmpty(hostKey))
+            {
+                url += $"?host={Uri.EscapeDataString(hostKey)}";
+            }
+
+            var response = await _httpClient.GetAsync(url, ct);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogInformation("Settings exported successfully");
+                return json;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to export settings. Status: {StatusCode}", response.StatusCode);
+                // Fallback to local export
+                var settings = await GetSettingsAsync(hostKey, ct);
+                return JsonSerializer.Serialize(settings, _jsonOptions);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error exporting settings to JSON");
+            // Fallback to local export
+            var settings = await GetSettingsAsync(hostKey, ct);
+            return JsonSerializer.Serialize(settings, _jsonOptions);
+        }
+    }
+
+    /// <summary>
+    /// Import settings from file
+    /// </summary>
+    public async Task<bool> ImportSettingsFromFileAsync(string filePath, string? hostKey = null, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!File.Exists(filePath))
+            {
+                _logger.LogWarning("Settings file not found: {FilePath}", filePath);
+                return false;
+            }
+
+            var jsonSettings = await File.ReadAllTextAsync(filePath, ct);
+            return await ImportSettingsFromJsonAsync(jsonSettings, hostKey, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing settings from file {FilePath}", filePath);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Import settings from JSON string
+    /// </summary>
+    public async Task<bool> ImportSettingsFromJsonAsync(string jsonSettings, string? hostKey = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var url = "api/v2/settings/import";
+            if (!string.IsNullOrEmpty(hostKey))
+            {
+                url += $"?host={Uri.EscapeDataString(hostKey)}";
+            }
+
+            var content = new StringContent(jsonSettings, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(url, content, ct);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Settings imported successfully");
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to import settings. Status: {StatusCode}", response.StatusCode);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing settings from JSON");
+            return false;
+        }
+    }
+
     #endregion
 
     #region Private Helper Methods

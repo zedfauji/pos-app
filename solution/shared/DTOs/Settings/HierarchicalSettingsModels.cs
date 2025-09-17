@@ -50,6 +50,9 @@ public class GeneralSettings
     
     [StringLength(50)]
     public string? HostKey { get; set; }
+
+    [Required, StringLength(3)]
+    public string Currency { get; set; } = "USD";
 }
 
 /// <summary>

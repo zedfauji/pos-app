@@ -1,0 +1,275 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.IntegrationsSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Integration Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Configure payment gateways, webhooks, CRM sync, and API endpoints" 
+                           Opacity="0.7" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Payment Gateway Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Payment Gateways" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Default Gateway"/>
+                            <ComboBox x:Name="DefaultGatewayCombo" PlaceholderText="Select default gateway">
+                                <ComboBoxItem Content="Stripe"/>
+                                <ComboBoxItem Content="Square"/>
+                                <ComboBoxItem Content="PayPal"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <CheckBox x:Name="EnableTestModeCheck" Grid.Row="0" Grid.Column="1" 
+                                  Content="Enable test mode" Margin="12,0,0,0"/>
+                    </Grid>
+
+                    <!-- Payment Gateways List -->
+                    <StackPanel Spacing="12" Margin="0,16,0,0">
+                        <TextBlock Text="Configured Gateways" FontSize="16" FontWeight="SemiBold"/>
+                        <ListView x:Name="PaymentGatewaysList" Height="200">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBox Grid.Column="0" Text="{Binding Name}" PlaceholderText="Gateway name"/>
+                                        <ComboBox Grid.Column="1" SelectedItem="{Binding Provider}" Margin="8,0">
+                                            <ComboBoxItem Content="Stripe"/>
+                                            <ComboBoxItem Content="Square"/>
+                                            <ComboBoxItem Content="PayPal"/>
+                                        </ComboBox>
+                                        <CheckBox Grid.Column="2" IsChecked="{Binding IsEnabled}" 
+                                                  Content="Enabled" Margin="8,0"/>
+                                        <CheckBox Grid.Column="3" IsChecked="{Binding IsTestMode}" 
+                                                  Content="Test" Margin="8,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Add Gateway" Click="AddPaymentGateway_Click"/>
+                            <Button Content="Remove Selected" Click="RemovePaymentGateway_Click"/>
+                            <Button Content="Configure Keys" Click="ConfigureGatewayKeys_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Webhook Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Webhook Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableWebhooksCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable webhooks" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Timeout (ms)"/>
+                            <NumberBox x:Name="WebhookTimeoutBox" PlaceholderText="10000" 
+                                       Minimum="1000" Maximum="30000"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Max Retries"/>
+                            <NumberBox x:Name="WebhookMaxRetriesBox" PlaceholderText="3" 
+                                       Minimum="1" Maximum="10"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Webhook Endpoints -->
+                    <StackPanel Spacing="12" Margin="0,16,0,0">
+                        <TextBlock Text="Webhook Endpoints" FontSize="16" FontWeight="SemiBold"/>
+                        <ListView x:Name="WebhookEndpointsList" Height="200">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBox Grid.Column="0" Text="{Binding Name}" PlaceholderText="Endpoint name"/>
+                                        <TextBox Grid.Column="1" Text="{Binding Url}" PlaceholderText="https://example.com/webhook" Margin="8,0"/>
+                                        <CheckBox Grid.Column="2" IsChecked="{Binding IsEnabled}" 
+                                                  Content="Enabled" Margin="8,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Add Endpoint" Click="AddWebhookEndpoint_Click"/>
+                            <Button Content="Remove Selected" Click="RemoveWebhookEndpoint_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- CRM Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="CRM Integration" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableCrmSyncCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable CRM sync" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="CRM Provider"/>
+                            <ComboBox x:Name="CrmProviderCombo" PlaceholderText="Select provider">
+                                <ComboBoxItem Content="Salesforce"/>
+                                <ComboBoxItem Content="HubSpot"/>
+                                <ComboBoxItem Content="Pipedrive"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="API Endpoint"/>
+                            <TextBox x:Name="CrmApiEndpointBox" PlaceholderText="https://api.salesforce.com"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4" Margin="12,16,0,0">
+                            <TextBlock Text="API Key"/>
+                            <PasswordBox x:Name="CrmApiKeyBox" PlaceholderText="Enter API key"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="SyncCustomersCheck" Grid.Row="2" Grid.Column="0" 
+                                  Content="Sync customers" Margin="0,16,12,0"/>
+                        <CheckBox x:Name="SyncOrdersCheck" Grid.Row="2" Grid.Column="1" 
+                                  Content="Sync orders" Margin="12,16,0,0"/>
+
+                        <StackPanel Grid.Row="3" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Sync Interval (minutes)"/>
+                            <NumberBox x:Name="CrmSyncIntervalBox" PlaceholderText="60" 
+                                       Minimum="5" Maximum="1440"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- API Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="API Endpoints" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Default Timeout (ms)"/>
+                            <NumberBox x:Name="ApiDefaultTimeoutBox" PlaceholderText="10000" 
+                                       Minimum="1000" Maximum="60000"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Default Retries"/>
+                            <NumberBox x:Name="ApiDefaultRetriesBox" PlaceholderText="3" 
+                                       Minimum="1" Maximum="10"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="EnableApiLoggingCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Enable API logging" Margin="0,16,12,0"/>
+                    </Grid>
+
+                    <!-- API Endpoints List -->
+                    <StackPanel Spacing="12" Margin="0,16,0,0">
+                        <TextBlock Text="Configured Endpoints" FontSize="16" FontWeight="SemiBold"/>
+                        <ListView x:Name="ApiEndpointsList" Height="200">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBox Grid.Column="0" Text="{Binding Name}" PlaceholderText="Endpoint name"/>
+                                        <TextBox Grid.Column="1" Text="{Binding BaseUrl}" PlaceholderText="https://api.example.com" Margin="8,0"/>
+                                        <CheckBox Grid.Column="2" IsChecked="{Binding IsEnabled}" 
+                                                  Content="Enabled" Margin="8,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Add Endpoint" Click="AddApiEndpoint_Click"/>
+                            <Button Content="Remove Selected" Click="RemoveApiEndpoint_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults"/>
+                <Button Content="Save Changes" Style="{StaticResource AccentButtonStyle}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
+

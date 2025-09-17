@@ -120,7 +120,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Audit & Reports Tile -->
+            <!-- Audit &amp; Reports Tile -->
             <Border Grid.Row="1" Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                     CornerRadius="8" Padding="16" Margin="4,8,4,0" Tapped="NavigateToAudit_Click">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

@@ -5,394 +5,136 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
-    
-    <Page.Resources>
-        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-        
-        <Style x:Key="SettingLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-        
-        <Style x:Key="SettingControlStyle" TargetType="Control">
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-    </Page.Resources>
-    
-    <Grid Padding="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,24">
-            <TextBlock Text="Inventory Settings" FontSize="24" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <Button x:Name="SaveButton" Content="Save Settings" 
-                    HorizontalAlignment="Right" 
-                    Margin="16,0,0,0"
-                    Click="SaveSettings_Click"
-                    Style="{StaticResource AccentButtonStyle}"/>
-        </StackPanel>
-
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="32" Width="800">
-                
-                <!-- General Inventory Settings -->
-                <StackPanel Spacing="12">
-                    <TextBlock Text="General Inventory Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Default Unit -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Default Unit" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="DefaultUnitComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Each" Tag="each"/>
-                                <ComboBoxItem Content="Box" Tag="box"/>
-                                <ComboBoxItem Content="Case" Tag="case"/>
-                                <ComboBoxItem Content="Pack" Tag="pack"/>
-                                <ComboBoxItem Content="Liter" Tag="liter"/>
-                                <ComboBoxItem Content="Kilogram" Tag="kg"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <!-- Default Tax Rate -->
-                        <StackPanel Grid.Row="0" Grid.Column="1">
-                            <TextBlock Text="Default Tax Rate (%)" Style="{StaticResource SettingLabelStyle}"/>
-                            <NumberBox x:Name="DefaultTaxRateNumberBox" 
-                                       Minimum="0" 
-                                       Maximum="100" 
-                                       SpinButtonPlacementMode="Inline"
-                                       Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Auto-Sync Menu Items -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Auto-Sync Menu Items" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="AutoSyncMenuItemsToggle" 
-                                          OnContent="Enabled" 
-                                          OffContent="Disabled"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Require Approval for Stock Adjustments -->
-                        <StackPanel Grid.Row="1" Grid.Column="1">
-                            <TextBlock Text="Require Approval for Stock Adjustments" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="RequireApprovalToggle" 
-                                          OnContent="Required" 
-                                          OffContent="Not Required"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Default Vendor -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,16,0">
-                            <TextBlock Text="Default Vendor" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="DefaultVendorComboBox" 
-                                      PlaceholderText="Select default vendor..."
-                                      Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Inventory Tracking Method -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="Inventory Tracking Method" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="TrackingMethodComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Perpetual (Real-time)" Tag="perpetual"/>
-                                <ComboBoxItem Content="Periodic (Manual counts)" Tag="periodic"/>
-                                <ComboBoxItem Content="Hybrid (Both)" Tag="hybrid"/>
-                            </ComboBox>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
-                <!-- Stock Management Settings -->
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Stock Management Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Low Stock Threshold -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Low Stock Threshold" Style="{StaticResource SettingLabelStyle}"/>
-                            <NumberBox x:Name="LowStockThresholdNumberBox" 
-                                       Minimum="0" 
-                                       SpinButtonPlacementMode="Inline"
-                                       Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Critical Stock Threshold -->
-                        <StackPanel Grid.Row="0" Grid.Column="1">
-                            <TextBlock Text="Critical Stock Threshold" Style="{StaticResource SettingLabelStyle}"/>
-                            <NumberBox x:Name="CriticalStockThresholdNumberBox" 
-                                       Minimum="0" 
-                                       SpinButtonPlacementMode="Inline"
-                                       Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Auto-Reorder Enabled -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Auto-Reorder Enabled" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="AutoReorderToggle" 
-                                          OnContent="Enabled" 
-                                          OffContent="Disabled"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Reorder Quantity Multiplier -->
-                        <StackPanel Grid.Row="1" Grid.Column="1">
-                            <TextBlock Text="Reorder Quantity Multiplier" Style="{StaticResource SettingLabelStyle}"/>
-                            <NumberBox x:Name="ReorderMultiplierNumberBox" 
-                                       Minimum="1" 
-                                       Maximum="10" 
-                                       SpinButtonPlacementMode="Inline"
-                                       Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Stock Alert Email -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,16,0">
-                            <TextBlock Text="Stock Alert Email" Style="{StaticResource SettingLabelStyle}"/>
-                            <TextBox x:Name="StockAlertEmailTextBox" 
-                                     PlaceholderText="manager@example.com"
-                                     Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Alert Frequency -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="Alert Frequency" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="AlertFrequencyComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Immediate" Tag="immediate"/>
-                                <ComboBoxItem Content="Daily Summary" Tag="daily"/>
-                                <ComboBoxItem Content="Weekly Summary" Tag="weekly"/>
-                                <ComboBoxItem Content="Manual Only" Tag="manual"/>
-                            </ComboBox>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
-                <!-- Vendor Management Settings -->
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Vendor Management Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Default Payment Terms -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Default Payment Terms" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="PaymentTermsComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Net 15" Tag="15"/>
-                                <ComboBoxItem Content="Net 30" Tag="30"/>
-                                <ComboBoxItem Content="Net 45" Tag="45"/>
-                                <ComboBoxItem Content="Net 60" Tag="60"/>
-                                <ComboBoxItem Content="Cash on Delivery" Tag="cod"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <!-- Default Currency -->
-                        <StackPanel Grid.Row="0" Grid.Column="1">
-                            <TextBlock Text="Default Currency" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="DefaultCurrencyComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="USD ($)" Tag="USD"/>
-                                <ComboBoxItem Content="EUR (€)" Tag="EUR"/>
-                                <ComboBoxItem Content="MXN (Mex$)" Tag="MXN"/>
-                                <ComboBoxItem Content="CAD (C$)" Tag="CAD"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <!-- Auto-Generate Purchase Orders -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Auto-Generate Purchase Orders" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="AutoGeneratePOToggle" 
-                                          OnContent="Enabled" 
-                                          OffContent="Disabled"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Require Vendor Approval -->
-                        <StackPanel Grid.Row="1" Grid.Column="1">
-                            <TextBlock Text="Require Vendor Approval" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="RequireVendorApprovalToggle" 
-                                          OnContent="Required" 
-                                          OffContent="Not Required"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Vendor Contact Method -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="Preferred Vendor Contact Method" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="ContactMethodComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Email" Tag="email"/>
-                                <ComboBoxItem Content="Phone" Tag="phone"/>
-                                <ComboBoxItem Content="SMS" Tag="sms"/>
-                                <ComboBoxItem Content="Portal" Tag="portal"/>
-                            </ComboBox>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
-                <!-- Reporting Settings -->
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Reporting Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Default Report Format -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Default Report Format" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="ReportFormatComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="PDF" Tag="pdf"/>
-                                <ComboBoxItem Content="Excel" Tag="excel"/>
-                                <ComboBoxItem Content="CSV" Tag="csv"/>
-                                <ComboBoxItem Content="JSON" Tag="json"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <!-- Include Images in Reports -->
-                        <StackPanel Grid.Row="0" Grid.Column="1">
-                            <TextBlock Text="Include Images in Reports" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="IncludeImagesToggle" 
-                                          OnContent="Yes" 
-                                          OffContent="No"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Auto-Generate Reports -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Auto-Generate Reports" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="AutoGenerateReportsToggle" 
-                                          OnContent="Enabled" 
-                                          OffContent="Disabled"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Report Retention Days -->
-                        <StackPanel Grid.Row="1" Grid.Column="1">
-                            <TextBlock Text="Report Retention (Days)" Style="{StaticResource SettingLabelStyle}"/>
-                            <NumberBox x:Name="ReportRetentionNumberBox" 
-                                       Minimum="1" 
-                                       Maximum="3650" 
-                                       SpinButtonPlacementMode="Inline"
-                                       Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Email Reports -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="Email Reports To" Style="{StaticResource SettingLabelStyle}"/>
-                            <TextBox x:Name="ReportEmailTextBox" 
-                                     PlaceholderText="reports@example.com"
-                                     Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
-                <!-- Integration Settings -->
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Integration Settings" Style="{StaticResource SectionHeaderStyle}"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <!-- Inventory API URL -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,16,0">
-                            <TextBlock Text="Inventory API URL" Style="{StaticResource SettingLabelStyle}"/>
-                            <TextBox x:Name="InventoryApiUrlTextBox" 
-                                     PlaceholderText="https://inventory-api.example.com"
-                                     Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Sync Frequency -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
-                            <TextBlock Text="Sync Frequency" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="SyncFrequencyComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Real-time" Tag="realtime"/>
-                                <ComboBoxItem Content="Every 5 minutes" Tag="5min"/>
-                                <ComboBoxItem Content="Every 15 minutes" Tag="15min"/>
-                                <ComboBoxItem Content="Every hour" Tag="hourly"/>
-                                <ComboBoxItem Content="Daily" Tag="daily"/>
-                                <ComboBoxItem Content="Manual" Tag="manual"/>
-                            </ComboBox>
-                        </StackPanel>
-                        
-                        <!-- Enable API Logging -->
-                        <StackPanel Grid.Row="1" Grid.Column="1">
-                            <TextBlock Text="Enable API Logging" Style="{StaticResource SettingLabelStyle}"/>
-                            <ToggleSwitch x:Name="ApiLoggingToggle" 
-                                          OnContent="Enabled" 
-                                          OffContent="Disabled"
-                                          Style="{StaticResource SettingControlStyle}"/>
-                        </StackPanel>
-                        
-                        <!-- Backup Settings -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
-                            <TextBlock Text="Backup Settings" Style="{StaticResource SettingLabelStyle}"/>
-                            <ComboBox x:Name="BackupSettingsComboBox" Style="{StaticResource SettingControlStyle}">
-                                <ComboBoxItem Content="Daily Backup" Tag="daily"/>
-                                <ComboBoxItem Content="Weekly Backup" Tag="weekly"/>
-                                <ComboBoxItem Content="Monthly Backup" Tag="monthly"/>
-                                <ComboBoxItem Content="No Backup" Tag="none"/>
-                            </ComboBox>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Inventory Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Configure stock thresholds, reorder settings, and vendor defaults" 
+                           Opacity="0.7" TextWrapping="Wrap"/>
             </StackPanel>
-        </ScrollViewer>
 
-        <!-- Status Bar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBlock x:Name="StatusText" Text="Ready" Opacity="0.7"/>
-            <TextBlock x:Name="LastSavedText" Text="" Opacity="0.5" Margin="16,0,0,0"/>
+            <!-- Stock Management Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Stock Management" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Low Stock Threshold"/>
+                            <NumberBox x:Name="LowStockThresholdBox" PlaceholderText="10" 
+                                       Minimum="1" Maximum="1000"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Critical Stock Threshold"/>
+                            <NumberBox x:Name="CriticalStockThresholdBox" PlaceholderText="5" 
+                                       Minimum="1" Maximum="1000"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="EnableStockAlertsCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Enable stock alerts" Margin="0,16,12,0"/>
+                        <CheckBox x:Name="AutoDeductStockCheck" Grid.Row="1" Grid.Column="1" 
+                                  Content="Auto-deduct stock on sale" Margin="12,16,0,0"/>
+
+                        <CheckBox x:Name="AllowNegativeStockCheck" Grid.Row="2" Grid.Column="0" 
+                                  Content="Allow negative stock" Margin="0,16,12,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Reorder Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Reorder Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableAutoReorderCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable auto-reorder" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Reorder Lead Time (days)"/>
+                            <NumberBox x:Name="ReorderLeadTimeDaysBox" PlaceholderText="7" 
+                                       Minimum="1" Maximum="365"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Safety Stock Multiplier"/>
+                            <NumberBox x:Name="SafetyStockMultiplierBox" PlaceholderText="1.5" 
+                                       Minimum="1.0" Maximum="10.0" SmallChange="0.1" LargeChange="0.5"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Vendor Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Vendor Defaults" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Default Payment Terms (days)"/>
+                            <NumberBox x:Name="DefaultPaymentTermsBox" PlaceholderText="30" 
+                                       Minimum="1" Maximum="90"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Default Currency"/>
+                            <ComboBox x:Name="DefaultCurrencyCombo" PlaceholderText="Select currency">
+                                <ComboBoxItem Content="USD - US Dollar"/>
+                                <ComboBoxItem Content="CAD - Canadian Dollar"/>
+                                <ComboBoxItem Content="EUR - Euro"/>
+                                <ComboBoxItem Content="GBP - British Pound"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <CheckBox x:Name="RequireApprovalForOrdersCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Require approval for orders" Margin="0,16,12,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults"/>
+                <Button Content="Save Changes" Style="{StaticResource AccentButtonStyle}"/>
+            </StackPanel>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Page>

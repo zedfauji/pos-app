@@ -1,0 +1,174 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.CustomersSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Customer &amp; Membership Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Configure membership tiers, wallet system, and loyalty programs" 
+                           Opacity="0.7" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Membership Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Membership Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Default Expiry (days)"/>
+                            <NumberBox x:Name="DefaultExpiryDaysBox" PlaceholderText="365" 
+                                       Minimum="1" Maximum="365"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="AutoRenewMembershipsCheck" Grid.Row="0" Grid.Column="1" 
+                                  Content="Auto-renew memberships" Margin="12,0,0,0"/>
+
+                        <CheckBox x:Name="RequireEmailForMembershipCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Require email for membership" Margin="0,16,12,0"/>
+                    </Grid>
+
+                    <!-- Membership Tiers -->
+                    <StackPanel Spacing="12" Margin="0,16,0,0">
+                        <TextBlock Text="Membership Tiers" FontSize="16" FontWeight="SemiBold"/>
+                        <ListView x:Name="MembershipTiersList" Height="200">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Padding="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <TextBox Grid.Column="0" Text="{Binding Name}" PlaceholderText="Tier name"/>
+                                        <NumberBox Grid.Column="1" Value="{Binding DiscountPercentage}" 
+                                                   Minimum="0" Maximum="100" SmallChange="1" Margin="8,0"/>
+                                        <NumberBox Grid.Column="2" Value="{Binding MinimumSpend}" 
+                                                   Minimum="0" Maximum="9999" SmallChange="10" Margin="8,0"/>
+                                        <TextBox Grid.Column="3" Text="{Binding Color}" PlaceholderText="#007ACC" Margin="8,0"/>
+                                        <ColorPicker Grid.Column="4" Color="{Binding Color}" Margin="8,0"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Add Tier" Click="AddMembershipTier_Click"/>
+                            <Button Content="Remove Selected" Click="RemoveMembershipTier_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Wallet Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Wallet System" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableWalletSystemCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable wallet system" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Max Wallet Balance ($)"/>
+                            <NumberBox x:Name="MaxWalletBalanceBox" PlaceholderText="1000" 
+                                       Minimum="0" Maximum="10000"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Min Top-up Amount ($)"/>
+                            <NumberBox x:Name="MinTopUpAmountBox" PlaceholderText="10" 
+                                       Minimum="1" Maximum="100"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="AllowNegativeBalanceCheck" Grid.Row="1" Grid.Column="1" 
+                                  Content="Allow negative balance" Margin="12,16,0,0"/>
+
+                        <CheckBox x:Name="RequireIdForWalletUseCheck" Grid.Row="2" Grid.Column="0" 
+                                  Content="Require ID for wallet use" Margin="0,16,12,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Loyalty Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Loyalty Program" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableLoyaltyProgramCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable loyalty program" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Points Per Dollar"/>
+                            <NumberBox x:Name="PointsPerDollarBox" PlaceholderText="1.0" 
+                                       Minimum="0.01" Maximum="10.0" SmallChange="0.1"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Point Value ($)"/>
+                            <NumberBox x:Name="PointValueBox" PlaceholderText="0.01" 
+                                       Minimum="0.01" Maximum="1.0" SmallChange="0.01"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="4" Margin="12,16,0,0">
+                            <TextBlock Text="Min Points for Redemption"/>
+                            <NumberBox x:Name="MinPointsForRedemptionBox" PlaceholderText="100" 
+                                       Minimum="1" Maximum="10000"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults"/>
+                <Button Content="Save Changes" Style="{StaticResource AccentButtonStyle}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

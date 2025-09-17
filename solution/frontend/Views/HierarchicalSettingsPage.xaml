@@ -25,6 +25,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -33,10 +34,43 @@
                 <StackPanel Grid.Row="0" Padding="16" Spacing="8">
                     <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold"/>
                     <TextBlock x:Name="HostKeyText" Text="Host: Loading..." FontSize="12" Opacity="0.7"/>
+                    
+                    <!-- Search Box -->
+                    <AutoSuggestBox x:Name="SearchBox" 
+                                    PlaceholderText="Search settings..."
+                                    QuerySubmitted="SearchBox_QuerySubmitted"
+                                    TextChanged="SearchBox_TextChanged"
+                                    SuggestionChosen="SearchBox_SuggestionChosen"/>
+                    <TextBlock x:Name="SearchResultsText" 
+                               Text="" 
+                               FontSize="12" 
+                               Opacity="0.7"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+
+                <!-- Filter Dropdown -->
+                <StackPanel Grid.Row="1" Padding="8,0" Spacing="4">
+                    <TextBlock Text="Filter by Category:" FontSize="12" FontWeight="SemiBold" Opacity="0.7"/>
+                    <ComboBox x:Name="CategoryFilterComboBox" 
+                              PlaceholderText="All Categories"
+                              SelectionChanged="CategoryFilterComboBox_SelectionChanged"
+                              HorizontalAlignment="Stretch">
+                        <ComboBoxItem Content="All Categories" Tag="all"/>
+                        <ComboBoxItem Content="Changed Only" Tag="changed"/>
+                        <ComboBoxItem Content="General" Tag="general"/>
+                        <ComboBoxItem Content="POS" Tag="pos"/>
+                        <ComboBoxItem Content="Inventory" Tag="inventory"/>
+                        <ComboBoxItem Content="Customers" Tag="customers"/>
+                        <ComboBoxItem Content="Payments" Tag="payments"/>
+                        <ComboBoxItem Content="Notifications" Tag="notifications"/>
+                        <ComboBoxItem Content="Security" Tag="security"/>
+                        <ComboBoxItem Content="Integrations" Tag="integrations"/>
+                        <ComboBoxItem Content="System" Tag="system"/>
+                    </ComboBox>
                 </StackPanel>
 
                 <!-- Navigation Tree -->
-                <ScrollViewer Grid.Row="1" Padding="8,0">
+                <ScrollViewer Grid.Row="2" Padding="8,0">
                     <TreeView x:Name="SettingsTreeView" SelectionChanged="SettingsTreeView_SelectionChanged">
                         <TreeView.ItemTemplate>
                             <DataTemplate>
@@ -52,7 +86,7 @@
                 </ScrollViewer>
 
                 <!-- Bottom Actions -->
-                <StackPanel Grid.Row="2" Padding="16" Spacing="8">
+                <StackPanel Grid.Row="3" Padding="16" Spacing="8">
                     <Button x:Name="SaveAllButton" Content="Save All Changes" 
                             Click="SaveAll_Click" Style="{StaticResource AccentButtonStyle}"
                             IsEnabled="True"/>
@@ -60,6 +94,14 @@
                             Click="Reset_Click"/>
                     <Button x:Name="TestConnectionsButton" Content="Test Connections" 
                             Click="TestConnections_Click"/>
+                    
+                    <!-- Import/Export Section -->
+                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,8,0,8"/>
+                    <TextBlock Text="Backup &amp; Restore" FontSize="12" FontWeight="SemiBold" Opacity="0.7"/>
+                    <Button x:Name="ExportButton" Content="Export Settings" 
+                            Click="Export_Click"/>
+                    <Button x:Name="ImportButton" Content="Import Settings" 
+                            Click="Import_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -142,6 +184,48 @@
                      Subtitle="Please check your settings and try again."
                      IsLightDismissEnabled="True"
                      PreferredPlacement="TopRight"/>
+
+        <!-- Import/Export Dialog -->
+        <ContentDialog x:Name="ImportExportDialog" 
+                       Title="Import/Export Settings"
+                       CloseButtonText="Cancel"
+                       DefaultButton="Close">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Choose an action:" FontSize="16" FontWeight="SemiBold"/>
+                
+                <StackPanel Spacing="12">
+                    <Button x:Name="ExportToFileButton" Content="Export to File" 
+                            Click="ExportToFile_Click" HorizontalAlignment="Stretch"/>
+                    <Button x:Name="ExportToClipboardButton" Content="Export to Clipboard" 
+                            Click="ExportToClipboard_Click" HorizontalAlignment="Stretch"/>
+                    <Button x:Name="ImportFromFileButton" Content="Import from File" 
+                            Click="ImportFromFile_Click" HorizontalAlignment="Stretch"/>
+                </StackPanel>
+                
+                <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,8,0,8"/>
+                
+                <StackPanel x:Name="ImportExportStatusPanel" Visibility="Collapsed">
+                    <TextBlock x:Name="ImportExportStatusText" Text="" FontSize="12"/>
+                    <ProgressRing x:Name="ImportExportProgressRing" IsActive="False" Width="20" Height="20"/>
+                </StackPanel>
+            </StackPanel>
+        </ContentDialog>
+
+        <!-- File Picker Dialog -->
+        <ContentDialog x:Name="FilePickerDialog" 
+                       Title="Select Settings File"
+                       CloseButtonText="Cancel"
+                       DefaultButton="Close">
+            <StackPanel Spacing="16">
+                <TextBlock Text="Select a settings file to import:" FontSize="16" FontWeight="SemiBold"/>
+                <TextBox x:Name="FilePathTextBox" PlaceholderText="C:\path\to\settings.json" IsReadOnly="True"/>
+                <Button x:Name="BrowseFileButton" Content="Browse..." 
+                        Click="BrowseFile_Click" HorizontalAlignment="Left"/>
+                <Button x:Name="ImportSelectedFileButton" Content="Import Selected File" 
+                        Click="ImportSelectedFile_Click" Style="{StaticResource AccentButtonStyle}"
+                        HorizontalAlignment="Stretch"/>
+            </StackPanel>
+        </ContentDialog>
 
         <!-- Connection Test Results Dialog -->
         <ContentDialog x:Name="ConnectionTestDialog" 

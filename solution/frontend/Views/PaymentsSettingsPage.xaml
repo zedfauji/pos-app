@@ -1,0 +1,56 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.PaymentsSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Payments Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Configure payment methods, discounts, surcharges, and split payments" 
+                           Opacity="0.7" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Discount Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Discounts" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="RequireManagerApprovalSwitch" Header="Require Manager Approval for Discounts"/>
+                    <ToggleSwitch x:Name="AllowStackingDiscountsSwitch" Header="Allow Stacking Discounts"/>
+                    <TextBox x:Name="MaxDiscountPercentageBox" Header="Max Discount Percentage (%)" PlaceholderText="e.g., 50"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Surcharge Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Surcharges" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="EnableSurchargesSwitch" Header="Enable Surcharges"/>
+                    <ToggleSwitch x:Name="ShowSurchargeOnReceiptSwitch" Header="Show Surcharge on Receipt"/>
+                    <TextBox x:Name="CardSurchargePercentageBox" Header="Card Surcharge Percentage (%)" PlaceholderText="e.g., 2.5"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Split Payment Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Split Payments" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="EnableSplitPaymentsSwitch" Header="Enable Split Payments"/>
+                    <ToggleSwitch x:Name="AllowUnevenSplitsSwitch" Header="Allow Uneven Splits"/>
+                    <NumberBox x:Name="MaxSplitCountBox" Header="Max Split Count" Value="4" SpinButtonPlacementMode="Compact"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

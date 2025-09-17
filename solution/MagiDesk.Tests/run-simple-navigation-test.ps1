@@ -34,3 +34,5 @@ Get-Process -Name "MagiDesk.Frontend" -ErrorAction SilentlyContinue | Stop-Proce
 Write-Host ""
 Write-Host "🎉 Simple navigation test execution completed!" -ForegroundColor Green
 
+
+

@@ -289,7 +289,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Analytics & Reporting -->
+            <!-- Analytics &amp; Reporting -->
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="16">
                     <StackPanel Orientation="Horizontal" Spacing="12">

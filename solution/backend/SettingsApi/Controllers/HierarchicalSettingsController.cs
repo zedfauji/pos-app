@@ -365,6 +365,217 @@ public class HierarchicalSettingsController : ControllerBase
         return true; // Placeholder
     }
 
+    /// <summary>
+    /// Get audit history for settings changes
+    /// </summary>
+    [HttpGet("audit/history")]
+    public async Task<ActionResult<List<SettingsAuditEntry>>> GetAuditHistory(
+        [FromQuery] string? host = null,
+        [FromQuery] string? category = null,
+        [FromQuery] int limit = 100,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var auditHistory = await _settingsService.GetAuditHistoryAsync(host, category, limit, ct);
+            return Ok(auditHistory);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get audit history for host {Host}", host);
+            return StatusCode(500, new { error = "Failed to retrieve audit history", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get audit history for a specific user
+    /// </summary>
+    [HttpGet("audit/history/user/{userId}")]
+    public async Task<ActionResult<List<SettingsAuditEntry>>> GetAuditHistoryByUser(
+        string userId,
+        [FromQuery] string? host = null,
+        [FromQuery] int limit = 100,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var auditHistory = await _settingsService.GetAuditHistoryByUserAsync(userId, host, limit, ct);
+            return Ok(auditHistory);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get audit history for user {UserId} and host {Host}", userId, host);
+            return StatusCode(500, new { error = "Failed to retrieve user audit history", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Validate user access to a settings category
+    /// </summary>
+    [HttpGet("access/validate")]
+    public async Task<ActionResult<bool>> ValidateUserAccess(
+        [FromQuery] string category,
+        [FromQuery] string userId,
+        [FromQuery] string action,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var hasAccess = await _settingsService.ValidateUserAccessAsync(category, userId, action, ct);
+            return Ok(hasAccess);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to validate user access for category {Category}, user {UserId}, action {Action}", 
+                category, userId, action);
+            return StatusCode(500, new { error = "Failed to validate user access", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get accessible categories for a user
+    /// </summary>
+    [HttpGet("access/categories/{userId}")]
+    public async Task<ActionResult<List<string>>> GetUserAccessibleCategories(
+        string userId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var categories = await _settingsService.GetUserAccessibleCategoriesAsync(userId, ct);
+            return Ok(categories);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get accessible categories for user {UserId}", userId);
+            return StatusCode(500, new { error = "Failed to retrieve accessible categories", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Set user access for a settings category
+    /// </summary>
+    [HttpPost("access/set")]
+    public async Task<ActionResult> SetUserCategoryAccess(
+        [FromBody] SetUserAccessRequest request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null || string.IsNullOrEmpty(request.UserId) || string.IsNullOrEmpty(request.Category))
+            {
+                return BadRequest(new { error = "UserId and Category are required" });
+            }
+
+            var success = await _settingsService.SetUserCategoryAccessAsync(
+                request.UserId, 
+                request.Category, 
+                request.CanView, 
+                request.CanEdit, 
+                ct);
+
+            if (success)
+            {
+                return Ok(new { message = "User access updated successfully" });
+            }
+            else
+            {
+                return StatusCode(500, new { error = "Failed to update user access" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set user access for user {UserId}, category {Category}", 
+                request?.UserId, request?.Category);
+            return StatusCode(500, new { error = "Failed to set user access", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Bulk reset settings for multiple categories
+    /// </summary>
+    [HttpPost("bulk/reset")]
+    public async Task<ActionResult> BulkResetSettings(
+        [FromBody] BulkResetRequest request,
+        [FromQuery] string? host = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null || request.Categories == null || !request.Categories.Any())
+            {
+                return BadRequest(new { error = "Categories list is required" });
+            }
+
+            var success = await _settingsService.BulkResetSettingsAsync(request.Categories, host, ct);
+            
+            if (success)
+            {
+                return Ok(new { message = $"Successfully reset {request.Categories.Count} categories" });
+            }
+            else
+            {
+                return StatusCode(500, new { error = "Failed to reset settings" });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to bulk reset settings for host {Host}", host);
+            return StatusCode(500, new { error = "Failed to bulk reset settings", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Bulk export settings for multiple categories
+    /// </summary>
+    [HttpPost("bulk/export")]
+    public async Task<ActionResult<string>> BulkExportSettings(
+        [FromBody] BulkExportRequest request,
+        [FromQuery] string? host = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null || request.Categories == null || !request.Categories.Any())
+            {
+                return BadRequest(new { error = "Categories list is required" });
+            }
+
+            var json = await _settingsService.BulkExportSettingsAsync(request.Categories, host, ct);
+            return Ok(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to bulk export settings for host {Host}", host);
+            return StatusCode(500, new { error = "Failed to bulk export settings", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Bulk validate settings across all categories
+    /// </summary>
+    [HttpPost("bulk/validate")]
+    public async Task<ActionResult<Dictionary<string, List<string>>>> BulkValidateSettings(
+        [FromBody] HierarchicalSettings settings,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (settings == null)
+            {
+                return BadRequest(new { error = "Settings object is required" });
+            }
+
+            var validationResults = await _settingsService.BulkValidateSettingsAsync(settings, ct);
+            return Ok(validationResults);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to bulk validate settings");
+            return StatusCode(500, new { error = "Failed to bulk validate settings", details = ex.Message });
+        }
+    }
+
     #endregion
 }
 
@@ -374,4 +585,22 @@ public class TestPrintRequest
     public string PaperSize { get; set; } = "80mm";
     public bool IncludeLogo { get; set; } = true;
     public string TestMessage { get; set; } = "Test Print - MagiDesk POS";
+}
+
+public class SetUserAccessRequest
+{
+    public string UserId { get; set; } = "";
+    public string Category { get; set; } = "";
+    public bool CanView { get; set; }
+    public bool CanEdit { get; set; }
+}
+
+public class BulkResetRequest
+{
+    public List<string> Categories { get; set; } = new();
+}
+
+public class BulkExportRequest
+{
+    public List<string> Categories { get; set; } = new();
 }

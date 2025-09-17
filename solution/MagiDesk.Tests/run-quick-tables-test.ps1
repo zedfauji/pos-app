@@ -59,3 +59,5 @@ Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Where-Object { $_.Pro
 Write-Host ""
 Write-Host "🎉 Quick Tables test execution completed!" -ForegroundColor Green
 
+
+

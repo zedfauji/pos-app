@@ -24,3 +24,5 @@ dotnet test MagiDesk.Tests/MagiDesk.Tests.csproj --filter "TablesPageAnalysis" -
 Write-Host ""
 Write-Host "📊 Analysis complete!" -ForegroundColor Green
 
+
+

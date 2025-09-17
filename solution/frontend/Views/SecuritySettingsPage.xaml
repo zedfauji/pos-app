@@ -1,0 +1,73 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.SecuritySettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Spacing="8">
+                <TextBlock Text="Security &amp; Roles Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Configure user roles, login policies, session timeouts, and audit logging" 
+                           Opacity="0.7" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- RBAC Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Role-Based Access Control (RBAC)" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="EnforceRolePermissionsSwitch" Header="Enforce Role Permissions"/>
+                    <ToggleSwitch x:Name="AllowRoleInheritanceSwitch" Header="Allow Role Inheritance"/>
+                    <ToggleSwitch x:Name="RequireManagerOverrideForRestrictedSwitch" Header="Require Manager Override for Restricted Operations"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Login Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Login Policies" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="RequireStrongPasswordsSwitch" Header="Require Strong Passwords"/>
+                    <ToggleSwitch x:Name="EnableTwoFactorSwitch" Header="Enable Two-Factor Authentication (2FA)"/>
+                    <NumberBox x:Name="MaxLoginAttemptsBox" Header="Max Login Attempts" Value="5" SpinButtonPlacementMode="Compact"/>
+                    <NumberBox x:Name="LockoutDurationMinutesBox" Header="Lockout Duration (Minutes)" Value="15" SpinButtonPlacementMode="Compact"/>
+                    <NumberBox x:Name="PasswordExpiryDaysBox" Header="Password Expiry (Days)" Value="90" SpinButtonPlacementMode="Compact"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Session Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Session Management" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="EnableAutoLogoutSwitch" Header="Enable Auto-Logout"/>
+                    <ToggleSwitch x:Name="RequireReauthForSensitiveSwitch" Header="Require Re-authentication for Sensitive Actions"/>
+                    <NumberBox x:Name="SessionTimeoutMinutesBox" Header="Session Timeout (Minutes)" Value="60" SpinButtonPlacementMode="Compact"/>
+                    <NumberBox x:Name="MaxConcurrentSessionsBox" Header="Max Concurrent Sessions" Value="3" SpinButtonPlacementMode="Compact"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Audit Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Audit Logging" FontSize="18" FontWeight="SemiBold"/>
+                    <ToggleSwitch x:Name="EnableAuditLoggingSwitch" Header="Enable Audit Logging"/>
+                    <ToggleSwitch x:Name="LogUserActionsSwitch" Header="Log User Actions"/>
+                    <ToggleSwitch x:Name="LogSystemEventsSwitch" Header="Log System Events"/>
+                    <ToggleSwitch x:Name="LogDataChangesSwitch" Header="Log Data Changes"/>
+                    <NumberBox x:Name="RetentionDaysBox" Header="Log Retention (Days)" Value="365" SpinButtonPlacementMode="Compact"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

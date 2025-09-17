@@ -6,13 +6,32 @@ using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Shared.DTOs.Settings;
 using System.Collections.ObjectModel;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace MagiDesk.Frontend.Views;
+
+    public class SettingsCategory
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Key { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public bool HasChanges { get; set; }
+        public bool IsConnected { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
 
 public sealed partial class HierarchicalSettingsPage : Page
 {
     public HierarchicalSettingsViewModel ViewModel { get; }
     private readonly Dictionary<string, Type> _settingsPages;
+    private string _currentFilter = "all";
+    private string _currentSearchQuery = "";
+    private List<SettingsCategory> _allCategories = new();
+    private List<SettingsCategory> _filteredCategories = new();
 
     public HierarchicalSettingsPage()
     {
@@ -26,15 +45,15 @@ public sealed partial class HierarchicalSettingsPage : Page
         _settingsPages = new Dictionary<string, Type>
         {
             { "general", typeof(GeneralSettingsPage) },
-            { "pos", typeof(BaseSettingsPage) },
-            { "inventory", typeof(BaseSettingsPage) },
-            { "customers", typeof(BaseSettingsPage) },
-            { "payments", typeof(BaseSettingsPage) },
+            { "pos", typeof(PosSettingsPage) },
+            { "inventory", typeof(InventorySettingsPage) },
+            { "customers", typeof(CustomersSettingsPage) },
+            { "payments", typeof(PaymentsSettingsPage) },
             { "printers", typeof(PrinterSettingsPage) },
-            { "notifications", typeof(BaseSettingsPage) },
-            { "security", typeof(BaseSettingsPage) },
-            { "integrations", typeof(BaseSettingsPage) },
-            { "system", typeof(BaseSettingsPage) }
+            { "notifications", typeof(NotificationsSettingsPage) },
+            { "security", typeof(SecuritySettingsPage) },
+            { "integrations", typeof(IntegrationsSettingsPage) },
+            { "system", typeof(SystemSettingsPage) }
         };
 
         // Initialize UI
@@ -183,6 +202,108 @@ public sealed partial class HierarchicalSettingsPage : Page
         {
             var treeViewItem = CreateTreeViewItem(item);
             SettingsTreeView.RootNodes.Add(treeViewItem);
+        }
+        
+        // Populate _allCategories for search functionality
+        _allCategories = treeItems.Select(t => new SettingsCategory 
+        { 
+            Key = t.Key, 
+            DisplayName = t.DisplayName, 
+            Description = t.Description, 
+            Icon = t.Icon, 
+            HasChanges = false 
+        }).ToList();
+        
+        _filteredCategories = new List<SettingsCategory>(_allCategories);
+        
+        // Set default filter selection
+        UpdateFilterButtonStyles();
+        
+        // Set default ComboBox selection to "All Categories"
+        if (CategoryFilterComboBox != null)
+        {
+            CategoryFilterComboBox.SelectedIndex = 0; // "All Categories" is the first item
+        }
+    }
+
+    private void UpdateFilterButtonStyles()
+    {
+        // No longer needed with ComboBox - this method is kept for compatibility
+        // The ComboBox handles its own selection state
+    }
+
+    private void PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_currentSearchQuery))
+        {
+            _filteredCategories = new List<SettingsCategory>(_allCategories);
+        }
+        else
+        {
+            var query = _currentSearchQuery.ToLower();
+            _filteredCategories = _allCategories.Where(c => 
+                c.DisplayName.ToLower().Contains(query) ||
+                c.Description.ToLower().Contains(query) ||
+                c.Key.ToLower().Contains(query)
+            ).ToList();
+        }
+        
+        ApplyFilters();
+        UpdateSettingsTree();
+        
+        // Update search results text
+        if (SearchResultsText != null)
+        {
+            if (_filteredCategories.Count == _allCategories.Count)
+            {
+                SearchResultsText.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                SearchResultsText.Text = $"Found {_filteredCategories.Count} of {_allCategories.Count} categories";
+                SearchResultsText.Visibility = Visibility.Visible;
+            }
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        var filtered = _filteredCategories.AsEnumerable();
+        
+        // Apply category filter
+        if (_currentFilter != "all")
+        {
+            filtered = filtered.Where(c => c.Key == _currentFilter);
+        }
+        
+        // Apply changed filter
+        if (_currentFilter == "changed")
+        {
+            filtered = filtered.Where(c => c.HasChanges);
+        }
+        
+        _filteredCategories = filtered.ToList();
+    }
+
+    private void UpdateSettingsTree()
+    {
+        if (SettingsTreeView == null) return;
+        
+        SettingsTreeView.RootNodes.Clear();
+        
+        foreach (var category in _filteredCategories)
+        {
+            var treeItem = new SettingsTreeItem
+            {
+                Key = category.Key,
+                DisplayName = category.DisplayName,
+                Description = category.Description,
+                Icon = category.Icon,
+                HasChanges = category.HasChanges
+            };
+            
+            var node = CreateTreeViewItem(treeItem);
+            SettingsTreeView.RootNodes.Add(node);
         }
     }
 
@@ -580,12 +701,311 @@ public sealed partial class HierarchicalSettingsPage : Page
                 ViewModel.UpdateCategorySettings("printers", currentSettings);
                 System.Diagnostics.Debug.WriteLine($"Collected printer settings: DefaultPrinter={currentSettings.Receipt.DefaultPrinter}");
             }
-            // Add other settings pages as needed
-            // else if (SettingsContentFrame.Content is GeneralSettingsPage generalPage) { ... }
+            else if (SettingsContentFrame.Content is GeneralSettingsPage generalPage)
+            {
+                var currentSettings = generalPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("general", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected general settings: BusinessName={currentSettings.BusinessName}");
+            }
+            else if (SettingsContentFrame.Content is PosSettingsPage posPage)
+            {
+                var currentSettings = posPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("pos", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected POS settings: DefaultTaxRate={currentSettings.Tax.DefaultTaxRate}");
+            }
+            else if (SettingsContentFrame.Content is InventorySettingsPage inventoryPage)
+            {
+                var currentSettings = inventoryPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("inventory", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Inventory settings: LowStockThreshold={currentSettings.Stock.LowStockThreshold}");
+            }
+            else if (SettingsContentFrame.Content is CustomersSettingsPage customersPage)
+            {
+                var currentSettings = customersPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("customers", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Customers settings: EnableWalletSystem={currentSettings.Wallet.EnableWalletSystem}");
+            }
+            else if (SettingsContentFrame.Content is PaymentsSettingsPage paymentsPage)
+            {
+                var currentSettings = paymentsPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("payments", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Payments settings: MaxDiscountPercentage={currentSettings.Discounts.MaxDiscountPercentage}");
+            }
+            else if (SettingsContentFrame.Content is NotificationsSettingsPage notificationsPage)
+            {
+                var currentSettings = notificationsPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("notifications", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Notifications settings: EnableEmail={currentSettings.Email.EnableEmail}");
+            }
+            else if (SettingsContentFrame.Content is SecuritySettingsPage securityPage)
+            {
+                var currentSettings = securityPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("security", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Security settings: EnforceRolePermissions={currentSettings.Rbac.EnforceRolePermissions}");
+            }
+            else if (SettingsContentFrame.Content is IntegrationsSettingsPage integrationsPage)
+            {
+                var currentSettings = integrationsPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("integrations", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected Integrations settings: EnableWebhooks={currentSettings.Webhooks.EnableWebhooks}");
+            }
+            else if (SettingsContentFrame.Content is SystemSettingsPage systemPage)
+            {
+                var currentSettings = systemPage.GetCurrentSettings();
+                ViewModel.UpdateCategorySettings("system", currentSettings);
+                System.Diagnostics.Debug.WriteLine($"Collected System settings: LogLevel={currentSettings.Logging.LogLevel}");
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error collecting current page settings: {ex.Message}");
+        }
+    }
+
+    private async void Export_Click(object sender, RoutedEventArgs e)
+    {
+        await ImportExportDialog.ShowAsync();
+    }
+
+    private async void Import_Click(object sender, RoutedEventArgs e)
+    {
+        await ImportExportDialog.ShowAsync();
+    }
+
+    private async void ExportToFile_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ImportExportStatusPanel.Visibility = Visibility.Visible;
+            ImportExportProgressRing.IsActive = true;
+            ImportExportStatusText.Text = "Exporting settings...";
+
+            var fileSavePicker = new FileSavePicker();
+            fileSavePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            fileSavePicker.FileTypeChoices.Add("JSON Files", new List<string>() { ".json" });
+            fileSavePicker.SuggestedFileName = $"magidesk-settings-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(fileSavePicker, hwnd);
+
+            var file = await fileSavePicker.PickSaveFileAsync();
+            if (file != null)
+            {
+                var settingsJson = await ViewModel.ExportSettingsToJsonAsync();
+                await FileIO.WriteTextAsync(file, settingsJson);
+                
+                ImportExportStatusText.Text = "Settings exported successfully!";
+                SaveSuccessTeachingTip.Subtitle = $"Settings exported to {file.Name}";
+                SaveSuccessTeachingTip.IsOpen = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            ImportExportStatusText.Text = $"Export failed: {ex.Message}";
+            ValidationErrorTeachingTip.Subtitle = $"Export failed: {ex.Message}";
+            ValidationErrorTeachingTip.IsOpen = true;
+        }
+        finally
+        {
+            ImportExportProgressRing.IsActive = false;
+        }
+    }
+
+    private async void ExportToClipboard_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ImportExportStatusPanel.Visibility = Visibility.Visible;
+            ImportExportProgressRing.IsActive = true;
+            ImportExportStatusText.Text = "Exporting to clipboard...";
+
+            var settingsJson = await ViewModel.ExportSettingsToJsonAsync();
+            
+            var dataPackage = new DataPackage();
+            dataPackage.SetText(settingsJson);
+            Clipboard.SetContent(dataPackage);
+            
+            ImportExportStatusText.Text = "Settings copied to clipboard!";
+            SaveSuccessTeachingTip.Subtitle = "Settings copied to clipboard";
+            SaveSuccessTeachingTip.IsOpen = true;
+        }
+        catch (Exception ex)
+        {
+            ImportExportStatusText.Text = $"Export failed: {ex.Message}";
+            ValidationErrorTeachingTip.Subtitle = $"Export failed: {ex.Message}";
+            ValidationErrorTeachingTip.IsOpen = true;
+        }
+        finally
+        {
+            ImportExportProgressRing.IsActive = false;
+        }
+    }
+
+    private async void ImportFromFile_Click(object sender, RoutedEventArgs e)
+    {
+        await FilePickerDialog.ShowAsync();
+    }
+
+    private async void BrowseFile_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var fileOpenPicker = new FileOpenPicker();
+            fileOpenPicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            fileOpenPicker.FileTypeFilter.Add(".json");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(fileOpenPicker, hwnd);
+
+            var file = await fileOpenPicker.PickSingleFileAsync();
+            if (file != null)
+            {
+                FilePathTextBox.Text = file.Path;
+            }
+        }
+        catch (Exception ex)
+        {
+            ValidationErrorTeachingTip.Subtitle = $"File selection failed: {ex.Message}";
+            ValidationErrorTeachingTip.IsOpen = true;
+        }
+    }
+
+    private async void ImportSelectedFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(FilePathTextBox.Text))
+        {
+            ValidationErrorTeachingTip.Subtitle = "Please select a file first";
+            ValidationErrorTeachingTip.IsOpen = true;
+            return;
+        }
+
+        try
+        {
+            ImportExportStatusPanel.Visibility = Visibility.Visible;
+            ImportExportProgressRing.IsActive = true;
+            ImportExportStatusText.Text = "Importing settings...";
+
+            var success = await ViewModel.ImportSettingsFromFileAsync(FilePathTextBox.Text);
+            
+            if (success)
+            {
+                ImportExportStatusText.Text = "Settings imported successfully!";
+                SaveSuccessTeachingTip.Subtitle = "Settings imported successfully";
+                SaveSuccessTeachingTip.IsOpen = true;
+                
+                // Refresh the current page
+                var selectedNode = SettingsTreeView.SelectedNode;
+                if (selectedNode?.Content is SettingsTreeItem item)
+                {
+                    NavigateToSettingsPage(item);
+                }
+            }
+            else
+            {
+                ImportExportStatusText.Text = "Import failed - invalid settings file";
+                ValidationErrorTeachingTip.Subtitle = "Import failed - invalid settings file";
+                ValidationErrorTeachingTip.IsOpen = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            ImportExportStatusText.Text = $"Import failed: {ex.Message}";
+            ValidationErrorTeachingTip.Subtitle = $"Import failed: {ex.Message}";
+            ValidationErrorTeachingTip.IsOpen = true;
+        }
+        finally
+        {
+            ImportExportProgressRing.IsActive = false;
+        }
+    }
+
+    private void NavigateToCategory(string categoryKey)
+    {
+        if (_settingsPages.TryGetValue(categoryKey, out var pageType))
+        {
+            var page = Activator.CreateInstance(pageType) as Page;
+            if (page != null)
+            {
+                SettingsContentFrame.Content = page;
+            }
+        }
+    }
+
+        private void CategoryFilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ComboBox comboBox && comboBox.SelectedItem is ComboBoxItem item && item.Tag is string filter)
+            {
+                _currentFilter = filter;
+                ApplyFilters();
+                UpdateSettingsTree();
+            }
+        }
+
+    private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if (args.ChosenSuggestion != null)
+        {
+            var category = args.ChosenSuggestion as SettingsCategory;
+            if (category != null)
+            {
+                NavigateToCategory(category.Key);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(args.QueryText))
+        {
+            _currentSearchQuery = args.QueryText;
+            PerformSearch();
+        }
+    }
+
+    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            var query = sender.Text?.ToLower() ?? "";
+            
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                sender.ItemsSource = null;
+                return;
+            }
+
+            // Filter categories based on search query
+            var suggestions = _allCategories.Where(c => 
+                c.DisplayName.ToLower().Contains(query) ||
+                c.Description.ToLower().Contains(query) ||
+                c.Key.ToLower().Contains(query)
+            ).Take(5).ToList();
+
+            sender.ItemsSource = suggestions;
+        }
+    }
+
+    private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        var category = args.SelectedItem as SettingsCategory;
+        if (category != null)
+        {
+            NavigateToCategory(category.Key);
+        }
+    }
+
+    private void UpdateSearchResults()
+    {
+        if (SearchResultsText != null)
+        {
+            if (_filteredCategories.Count == 0)
+            {
+                SearchResultsText.Text = "No settings found matching your search.";
+            }
+            else if (_filteredCategories.Count == _allCategories.Count)
+            {
+                SearchResultsText.Text = $"Showing all {_allCategories.Count} settings categories.";
+            }
+            else
+            {
+                SearchResultsText.Text = $"Found {_filteredCategories.Count} settings categories matching your search.";
+            }
         }
     }
 }
@@ -651,3 +1071,4 @@ public class BooleanToColorConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
