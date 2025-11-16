@@ -1,11 +1,8 @@
-; Inno Setup installer script for MagiDesk Frontend + Sync Windows Service
-; Pass in /DSourceDir="<frontend publish path>", /DServiceDir="<service publish path>", and optionally /DAppVersion and /DOutputDir
+; Inno Setup installer script for MagiDesk Frontend
+; Pass in /DSourceDir="<frontend publish path>", and optionally /DAppVersion and /DOutputDir
 
 #ifndef SourceDir
   #error SourceDir not defined. Pass /DSourceDir="<publish path>" to ISCC.
-#endif
-#ifndef ServiceDir
-  #define ServiceDir ""
 #endif
 #ifndef AppVersion
   #define AppVersion "1.0.0"
@@ -39,22 +36,21 @@ SolidCompression=yes
 WizardStyle=modern
 DisableProgramGroupPage=yes
 ArchitecturesInstallIn64BitMode=x64
+ExtraDiskSpaceRequired=500000000
 #if SetupIcon != ""
 SetupIconFile={#SetupIcon}
 #endif
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
-; Sync Worker (if provided)
-Source: "{#ServiceDir}\*"; DestDir: "{app}\SyncWorker"; Flags: recursesubdirs createallsubdirs ignoreversion; Check: ServiceProvided
-; Default config to ProgramData
-Source: "{#ServiceDir}\appsettings.json"; DestDir: "{commonappdata}\MagiDesk\sync"; Flags: ignoreversion; Check: ServiceProvided
 ; Optional redistributables copied to temp for install
+#if RedistDir != ""
 #if FileExists(AddBackslash(RedistDir) + "WindowsAppRuntimeInstall.exe")
 Source: "{#RedistDir}\WindowsAppRuntimeInstall.exe"; DestDir: "{tmp}"; Flags: ignoreversion
 #endif
 #if FileExists(AddBackslash(RedistDir) + "Microsoft.WebView2.Bootstrapper.exe")
 Source: "{#RedistDir}\Microsoft.WebView2.Bootstrapper.exe"; DestDir: "{tmp}"; Flags: ignoreversion
+#endif
 #endif
 
 [Icons]
@@ -71,29 +67,68 @@ Name: "{autodesktop}\MagiDesk"; Filename: "{app}\MagiDesk.Frontend.exe"; Working
 Name: desktopicon; Description: "Create a &desktop shortcut"; Flags: unchecked
 
 [Run]
-Filename: "{app}\MagiDesk.Frontend.exe"; Description: "Launch MagiDesk"; Flags: nowait postinstall skipifsilent
-; Create and start Windows Service
-Filename: "cmd.exe"; Parameters: "/c sc create RestockMate binPath= ""{app}\SyncWorker\MagiDesk.SyncWorker.exe"" start= auto DisplayName= ""RestockMate"""; Flags: runhidden; Check: ServiceProvided
-Filename: "cmd.exe"; Parameters: "/c sc start RestockMate"; Flags: runhidden; Check: ServiceProvided
-; Install redistributables silently if provided
+; Install redistributables silently BEFORE launching the app (with error handling)
+#if RedistDir != ""
 #if FileExists(AddBackslash(RedistDir) + "WindowsAppRuntimeInstall.exe")
-Filename: "{tmp}\WindowsAppRuntimeInstall.exe"; Parameters: "/quiet /norestart"; Flags: runhidden
+Filename: "{tmp}\WindowsAppRuntimeInstall.exe"; Parameters: "/quiet /norestart"; Flags: runhidden skipifdoesntexist waituntilterminated
 #endif
 #if FileExists(AddBackslash(RedistDir) + "Microsoft.WebView2.Bootstrapper.exe")
-Filename: "{tmp}\Microsoft.WebView2.Bootstrapper.exe"; Parameters: "/silent /install"; Flags: runhidden
+Filename: "{tmp}\Microsoft.WebView2.Bootstrapper.exe"; Parameters: "/silent /install"; Flags: runhidden skipifdoesntexist waituntilterminated
 #endif
+#endif
+; Launch MagiDesk after prerequisites are installed
+Filename: "{app}\MagiDesk.Frontend.exe"; Description: "Launch MagiDesk"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "cmd.exe"; Parameters: "/c sc stop RestockMate"; Flags: runhidden; Check: ServiceProvided
-Filename: "cmd.exe"; Parameters: "/c sc delete RestockMate"; Flags: runhidden; Check: ServiceProvided
 
 [Code]
-function ServiceProvided: Boolean;
-begin
-  Result := '{#ServiceDir}' <> '';
-end;
 
 function RedistProvided: Boolean;
 begin
   Result := '{#RedistDir}' <> '';
+end;
+
+function InitializeSetup(): Boolean;
+var
+  Version: TWindowsVersion;
+  ErrorMessage: String;
+begin
+  Result := True;
+  
+  // Get Windows version
+  GetWindowsVersionEx(Version);
+  
+  // Check if Windows 10 or later
+  if Version.Major < 10 then
+  begin
+    ErrorMessage := 'MagiDesk requires Windows 10 or later.' + #13#10 + #13#10 +
+                    'Your system is running Windows ' + IntToStr(Version.Major) + '.' + IntToStr(Version.Minor) + '.' + #13#10 +
+                    'Please upgrade to Windows 10 version 1809 (October 2018 Update) or later.';
+    MsgBox(ErrorMessage, mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+  
+  // Check if Windows 10 version 1809 (Build 17763) or later
+  if (Version.Major = 10) and (Version.Build < 17763) then
+  begin
+    ErrorMessage := 'MagiDesk requires Windows 10 version 1809 (October 2018 Update) or later.' + #13#10 + #13#10 +
+                    'Your system is running Windows 10 Build ' + IntToStr(Version.Build) + '.' + #13#10 +
+                    'Minimum required: Windows 10 Build 17763 (version 1809).' + #13#10 + #13#10 +
+                    'Please update Windows to the latest version.';
+    MsgBox(ErrorMessage, mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+  
+  // Check if 64-bit architecture
+  if not IsWin64 then
+  begin
+    ErrorMessage := 'MagiDesk requires a 64-bit version of Windows.' + #13#10 + #13#10 +
+                    'Your system appears to be running 32-bit Windows.' + #13#10 +
+                    'Please install the 64-bit version of Windows 10.';
+    MsgBox(ErrorMessage, mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
 end;

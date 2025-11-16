@@ -17,6 +17,9 @@ obj/
 *.msix*
 Package.StoreAssociation.xml
 
+# Installer redistributables (downloaded files)
+solution/frontend/install/redist/
+
 # Logs
 *.log
 *.binlog
