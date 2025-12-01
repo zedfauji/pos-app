@@ -4,8 +4,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:data="using:Microsoft.UI.Xaml.Data"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
     mc:Ignorable="d"
     Background="Transparent">
+    
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
+    </Page.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -282,19 +289,24 @@
                             <TextBlock Text="Split Payment" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             
                             <!-- Split Method Selection -->
-                            <Grid Margin="0,0,0,8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <RadioButton x:Name="SplitAmountRadio" Grid.Column="0" Content="Amount" Tag="Amount" 
-                                           Checked="SplitMethod_Checked" IsChecked="True" Margin="0,0,4,0"/>
-                                <RadioButton x:Name="SplitPercentageRadio" Grid.Column="1" Content="Percentage" Tag="Percentage" 
-                                           Checked="SplitMethod_Checked" Margin="2,0"/>
-                                <RadioButton x:Name="SplitPeopleRadio" Grid.Column="2" Content="By People" Tag="People" 
-                                           Checked="SplitMethod_Checked" Margin="4,0,0,0"/>
-                            </Grid>
+                            <StackPanel Margin="0,0,0,8" Spacing="8">
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="SplitAmountRadio" Grid.Column="0" Content="Amount" Tag="Amount" 
+                                               Checked="SplitMethod_Checked" IsChecked="True" Margin="0,0,4,0"/>
+                                    <RadioButton x:Name="SplitPercentageRadio" Grid.Column="1" Content="Percentage" Tag="Percentage" 
+                                               Checked="SplitMethod_Checked" Margin="2,0"/>
+                                    <RadioButton x:Name="SplitPeopleRadio" Grid.Column="2" Content="By People" Tag="People" 
+                                               Checked="SplitMethod_Checked" Margin="2,0"/>
+                                    <RadioButton x:Name="SplitItemsRadio" Grid.Column="3" Content="By Items" Tag="Items" 
+                                               Checked="SplitMethod_Checked" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
                             
                             <!-- Quick Actions -->
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
@@ -313,6 +325,68 @@
                                           Foreground="Gray" Margin="0,4,0,0"/>
                             </StackPanel>
                             
+                            <!-- By Items Mode -->
+                            <StackPanel x:Name="ItemsModePanel" Spacing="8" Visibility="Collapsed" Margin="0,0,0,8">
+                                <TextBlock Text="Assign Items to Payment Methods" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" MaxHeight="300">
+                                    <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="ItemsSplitList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="8,6"
+                                                            Opacity="{Binding IsIncluded, Converter={StaticResource BoolToOpacityConverter}}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                                            <CheckBox Grid.Column="0" 
+                                                                     IsChecked="{Binding IsIncluded, Mode=TwoWay}"
+                                                                     Checked="ItemInclude_Checked"
+                                                                     Unchecked="ItemInclude_Unchecked"
+                                                                     Margin="0,0,8,0"
+                                                                     VerticalAlignment="Center"/>
+                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                                <TextBlock FontSize="12" FontWeight="SemiBold">
+                                                                    <Run Text="{Binding Name}"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text="(Excluded)" FontSize="11" Foreground="Gray" 
+                                                                           Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                           Margin="0,-2,0,0"/>
+                                                                <TextBlock FontSize="11" Foreground="Gray">
+                                                                    <Run Text="{Binding Quantity}"/>
+                                                                    <Run Text=" x $"/>
+                                                                    <Run Text="{Binding UnitPrice}"/>
+                                                                    <Run Text=" = $"/>
+                                                                    <Run Text="{Binding Subtotal}" FontWeight="SemiBold"/>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <ComboBox Grid.Column="2" 
+                                                                     Width="120" 
+                                                                     FontSize="11"
+                                                                     SelectionChanged="ItemPaymentMethod_SelectionChanged"
+                                                                     Tag="{Binding}"
+                                                                     IsEnabled="{Binding IsIncluded}"
+                                                                     PlaceholderText="Select method">
+                                                                <ComboBox.Items>
+                                                                    <x:String>Cash</x:String>
+                                                                    <x:String>Card</x:String>
+                                                                    <x:String>Digital</x:String>
+                                                                </ComboBox.Items>
+                                                            </ComboBox>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="AutoAssignItemsButton" Content="Auto-Assign Items" Click="AutoAssignItems_Click" 
+                                           Padding="12,6" FontSize="12" Background="#E0E0E0" HorizontalAlignment="Stretch"/>
+                                    <Button x:Name="IncludeAllItemsButton" Content="Include All" Click="IncludeAllItems_Click" 
+                                           Padding="12,6" FontSize="12" Background="#E0E0E0"/>
+                                    <Button x:Name="ExcludeAllItemsButton" Content="Exclude All" Click="ExcludeAllItems_Click" 
+                                           Padding="12,6" FontSize="12" Background="#E0E0E0"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
                             <!-- Amount/Percentage Mode -->
                             <StackPanel x:Name="AmountModePanel" Spacing="4" Margin="0,0,0,8">
                                 <StackPanel>
@@ -326,7 +400,11 @@
                                                   Foreground="Gray" Visibility="Collapsed"/>
                                     </Grid>
                                     <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
-                                              ValueChanged="CashAmountInput_ValueChanged"/>
+                                              ValueChanged="CashAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
                                 </StackPanel>
                                 <StackPanel>
                                     <Grid>
@@ -339,7 +417,11 @@
                                                   Foreground="Gray" Visibility="Collapsed"/>
                                     </Grid>
                                     <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
-                                              ValueChanged="CardAmountInput_ValueChanged"/>
+                                              ValueChanged="CardAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
                                 </StackPanel>
                                 <StackPanel>
                                     <Grid>
@@ -352,7 +434,11 @@
                                                   Foreground="Gray" Visibility="Collapsed"/>
                                     </Grid>
                                     <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
-                                              ValueChanged="DigitalAmountInput_ValueChanged"/>
+                                              ValueChanged="DigitalAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
                                 </StackPanel>
                             </StackPanel>
                             

@@ -44,7 +44,7 @@ namespace MagiDesk.Frontend.Views
         private decimal _cashAmount = 0;
         private decimal _cardAmount = 0;
         private int _numberOfPeople = 2;
-        private string _splitMode = "Amount"; // "Amount", "Percentage", "People"
+        private string _splitMode = "Amount"; // "Amount", "Percentage", "People", "Items"
         private decimal _cashPercentage = 0;
         private decimal _cardPercentage = 0;
         private decimal _digitalPercentage = 0;
@@ -146,7 +146,9 @@ namespace MagiDesk.Frontend.Views
                         Name = item.name,
                         Quantity = item.quantity,
                         UnitPrice = item.price,
-                        Subtotal = item.quantity * item.price
+                        Subtotal = item.quantity * item.price,
+                        AssignedPaymentMethod = "",
+                        IsIncluded = true // Default to included
                     });
                 }
                 System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Loaded {_orderItems.Count} items from bill");
@@ -170,7 +172,9 @@ namespace MagiDesk.Frontend.Views
                                 Name = item.name,
                                 Quantity = item.quantity,
                                 UnitPrice = item.price,
-                                Subtotal = item.quantity * item.price
+                                Subtotal = item.quantity * item.price,
+                                AssignedPaymentMethod = "",
+                                IsIncluded = true // Default to included
                             });
                         }
                         System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Fetched {_orderItems.Count} items from BillingService");
@@ -197,7 +201,9 @@ namespace MagiDesk.Frontend.Views
                     Name = "Order Items",
                     Quantity = 1,
                     UnitPrice = itemTotal,
-                    Subtotal = itemTotal
+                    Subtotal = itemTotal,
+                    AssignedPaymentMethod = "",
+                    IsIncluded = true // Default to included
                 });
             }
             
@@ -237,11 +243,44 @@ namespace MagiDesk.Frontend.Views
                 if (method == "Split")
                 {
                     SplitPaymentPanel.Visibility = Visibility.Visible;
-                    // Initialize split mode
+                    // Initialize split mode to "Amount" (default)
                     _splitMode = "Amount";
-                    SplitAmountRadio.IsChecked = true;
-                    AmountModePanel.Visibility = Visibility.Visible;
-                    PeopleModePanel.Visibility = Visibility.Collapsed;
+                    
+                    // Set the correct radio button as checked (only Amount should be checked)
+                    if (SplitAmountRadio != null)
+                        SplitAmountRadio.IsChecked = true;
+                    if (SplitPercentageRadio != null)
+                        SplitPercentageRadio.IsChecked = false;
+                    if (SplitPeopleRadio != null)
+                        SplitPeopleRadio.IsChecked = false;
+                    if (SplitItemsRadio != null)
+                        SplitItemsRadio.IsChecked = false;
+                    
+                    // Ensure ItemsModePanel is hidden when Amount mode is selected
+                    if (ItemsModePanel != null)
+                        ItemsModePanel.Visibility = Visibility.Collapsed;
+                    
+                    // Show/hide appropriate panels
+                    if (AmountModePanel != null)
+                        AmountModePanel.Visibility = Visibility.Visible;
+                    if (PeopleModePanel != null)
+                        PeopleModePanel.Visibility = Visibility.Collapsed;
+                    if (ItemsModePanel != null)
+                        ItemsModePanel.Visibility = Visibility.Collapsed;
+                    
+                    // Hide percentage text blocks for Amount mode
+                    if (CashPercentageText != null)
+                        CashPercentageText.Visibility = Visibility.Collapsed;
+                    if (CardPercentageText != null)
+                        CardPercentageText.Visibility = Visibility.Collapsed;
+                    if (DigitalPercentageText != null)
+                        DigitalPercentageText.Visibility = Visibility.Collapsed;
+                    
+                    // Initialize items split list if needed
+                    if (ItemsSplitList != null && ItemsSplitList.ItemsSource == null)
+                    {
+                        ItemsSplitList.ItemsSource = _orderItems;
+                    }
                     
                     // Initialize split amounts with equal split
                     SplitEvenly();
@@ -340,18 +379,20 @@ namespace MagiDesk.Frontend.Views
 
         private void CardAmountInput_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            _cardAmount = (decimal)args.NewValue;
+            _cardAmount = Math.Round((decimal)args.NewValue, 2);
             UpdateSplitTotal();
         }
-
+        
         private void DigitalAmountInput_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            _digitalAmount = (decimal)args.NewValue;
+            _digitalAmount = Math.Round((decimal)args.NewValue, 2);
             UpdateSplitTotal();
         }
 
         private void UpdateSplitTotal()
         {
+            if (SplitTotalText == null) return;
+            
             var splitTotal = _cashAmount + _cardAmount + _digitalAmount;
             SplitTotalText.Text = splitTotal.ToString("C");
             
@@ -369,24 +410,39 @@ namespace MagiDesk.Frontend.Views
                 _cardPercentage = _cardAmount > 0 ? (_cardAmount / expectedTotal) * 100 : 0;
                 _digitalPercentage = _digitalAmount > 0 ? (_digitalAmount / expectedTotal) * 100 : 0;
                 
-                CashPercentageText.Text = _cashPercentage > 0 ? $"{_cashPercentage:F1}%" : "";
-                CardPercentageText.Text = _cardPercentage > 0 ? $"{_cardPercentage:F1}%" : "";
-                DigitalPercentageText.Text = _digitalPercentage > 0 ? $"{_digitalPercentage:F1}%" : "";
-                
-                CashPercentageText.Visibility = _cashPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
-                CardPercentageText.Visibility = _cardPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
-                DigitalPercentageText.Visibility = _digitalPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                if (CashPercentageText != null)
+                {
+                    CashPercentageText.Text = _cashPercentage > 0 ? $"{_cashPercentage:F1}%" : "";
+                    CashPercentageText.Visibility = _cashPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (CardPercentageText != null)
+                {
+                    CardPercentageText.Text = _cardPercentage > 0 ? $"{_cardPercentage:F1}%" : "";
+                    CardPercentageText.Visibility = _cardPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (DigitalPercentageText != null)
+                {
+                    DigitalPercentageText.Text = _digitalPercentage > 0 ? $"{_digitalPercentage:F1}%" : "";
+                    DigitalPercentageText.Visibility = _digitalPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                }
             }
             else
             {
-                CashPercentageText.Visibility = Visibility.Collapsed;
-                CardPercentageText.Visibility = Visibility.Collapsed;
-                DigitalPercentageText.Visibility = Visibility.Collapsed;
+                if (CashPercentageText != null)
+                    CashPercentageText.Visibility = Visibility.Collapsed;
+                if (CardPercentageText != null)
+                    CardPercentageText.Visibility = Visibility.Collapsed;
+                if (DigitalPercentageText != null)
+                    DigitalPercentageText.Visibility = Visibility.Collapsed;
             }
         }
         
         private void UpdateBalanceIndicator(decimal difference, decimal expectedTotal)
         {
+            // Check if UI elements are initialized
+            if (BalanceStatusText == null || BalanceIcon == null || BalanceIndicator == null)
+                return;
+                
             var absDifference = Math.Abs(difference);
             
             if (absDifference <= 0.01m) // Balanced (within 1 cent)
@@ -425,21 +481,43 @@ namespace MagiDesk.Frontend.Views
             {
                 _splitMode = mode;
                 
-                AmountModePanel.Visibility = mode == "People" ? Visibility.Collapsed : Visibility.Visible;
+                // Check if UI elements are initialized (split panel might not be visible yet)
+                if (AmountModePanel == null || PeopleModePanel == null || ItemsModePanel == null)
+                    return;
+                
+                // Uncheck all other radio buttons to ensure only one is selected
+                if (SplitAmountRadio != null && mode != "Amount")
+                    SplitAmountRadio.IsChecked = false;
+                if (SplitPercentageRadio != null && mode != "Percentage")
+                    SplitPercentageRadio.IsChecked = false;
+                if (SplitPeopleRadio != null && mode != "People")
+                    SplitPeopleRadio.IsChecked = false;
+                if (SplitItemsRadio != null && mode != "Items")
+                    SplitItemsRadio.IsChecked = false;
+                
+                // Show/hide appropriate panels
+                AmountModePanel.Visibility = (mode == "People" || mode == "Items") ? Visibility.Collapsed : Visibility.Visible;
                 PeopleModePanel.Visibility = mode == "People" ? Visibility.Visible : Visibility.Collapsed;
+                ItemsModePanel.Visibility = mode == "Items" ? Visibility.Visible : Visibility.Collapsed;
                 
                 if (mode == "Percentage")
                 {
                     // Show percentage text blocks
-                    CashPercentageText.Visibility = Visibility.Visible;
-                    CardPercentageText.Visibility = Visibility.Visible;
-                    DigitalPercentageText.Visibility = Visibility.Visible;
+                    if (CashPercentageText != null)
+                        CashPercentageText.Visibility = Visibility.Visible;
+                    if (CardPercentageText != null)
+                        CardPercentageText.Visibility = Visibility.Visible;
+                    if (DigitalPercentageText != null)
+                        DigitalPercentageText.Visibility = Visibility.Visible;
                 }
                 else
                 {
-                    CashPercentageText.Visibility = Visibility.Collapsed;
-                    CardPercentageText.Visibility = Visibility.Collapsed;
-                    DigitalPercentageText.Visibility = Visibility.Collapsed;
+                    if (CashPercentageText != null)
+                        CashPercentageText.Visibility = Visibility.Collapsed;
+                    if (CardPercentageText != null)
+                        CardPercentageText.Visibility = Visibility.Collapsed;
+                    if (DigitalPercentageText != null)
+                        DigitalPercentageText.Visibility = Visibility.Collapsed;
                 }
                 
                 // Recalculate based on new mode
@@ -450,6 +528,15 @@ namespace MagiDesk.Frontend.Views
                 else if (mode == "Percentage")
                 {
                     CalculateSplitByPercentage();
+                }
+                else if (mode == "Items")
+                {
+                    InitializeItemsSplit();
+                }
+                else if (mode == "Amount")
+                {
+                    // For Amount mode, just update the split total
+                    UpdateSplitTotal();
                 }
             }
         }
@@ -472,14 +559,17 @@ namespace MagiDesk.Frontend.Views
             {
                 // Split equally among 3 payment methods
                 var amountPerMethod = expectedTotal / 3;
-                CashAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
-                CardAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
-                DigitalAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                if (CashAmountInput != null)
+                    CashAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                if (CardAmountInput != null)
+                    CardAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                if (DigitalAmountInput != null)
+                    DigitalAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
                 
                 // Adjust for rounding - put remainder in cash
                 var splitTotal = _cashAmount + _cardAmount + _digitalAmount;
                 var remainder = expectedTotal - splitTotal;
-                if (Math.Abs(remainder) > 0.01m)
+                if (Math.Abs(remainder) > 0.01m && CashAmountInput != null)
                 {
                     CashAmountInput.Value = (double)(_cashAmount + remainder);
                 }
@@ -496,15 +586,15 @@ namespace MagiDesk.Frontend.Views
             if (remaining > 0)
             {
                 // Fill remaining in the method with the smallest amount
-                if (_cashAmount <= _cardAmount && _cashAmount <= _digitalAmount)
+                if (_cashAmount <= _cardAmount && _cashAmount <= _digitalAmount && CashAmountInput != null)
                 {
                     CashAmountInput.Value = (double)(_cashAmount + remaining);
                 }
-                else if (_cardAmount <= _digitalAmount)
+                else if (_cardAmount <= _digitalAmount && CardAmountInput != null)
                 {
                     CardAmountInput.Value = (double)(_cardAmount + remaining);
                 }
-                else
+                else if (DigitalAmountInput != null)
                 {
                     DigitalAmountInput.Value = (double)(_digitalAmount + remaining);
                 }
@@ -525,7 +615,8 @@ namespace MagiDesk.Frontend.Views
             var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
             var perPerson = expectedTotal / _numberOfPeople;
             
-            PerPersonAmountText.Text = $"Per Person: {perPerson:C}";
+            if (PerPersonAmountText != null)
+                PerPersonAmountText.Text = $"Per Person: {perPerson:C}";
             
             // Reset amounts
             _cashAmount = 0;
@@ -564,10 +655,13 @@ namespace MagiDesk.Frontend.Views
                 _cashAmount += remaining;
             }
             
-            // Update UI
-            CashAmountInput.Value = (double)_cashAmount;
-            CardAmountInput.Value = (double)_cardAmount;
-            DigitalAmountInput.Value = (double)_digitalAmount;
+            // Update UI - check if controls are initialized
+            if (CashAmountInput != null)
+                CashAmountInput.Value = (double)_cashAmount;
+            if (CardAmountInput != null)
+                CardAmountInput.Value = (double)_cardAmount;
+            if (DigitalAmountInput != null)
+                DigitalAmountInput.Value = (double)_digitalAmount;
         }
         
         private void CalculateSplitByPercentage()
@@ -596,9 +690,13 @@ namespace MagiDesk.Frontend.Views
                 _cashAmount += remainder;
             }
             
-            CashAmountInput.Value = (double)_cashAmount;
-            CardAmountInput.Value = (double)_cardAmount;
-            DigitalAmountInput.Value = (double)_digitalAmount;
+            // Update UI - check if controls are initialized
+            if (CashAmountInput != null)
+                CashAmountInput.Value = (double)_cashAmount;
+            if (CardAmountInput != null)
+                CardAmountInput.Value = (double)_cardAmount;
+            if (DigitalAmountInput != null)
+                DigitalAmountInput.Value = (double)_digitalAmount;
         }
         
         private void TipDistribution_Checked(object sender, RoutedEventArgs e)
@@ -607,6 +705,182 @@ namespace MagiDesk.Frontend.Views
             {
                 _tipDistribution = distribution;
             }
+        }
+        
+        private void InitializeItemsSplit()
+        {
+            // Initialize items split mode - assign items to payment methods
+            if (ItemsSplitList == null) return;
+            
+            // If no items are assigned yet, auto-assign them
+            bool hasAssignments = _orderItems.Any(item => !string.IsNullOrEmpty(item.AssignedPaymentMethod));
+            if (!hasAssignments)
+            {
+                AutoAssignItems();
+            }
+            else
+            {
+                // Recalculate split amounts based on current assignments
+                CalculateSplitByItems();
+            }
+        }
+        
+        private void ItemPaymentMethod_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is ComboBox comboBox)
+            {
+                // Get the item from the Tag
+                if (comboBox.Tag is OrderItemViewModel item)
+                {
+                    if (comboBox.SelectedItem is string paymentMethod)
+                    {
+                        item.AssignedPaymentMethod = paymentMethod;
+                        CalculateSplitByItems();
+                    }
+                }
+                else if (comboBox.DataContext is OrderItemViewModel itemFromContext)
+                {
+                    if (comboBox.SelectedItem is string paymentMethod)
+                    {
+                        itemFromContext.AssignedPaymentMethod = paymentMethod;
+                        CalculateSplitByItems();
+                    }
+                }
+            }
+        }
+        
+        private void ItemInclude_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox checkBox && checkBox.DataContext is OrderItemViewModel item)
+            {
+                item.IsIncluded = true;
+                CalculateSplitByItems();
+            }
+        }
+        
+        private void ItemInclude_Unchecked(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox checkBox && checkBox.DataContext is OrderItemViewModel item)
+            {
+                item.IsIncluded = false;
+                item.AssignedPaymentMethod = ""; // Clear payment method when excluded
+                CalculateSplitByItems();
+            }
+        }
+        
+        private void AutoAssignItems_Click(object sender, RoutedEventArgs e)
+        {
+            AutoAssignItems();
+        }
+        
+        private void IncludeAllItems_Click(object sender, RoutedEventArgs e)
+        {
+            if (_orderItems == null) return;
+            
+            foreach (var item in _orderItems)
+            {
+                item.IsIncluded = true;
+            }
+            
+            // Auto-assign included items
+            AutoAssignItems();
+        }
+        
+        private void ExcludeAllItems_Click(object sender, RoutedEventArgs e)
+        {
+            if (_orderItems == null) return;
+            
+            foreach (var item in _orderItems)
+            {
+                item.IsIncluded = false;
+                item.AssignedPaymentMethod = "";
+            }
+            
+            // Reset amounts
+            _cashAmount = 0;
+            _cardAmount = 0;
+            _digitalAmount = 0;
+            
+            // Update UI
+            if (CashAmountInput != null)
+                CashAmountInput.Value = 0;
+            if (CardAmountInput != null)
+                CardAmountInput.Value = 0;
+            if (DigitalAmountInput != null)
+                DigitalAmountInput.Value = 0;
+            
+            UpdateSplitTotal();
+        }
+        
+        private void AutoAssignItems()
+        {
+            if (_orderItems == null || _orderItems.Count == 0) return;
+            
+            // Distribute items evenly across payment methods (only for included items)
+            var methods = new[] { "Cash", "Card", "Digital" };
+            int methodIndex = 0;
+            
+            foreach (var item in _orderItems)
+            {
+                // Only assign payment method to included items
+                if (item.IsIncluded)
+                {
+                    item.AssignedPaymentMethod = methods[methodIndex % methods.Length];
+                    methodIndex++;
+                }
+                else
+                {
+                    // Clear payment method for excluded items
+                    item.AssignedPaymentMethod = "";
+                }
+            }
+            
+            CalculateSplitByItems();
+        }
+        
+        private void CalculateSplitByItems()
+        {
+            if (_orderItems == null || _orderItems.Count == 0) return;
+            
+            // Reset amounts
+            _cashAmount = 0;
+            _cardAmount = 0;
+            _digitalAmount = 0;
+            
+            // Calculate amounts based on item assignments (only for included items)
+            foreach (var item in _orderItems)
+            {
+                // Skip excluded items
+                if (!item.IsIncluded)
+                    continue;
+                    
+                if (string.IsNullOrEmpty(item.AssignedPaymentMethod))
+                    continue;
+                    
+                switch (item.AssignedPaymentMethod)
+                {
+                    case "Cash":
+                        _cashAmount += item.Subtotal;
+                        break;
+                    case "Card":
+                        _cardAmount += item.Subtotal;
+                        break;
+                    case "Digital":
+                        _digitalAmount += item.Subtotal;
+                        break;
+                }
+            }
+            
+            // Update UI - check if controls are initialized
+            if (CashAmountInput != null)
+                CashAmountInput.Value = (double)_cashAmount;
+            if (CardAmountInput != null)
+                CardAmountInput.Value = (double)_cardAmount;
+            if (DigitalAmountInput != null)
+                DigitalAmountInput.Value = (double)_digitalAmount;
+            
+            // Update split total and balance
+            UpdateSplitTotal();
         }
 
         // Customer amount and tip calculator methods
@@ -1371,6 +1645,8 @@ namespace MagiDesk.Frontend.Views
         private int _quantity;
         private decimal _unitPrice;
         private decimal _subtotal;
+        private string _assignedPaymentMethod = ""; // For split by items
+        private bool _isIncluded = true; // Whether this item is included in payment
 
         public string Name 
         { 
@@ -1395,6 +1671,34 @@ namespace MagiDesk.Frontend.Views
             get => _subtotal; 
             set { _subtotal = value; OnPropertyChanged(); } 
         }
+        
+        public string AssignedPaymentMethod
+        {
+            get => _assignedPaymentMethod;
+            set 
+            { 
+                _assignedPaymentMethod = value; 
+                OnPropertyChanged(); 
+            }
+        }
+        
+        public bool IsIncluded
+        {
+            get => _isIncluded;
+            set 
+            { 
+                _isIncluded = value; 
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsExcluded));
+                // If excluded, clear payment method assignment
+                if (!value)
+                {
+                    AssignedPaymentMethod = "";
+                }
+            }
+        }
+        
+        public bool IsExcluded => !_isIncluded;
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
