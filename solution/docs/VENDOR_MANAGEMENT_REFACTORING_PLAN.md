@@ -1,4 +1,4 @@
-# Vendor Management Module - Refactoring Plan
+    # Vendor Management Module - Refactoring Plan
 
 **Date:** 2025-01-16  
 **Based on:** VENDOR_MANAGEMENT_AUDIT_REPORT.md  

@@ -127,8 +127,7 @@
                 <Page Include="Views\StockAdjustmentDialog.xaml" />
                 <Compile Include="Views\StockAdjustmentDialog.xaml.cs" />
                 <!-- Legacy VendorsPage removed - using new inventory system -->
-                <Page Include="Views\VendorDialog.xaml" />
-                <Compile Include="Views\VendorDialog.xaml.cs" />
+                <!-- VendorDialog removed - using VendorCrudDialog instead -->
                 <Page Include="Views\RestockPage.xaml" />
                 <Compile Include="Views\RestockPage.xaml.cs" />
                 <Page Include="Views\RestockRequestDialog.xaml" />
@@ -145,6 +144,10 @@
                 <Compile Include="Views\AuditReportsPage.xaml.cs" />
                 <Page Include="Views\ReportGenerationDialog.xaml" />
                 <Compile Include="Views\ReportGenerationDialog.xaml.cs" />
+                <Page Include="Views\VendorsManagementPage.xaml" />
+                <Compile Include="Views\VendorsManagementPage.xaml.cs" />
+                <Page Include="Views\VendorDetailsPage.xaml" />
+                <Compile Include="Views\VendorDetailsPage.xaml.cs" />
     </ItemGroup>
     <ItemGroup Condition="'$(XamlOnlyMain)'=='true' and '$(IncludeCashFlow)'=='true'">
         <Page Include="Views\CashFlowPage.xaml" />

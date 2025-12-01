@@ -264,3 +264,4 @@ dotnet test MagiDesk.Tests --filter "TestCategory=Visual" --verbosity normal
 
 
 
+

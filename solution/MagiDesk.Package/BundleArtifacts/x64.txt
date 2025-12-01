@@ -1,0 +1,2 @@
+MainPackage=C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\MagiDesk.Package\bin\x64\Release\MagiDesk.Package_1.0.11.0_x64.msix
+SymbolPackage=C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\MagiDesk.Package\obj\x64\Release\Symbols\MagiDesk.Package_1.0.11.0_x64.appxsym

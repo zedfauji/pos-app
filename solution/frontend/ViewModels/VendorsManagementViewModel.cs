@@ -14,6 +14,9 @@ public class VendorsManagementViewModel : INotifyPropertyChanged
     private readonly IVendorService _vendorService;
     private readonly IInventoryService _inventoryService;
     private readonly IVendorOrderService? _vendorOrderService;
+
+    public IVendorOrderService? GetVendorOrderService() => _vendorOrderService;
+    public IInventoryService GetInventoryService() => _inventoryService;
     private bool _isLoading;
     private string _statusMessage = "Ready";
     private string _searchText = string.Empty;
@@ -488,6 +491,41 @@ public class VendorsManagementViewModel : INotifyPropertyChanged
             vendorDisplay.PendingOrders = ordersList.Count(o => o.Status == "Draft" || o.Status == "Sent" || o.Status == "Confirmed" || o.Status == "Shipped");
             vendorDisplay.TotalOrderValue = ordersList.Sum(o => o.TotalValue);
             vendorDisplay.LastOrderDate = ordersList.OrderByDescending(o => o.OrderDate).FirstOrDefault()?.OrderDate;
+
+            // Calculate performance metrics
+            if (ordersList.Any())
+            {
+                var deliveredOrders = ordersList.Where(o => o.Status == "Delivered" && o.ActualDeliveryDate.HasValue && o.ExpectedDeliveryDate.HasValue).ToList();
+                
+                if (deliveredOrders.Any())
+                {
+                    // On-time delivery rate
+                    var onTimeDeliveries = deliveredOrders.Count(o => o.ActualDeliveryDate.Value <= o.ExpectedDeliveryDate.Value);
+                    vendorDisplay.OnTimeDeliveryRate = (double)onTimeDeliveries / deliveredOrders.Count * 100;
+
+                    // Average delivery time (in days)
+                    var deliveryTimes = deliveredOrders
+                        .Where(o => o.SentDate.HasValue && o.ActualDeliveryDate.HasValue)
+                        .Select(o => (o.ActualDeliveryDate.Value - o.SentDate.Value).TotalDays)
+                        .ToList();
+                    if (deliveryTimes.Any())
+                    {
+                        vendorDisplay.AverageDeliveryDays = deliveryTimes.Average();
+                    }
+
+                    // Average order value
+                    vendorDisplay.AverageOrderValue = deliveredOrders.Average(o => o.TotalValue);
+                }
+
+                // Monthly spend (last 30 days)
+                var thirtyDaysAgo = DateTime.Now.AddDays(-30);
+                var recentOrders = ordersList.Where(o => o.OrderDate >= thirtyDaysAgo).ToList();
+                vendorDisplay.MonthlySpend = recentOrders.Sum(o => o.TotalValue);
+
+                // Orders this month
+                var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                vendorDisplay.OrdersThisMonth = ordersList.Count(o => o.OrderDate >= startOfMonth);
+            }
         }
         catch
         {
@@ -512,6 +550,11 @@ public class VendorDisplay : INotifyPropertyChanged
     private int _pendingOrders;
     private decimal _totalOrderValue;
     private DateTime? _lastOrderDate;
+    private double _onTimeDeliveryRate;
+    private double _averageDeliveryDays;
+    private decimal _averageOrderValue;
+    private decimal _monthlySpend;
+    private int _ordersThisMonth;
 
     public VendorDisplay(VendorDto dto)
     {
@@ -682,6 +725,7 @@ public class VendorDisplay : INotifyPropertyChanged
             {
                 _totalOrders = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasOrders));
             }
         }
     }
@@ -729,6 +773,81 @@ public class VendorDisplay : INotifyPropertyChanged
 
     public string TotalOrderValueDisplay => TotalOrderValue.ToString("C");
     public string LastOrderDateDisplay => LastOrderDate?.ToString("MM/dd/yyyy") ?? "Never";
+    public bool HasOrders => TotalOrders > 0;
+
+    public double OnTimeDeliveryRate
+    {
+        get => _onTimeDeliveryRate;
+        set
+        {
+            if (_onTimeDeliveryRate != value)
+            {
+                _onTimeDeliveryRate = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(OnTimeDeliveryRateDisplay));
+            }
+        }
+    }
+
+    public double AverageDeliveryDays
+    {
+        get => _averageDeliveryDays;
+        set
+        {
+            if (_averageDeliveryDays != value)
+            {
+                _averageDeliveryDays = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AverageDeliveryDaysDisplay));
+            }
+        }
+    }
+
+    public decimal AverageOrderValue
+    {
+        get => _averageOrderValue;
+        set
+        {
+            if (_averageOrderValue != value)
+            {
+                _averageOrderValue = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AverageOrderValueDisplay));
+            }
+        }
+    }
+
+    public decimal MonthlySpend
+    {
+        get => _monthlySpend;
+        set
+        {
+            if (_monthlySpend != value)
+            {
+                _monthlySpend = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(MonthlySpendDisplay));
+            }
+        }
+    }
+
+    public int OrdersThisMonth
+    {
+        get => _ordersThisMonth;
+        set
+        {
+            if (_ordersThisMonth != value)
+            {
+                _ordersThisMonth = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string OnTimeDeliveryRateDisplay => OnTimeDeliveryRate > 0 ? $"{OnTimeDeliveryRate:F1}%" : "N/A";
+    public string AverageDeliveryDaysDisplay => AverageDeliveryDays > 0 ? $"{AverageDeliveryDays:F1} days" : "N/A";
+    public string AverageOrderValueDisplay => AverageOrderValue > 0 ? AverageOrderValue.ToString("C") : "N/A";
+    public string MonthlySpendDisplay => MonthlySpend.ToString("C");
 
     public void UpdateFrom(VendorDto dto)
     {

@@ -124,12 +124,37 @@ public sealed partial class VendorsManagementPage : Page, IToolbarConsumer
         }
     }
 
-    private async void Vendor_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+    private void Vendor_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
     {
         if (sender is FrameworkElement element && element.DataContext is VendorDisplay vendor)
         {
             _vm.SelectedVendor = vendor;
-            await EditVendorAsync(vendor);
+            ShowVendorDetailsAsync(vendor);
+        }
+    }
+
+    private void ShowVendorDetailsAsync(VendorDisplay vendor)
+    {
+        try
+        {
+            var frame = (Frame)this.Parent;
+            frame.Navigate(typeof(VendorDetailsPage), vendor);
+        }
+        catch (Exception ex)
+        {
+            ShowErrorDialog("Error", $"Failed to navigate to vendor details: {ex.Message}");
+        }
+    }
+
+    private void ViewDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem item && item.Tag is VendorDisplay vendor)
+        {
+            ShowVendorDetailsAsync(vendor);
+        }
+        else if (_vm.SelectedVendor != null)
+        {
+            ShowVendorDetailsAsync(_vm.SelectedVendor);
         }
     }
 

@@ -37,6 +37,7 @@ namespace MagiDesk.Frontend.Views
         private readonly PaymentApiService? _paymentService;
         private readonly PaymentIdResolver? _idResolver;
         private readonly SplitPaymentCalculator? _splitCalculator;
+        private readonly BillingService? _billingService;
         private ObservableCollection<OrderItemViewModel> _orderItems = new();
         
         // Split payment properties
@@ -62,6 +63,7 @@ namespace MagiDesk.Frontend.Views
             _paymentService = App.Payments;
             _idResolver = new PaymentIdResolver(new TableRepository());
             _splitCalculator = new SplitPaymentCalculator();
+            _billingService = new BillingService();
             Loaded += EphemeralPaymentPage_Loaded;
             
             // Initialize order items list
@@ -80,21 +82,21 @@ namespace MagiDesk.Frontend.Views
             // Get bill data from navigation parameter
             if (this.Tag is BillResult bill)
             {
-                SetBillInfo(bill, null); // No window needed for native page
+                _ = SetBillInfoAsync(bill, null); // No window needed for native page
             }
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
             
             if (e.Parameter is BillResult bill)
             {
-                SetBillInfo(bill, null);
+                await SetBillInfoAsync(bill, null);
             }
         }
 
-        public void SetBillInfo(BillResult bill, Window? parentWindow)
+        public async Task SetBillInfoAsync(BillResult bill, Window? parentWindow)
         {
             _bill = bill;
             _parentWindow = parentWindow;
@@ -102,8 +104,14 @@ namespace MagiDesk.Frontend.Views
             _currentAmount = bill.TotalAmount;
             
             UpdateBillInfo();
-            LoadOrderItems();
+            await LoadOrderItemsAsync();
             UpdatePaymentSummary();
+        }
+        
+        // Keep synchronous version for backward compatibility
+        public void SetBillInfo(BillResult bill, Window? parentWindow)
+        {
+            _ = SetBillInfoAsync(bill, parentWindow);
         }
 
         private void UpdateBillInfo()
@@ -116,11 +124,13 @@ namespace MagiDesk.Frontend.Views
             }
         }
 
-        private void LoadOrderItems()
+        private async Task LoadOrderItemsAsync()
         {
-            if (_bill?.Items != null)
+            _orderItems.Clear();
+            
+            // First, try to use items from the bill if available
+            if (_bill?.Items != null && _bill.Items.Count > 0)
             {
-                _orderItems.Clear();
                 foreach (var item in _bill.Items)
                 {
                     _orderItems.Add(new OrderItemViewModel
@@ -131,6 +141,61 @@ namespace MagiDesk.Frontend.Views
                         Subtotal = item.quantity * item.price
                     });
                 }
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Loaded {_orderItems.Count} items from bill");
+                return;
+            }
+            
+            // If items are missing or empty, try to fetch them using BillingId
+            if (_bill?.BillingId != null && _bill.BillingId != Guid.Empty && _billingService != null)
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Items missing, fetching from BillingId {_bill.BillingId}");
+                    var items = await _billingService.GetOrderItemsByBillingIdAsync(_bill.BillingId.Value);
+                    
+                    if (items != null && items.Count > 0)
+                    {
+                        foreach (var item in items)
+                        {
+                            _orderItems.Add(new OrderItemViewModel
+                            {
+                                Name = item.name,
+                                Quantity = item.quantity,
+                                UnitPrice = item.price,
+                                Subtotal = item.quantity * item.price
+                            });
+                        }
+                        System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Fetched {_orderItems.Count} items from BillingService");
+                        
+                        // Update the bill's Items list for future reference
+                        _bill.Items = items;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Error fetching items: {ex.Message}");
+                }
+            }
+            
+            // If we still don't have items but have ItemsCost or TotalAmount, create a placeholder item
+            if (_orderItems.Count == 0 && _bill != null && (_bill.ItemsCost > 0 || _bill.TotalAmount > 0))
+            {
+                var itemTotal = _bill.ItemsCost > 0 ? _bill.ItemsCost : _bill.TotalAmount;
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Creating placeholder item with total {itemTotal}");
+                
+                _orderItems.Add(new OrderItemViewModel
+                {
+                    Name = "Order Items",
+                    Quantity = 1,
+                    UnitPrice = itemTotal,
+                    Subtotal = itemTotal
+                });
+            }
+            
+            if (_orderItems.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: WARNING - No items loaded. BillId: {_bill?.BillId}, BillingId: {_bill?.BillingId}, TotalAmount: {_bill?.TotalAmount}");
             }
         }
 
@@ -251,7 +316,7 @@ namespace MagiDesk.Frontend.Views
             ChangeAmountText.Text = "";
             
             // Reset order items to original quantities
-            LoadOrderItems();
+            _ = LoadOrderItemsAsync();
             
             UpdatePaymentSummary();
         }
