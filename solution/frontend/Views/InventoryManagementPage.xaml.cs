@@ -64,7 +64,7 @@ public sealed partial class InventoryManagementPage : Page, IToolbarConsumer
     private void NavigateToVendors_Click(object sender, TappedRoutedEventArgs e)
     {
         var frame = (Frame)this.Parent;
-        // Legacy VendorsPage removed - using new inventory system
+        frame.Navigate(typeof(VendorsManagementPage));
     }
 
     private void NavigateToRestock_Click(object sender, TappedRoutedEventArgs e)

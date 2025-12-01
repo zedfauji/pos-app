@@ -1,0 +1,447 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.VendorsManagementPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewmodels="using:MagiDesk.Frontend.ViewModels"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    mc:Ignorable="d"
+    d:DataContext="{d:DesignInstance Type=viewmodels:VendorsManagementViewModel, IsDesignTimeCreatable=False}">
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Page.Resources>
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="Vendors Management" FontSize="24" FontWeight="SemiBold"/>
+            <Button Content="Add Vendor" Click="AddVendor_Click" 
+                    Background="{ThemeResource AccentFillColorDefaultBrush}" 
+                    Foreground="White"
+                    HorizontalAlignment="Right"/>
+            <Button Content="Refresh" Click="Refresh_Click"/>
+            <TextBlock Text="{x:Bind _vm.StatusMessage, Mode=OneWay}" 
+                       VerticalAlignment="Center" 
+                       Opacity="0.7"
+                       Margin="8,0,0,0"/>
+        </StackPanel>
+
+        <!-- Statistics Cards -->
+        <ScrollViewer Grid.Row="1" 
+                      HorizontalScrollMode="Enabled" 
+                      HorizontalScrollBarVisibility="Auto" 
+                      VerticalScrollMode="Disabled"
+                      Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <!-- Total Vendors -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        CornerRadius="8" Padding="16" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Total Vendors" FontSize="12" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind _vm.TotalVendors, Mode=OneWay}" 
+                                   FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Active Vendors -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        CornerRadius="8" Padding="16" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Active Vendors" FontSize="12" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind _vm.ActiveVendors, Mode=OneWay}" 
+                                   FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        <TextBlock Text="Currently active" FontSize="12" Opacity="0.7" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Inactive Vendors -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        CornerRadius="8" Padding="16" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Inactive Vendors" FontSize="12" Opacity="0.7"/>
+                        <TextBlock Text="{x:Bind _vm.InactiveVendors, Mode=OneWay}" 
+                                   FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        <TextBlock Text="Currently inactive" FontSize="12" Opacity="0.7" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Total Budget -->
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        CornerRadius="8" Padding="16" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Total Budget" FontSize="12" Opacity="0.7"/>
+                        <TextBlock x:Name="TotalBudgetText" 
+                                   FontSize="24" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        <TextBlock Text="Allocated budget" FontSize="12" Opacity="0.7" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Filters and Sorting -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="200"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Search -->
+            <TextBox Grid.Row="0" Grid.Column="0" 
+                     x:Name="SearchBox" 
+                     PlaceholderText="Search vendors by name, contact info, or notes..." 
+                     Text="{x:Bind _vm.SearchText, Mode=TwoWay}"
+                     Margin="0,0,8,8"/>
+            
+            <!-- Status Filter -->
+            <ComboBox Grid.Row="0" Grid.Column="1" 
+                      x:Name="StatusFilterComboBox"
+                      PlaceholderText="All Status"
+                      SelectedValue="{x:Bind _vm.StatusFilter, Mode=TwoWay}"
+                      SelectedValuePath="Tag"
+                      Margin="0,0,8,8">
+                <ComboBoxItem Content="All" Tag="all"/>
+                <ComboBoxItem Content="Active" Tag="active"/>
+                <ComboBoxItem Content="Inactive" Tag="inactive"/>
+            </ComboBox>
+
+            <!-- Sort By -->
+            <ComboBox Grid.Row="0" Grid.Column="2"
+                      x:Name="SortByComboBox"
+                      PlaceholderText="Sort By"
+                      SelectedValue="{x:Bind _vm.SortBy, Mode=TwoWay}"
+                      SelectedValuePath="Tag"
+                      Margin="0,0,0,8">
+                <ComboBoxItem Content="Name" Tag="Name"/>
+                <ComboBoxItem Content="Budget" Tag="Budget"/>
+                <ComboBoxItem Content="Status" Tag="Status"/>
+                <ComboBoxItem Content="Created Date" Tag="CreatedAt"/>
+            </ComboBox>
+
+            <!-- Sort Direction and Page Size -->
+            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="SortDirectionButton"
+                        Content="{x:Bind _vm.SortDirection, Mode=OneWay}"
+                        Click="SortDirectionButton_Click"
+                        Width="100"/>
+                <TextBlock Text="Page Size:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <ComboBox x:Name="PageSizeComboBox"
+                          SelectedValue="{x:Bind _vm.PageSize, Mode=TwoWay}"
+                          SelectedValuePath="Tag"
+                          Width="80"
+                          SelectionChanged="PageSizeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="10" Tag="10"/>
+                    <ComboBoxItem Content="25" Tag="25"/>
+                    <ComboBoxItem Content="50" Tag="50"/>
+                    <ComboBoxItem Content="100" Tag="100"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Results Count -->
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                       Text="{x:Bind _vm.DisplayedCount, Mode=OneWay}"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Right"
+                       Opacity="0.7">
+                <Run Text="Showing "/>
+                <Run Text="{x:Bind _vm.DisplayedCount, Mode=OneWay}"/>
+                <Run Text=" of "/>
+                <Run Text="{x:Bind _vm.TotalCount, Mode=OneWay}"/>
+                <Run Text=" vendors"/>
+            </TextBlock>
+        </Grid>
+
+        <!-- Vendors List -->
+        <Grid Grid.Row="3">
+            <ListView x:Name="VendorsList"
+                      ItemsSource="{x:Bind _vm.FilteredVendors, Mode=OneWay}"
+                      SelectionMode="Single"
+                      SelectionChanged="VendorsList_SelectionChanged"
+                      DoubleTapped="Vendor_DoubleTapped"
+                      Visibility="{x:Bind _vm.HasVendors, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:VendorDisplay">
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            CornerRadius="8" 
+                            Padding="16" 
+                            Margin="0,0,0,8"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            Tapped="Vendor_Tapped"
+                            DoubleTapped="Vendor_DoubleTapped">
+                        <Border.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Edit Vendor" Click="EditVendor_Click" Tag="{x:Bind}"/>
+                                <MenuFlyoutItem Text="View Items" Click="ViewItems_Click" Tag="{x:Bind}"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="Delete Vendor" Click="DeleteVendor_Click" Tag="{x:Bind}"/>
+                            </MenuFlyout>
+                        </Border.ContextFlyout>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="{x:Bind Name}" 
+                                               FontSize="18" 
+                                               FontWeight="SemiBold"/>
+                                    <Border CornerRadius="4" 
+                                            Padding="6,2">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="{x:Bind StatusColor}"/>
+                                        </Border.Background>
+                                        <TextBlock Text="{x:Bind StatusDisplay}" 
+                                                   FontSize="10" 
+                                                   Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Contact:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind ContactInfo}" 
+                                                   FontSize="12" 
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Budget:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind BudgetDisplay}" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="4" 
+                                                Visibility="{x:Bind ReminderVisibility, Mode=OneWay}">
+                                        <TextBlock Text="Reminder:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Reminder}" 
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="4" 
+                                                Visibility="{x:Bind HasNotes, Mode=OneWay}">
+                                        <SymbolIcon Symbol="Document" Opacity="0.7" Width="12" Height="12"/>
+                                        <TextBlock Text="Has Notes" FontSize="12" Opacity="0.7" FontStyle="Italic"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Order Summary -->
+                                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <SymbolIcon Symbol="Shop" Opacity="0.7" Width="12" Height="12"/>
+                                        <TextBlock Text="Orders:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind TotalOrders}" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <SymbolIcon Symbol="Clock" Opacity="0.7" Width="12" Height="12"/>
+                                        <TextBlock Text="Pending:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind PendingOrders}" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource SystemAccentColor}"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Total Value:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind TotalOrderValueDisplay}" 
+                                                   FontSize="12" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="Last Order:" FontSize="12" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind LastOrderDateDisplay}" 
+                                                   FontSize="12"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- Empty State -->
+            <StackPanel x:Name="EmptyStatePanel"
+                        Visibility="{x:Bind _vm.ShowEmptyState, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="16"
+                        Padding="40">
+                <SymbolIcon Symbol="People" 
+                           Width="64" 
+                           Height="64" 
+                           Opacity="0.3"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="No Vendors Found" 
+                          FontSize="24" 
+                          FontWeight="SemiBold"
+                          HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind _vm.EmptyStateMessage, Mode=OneWay}" 
+                          FontSize="14" 
+                          Opacity="0.7"
+                          TextAlignment="Center"
+                          TextWrapping="Wrap"
+                          MaxWidth="400"
+                          HorizontalAlignment="Center"/>
+                <Button Content="Add Your First Vendor" 
+                       Click="AddVendor_Click"
+                       HorizontalAlignment="Center"
+                       Margin="0,8,0,0"
+                       Background="{ThemeResource AccentFillColorDefaultBrush}"
+                       Foreground="White"/>
+            </StackPanel>
+
+            <!-- Skeleton Loading -->
+            <StackPanel x:Name="SkeletonPanel"
+                       Visibility="{x:Bind _vm.ShowSkeleton, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
+                       Spacing="8"
+                       Margin="0,16,0,0">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                       CornerRadius="8" 
+                       Padding="16" 
+                       Margin="0,0,0,8"
+                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                       BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="20" 
+                                  Width="200" 
+                                  Opacity="0.3"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="150" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="300" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                       CornerRadius="8" 
+                       Padding="16" 
+                       Margin="0,0,0,8"
+                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                       BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="20" 
+                                  Width="180" 
+                                  Opacity="0.3"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="140" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="280" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                       CornerRadius="8" 
+                       Padding="16" 
+                       Margin="0,0,0,8"
+                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                       BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="20" 
+                                  Width="220" 
+                                  Opacity="0.3"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="160" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                        <Rectangle Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" 
+                                  Height="16" 
+                                  Width="320" 
+                                  Opacity="0.2"
+                                  RadiusX="4" 
+                                  RadiusY="4"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Pagination Controls -->
+        <Grid Grid.Row="4" 
+              Margin="0,16,0,0"
+              Visibility="{x:Bind _vm.HasVendors, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Page Info -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Page" VerticalAlignment="Center"/>
+                <NumberBox x:Name="PageNumberBox"
+                           Value="{x:Bind _vm.CurrentPage, Mode=TwoWay}"
+                           Minimum="1"
+                           Maximum="{x:Bind _vm.TotalPages, Mode=OneWay}"
+                           SpinButtonPlacementMode="Inline"
+                           Width="80"/>
+                <TextBlock VerticalAlignment="Center" Margin="4,0,0,0">
+                    <Run Text="of "/>
+                    <Run Text="{x:Bind _vm.TotalPages, Mode=OneWay}"/>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- Navigation Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="First" 
+                        Click="FirstPage_Click"
+                        IsEnabled="{x:Bind _vm.HasPreviousPage, Mode=OneWay}"/>
+                <Button Content="Previous" 
+                        Click="PreviousPage_Click"
+                        IsEnabled="{x:Bind _vm.HasPreviousPage, Mode=OneWay}"/>
+                <Button Content="Next" 
+                        Click="NextPage_Click"
+                        IsEnabled="{x:Bind _vm.HasNextPage, Mode=OneWay}"/>
+                <Button Content="Last" 
+                        Click="LastPage_Click"
+                        IsEnabled="{x:Bind _vm.HasNextPage, Mode=OneWay}"/>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Page>
+

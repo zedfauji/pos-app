@@ -37,33 +37,107 @@ public class VendorsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<VendorDto>> GetById(string id, CancellationToken ct)
     {
-        var vendor = await _vendors.GetAsync(id, ct);
-        if (vendor is null) return NotFound();
-        return Ok(vendor);
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { error = "Vendor ID is required" });
+
+        try
+        {
+            var vendor = await _vendors.GetAsync(id, ct);
+            if (vendor is null) return NotFound(new { error = "Vendor not found" });
+            return Ok(vendor);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get vendor {VendorId}", id);
+            return StatusCode(500, new { error = "Failed to retrieve vendor. Please try again." });
+        }
     }
 
     [HttpPost]
     public async Task<ActionResult<VendorDto>> Create([FromBody] VendorDto dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required");
-        var created = await _vendors.CreateAsync(dto, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        // Validation
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return BadRequest(new { error = "Name is required" });
+        
+        if (dto.Name.Length > 255)
+            return BadRequest(new { error = "Name must be 255 characters or less" });
+        
+        if (dto.Budget < 0)
+            return BadRequest(new { error = "Budget cannot be negative" });
+        
+        if (!string.IsNullOrEmpty(dto.Status) && !new[] { "active", "inactive" }.Contains(dto.Status.ToLowerInvariant()))
+            return BadRequest(new { error = "Status must be 'active' or 'inactive'" });
+        
+        if (!string.IsNullOrEmpty(dto.Reminder) && !new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" }
+            .Contains(dto.Reminder, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "Reminder must be a valid weekday name" });
+
+        try
+        {
+            var created = await _vendors.CreateAsync(dto, ct);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create vendor");
+            return StatusCode(500, new { error = "Failed to create vendor. Please try again." });
+        }
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(string id, [FromBody] VendorDto dto, CancellationToken ct)
     {
-        var ok = await _vendors.UpdateAsync(id, dto, ct);
-        if (!ok) return NotFound();
-        return NoContent();
+        // Validation
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { error = "Vendor ID is required" });
+        
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return BadRequest(new { error = "Name is required" });
+        
+        if (dto.Name.Length > 255)
+            return BadRequest(new { error = "Name must be 255 characters or less" });
+        
+        if (dto.Budget < 0)
+            return BadRequest(new { error = "Budget cannot be negative" });
+        
+        if (!string.IsNullOrEmpty(dto.Status) && !new[] { "active", "inactive" }.Contains(dto.Status.ToLowerInvariant()))
+            return BadRequest(new { error = "Status must be 'active' or 'inactive'" });
+        
+        if (!string.IsNullOrEmpty(dto.Reminder) && !new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" }
+            .Contains(dto.Reminder, StringComparer.OrdinalIgnoreCase))
+            return BadRequest(new { error = "Reminder must be a valid weekday name" });
+
+        try
+        {
+            var ok = await _vendors.UpdateAsync(id, dto, ct);
+            if (!ok) return NotFound(new { error = "Vendor not found" });
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update vendor {VendorId}", id);
+            return StatusCode(500, new { error = "Failed to update vendor. Please try again." });
+        }
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {
-        var ok = await _vendors.DeleteAsync(id, ct);
-        if (!ok) return NotFound();
-        return NoContent();
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { error = "Vendor ID is required" });
+
+        try
+        {
+            var ok = await _vendors.DeleteAsync(id, ct);
+            if (!ok) return NotFound(new { error = "Vendor not found" });
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete vendor {VendorId}", id);
+            return StatusCode(500, new { error = "Failed to delete vendor. Please try again." });
+        }
     }
 
     [HttpGet("{vendorId}/export")]

@@ -1,0 +1,103 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.VendorCrudDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Vendor Details"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
+    x:Name="Dialog">
+    <ScrollViewer MaxHeight="600">
+        <StackPanel Spacing="16" Padding="8">
+            <!-- Error Message -->
+            <TextBlock x:Name="ErrorMessageText" 
+                       Foreground="Red" 
+                       Visibility="Collapsed" 
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,8"/>
+
+            <!-- Name -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Name *" FontWeight="SemiBold"/>
+                <TextBox x:Name="NameTextBox" 
+                         Text="{x:Bind Item.Name, Mode=TwoWay}"
+                         PlaceholderText="Enter vendor name"/>
+            </StackPanel>
+
+            <!-- Contact Info -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Contact Information" FontWeight="SemiBold"/>
+                <TextBox x:Name="ContactInfoTextBox" 
+                         Text="{x:Bind Item.ContactInfo, Mode=TwoWay}"
+                         PlaceholderText="Email, phone, address, etc."
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         MinHeight="60"/>
+            </StackPanel>
+
+            <!-- Notes -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Notes" FontWeight="SemiBold"/>
+                <TextBox x:Name="NotesTextBox" 
+                         Text="{x:Bind Item.Notes, Mode=TwoWay}"
+                         PlaceholderText="Additional notes about this vendor..."
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         MinHeight="80"/>
+            </StackPanel>
+
+            <!-- Status -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Status" FontWeight="SemiBold"/>
+                <ComboBox x:Name="StatusComboBox" 
+                          SelectedValue="{x:Bind Item.Status, Mode=TwoWay}"
+                          SelectedValuePath="Tag">
+                    <ComboBoxItem Content="Active" Tag="active"/>
+                    <ComboBoxItem Content="Inactive" Tag="inactive"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Budget -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Budget" FontWeight="SemiBold"/>
+                <NumberBox x:Name="BudgetNumberBox" 
+                           Value="{x:Bind Item.Budget, Mode=TwoWay}"
+                           Minimum="0"
+                           SpinButtonPlacementMode="Inline"/>
+            </StackPanel>
+
+            <!-- Reminder Settings -->
+            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                    BorderThickness="1" 
+                    CornerRadius="4" 
+                    Padding="12">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Reminder Settings" FontWeight="SemiBold" FontSize="14"/>
+                    
+                    <CheckBox x:Name="ReminderEnabledCheckBox" 
+                              Content="Enable Reminder"
+                              IsChecked="{x:Bind Item.ReminderEnabled, Mode=TwoWay}"/>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Reminder Day" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="ReminderComboBox" 
+                                  SelectedValue="{x:Bind Item.Reminder, Mode=TwoWay}"
+                                  SelectedValuePath="Tag"
+                                  IsEnabled="{x:Bind Item.ReminderEnabled, Mode=OneWay}"
+                                  PlaceholderText="Select day">
+                            <ComboBoxItem Content="Monday" Tag="Monday"/>
+                            <ComboBoxItem Content="Tuesday" Tag="Tuesday"/>
+                            <ComboBoxItem Content="Wednesday" Tag="Wednesday"/>
+                            <ComboBoxItem Content="Thursday" Tag="Thursday"/>
+                            <ComboBoxItem Content="Friday" Tag="Friday"/>
+                            <ComboBoxItem Content="Saturday" Tag="Saturday"/>
+                            <ComboBoxItem Content="Sunday" Tag="Sunday"/>
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>
+

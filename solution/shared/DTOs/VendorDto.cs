@@ -11,4 +11,7 @@ public class VendorDto
     [JsonPropertyName("budget")] public decimal Budget { get; set; }
     [JsonPropertyName("reminder")] public string? Reminder { get; set; } // Weekday name like "Monday"
     [JsonPropertyName("reminderEnabled")] public bool ReminderEnabled { get; set; }
+    [JsonPropertyName("notes")] public string? Notes { get; set; }
+    [JsonPropertyName("createdAt")] public DateTime? CreatedAt { get; set; }
+    [JsonPropertyName("updatedAt")] public DateTime? UpdatedAt { get; set; }
 }

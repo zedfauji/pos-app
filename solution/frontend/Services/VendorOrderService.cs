@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using MagiDesk.Shared.DTOs;
 using System.Text.Json;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 
 namespace MagiDesk.Frontend.Services;
@@ -8,6 +9,7 @@ namespace MagiDesk.Frontend.Services;
 public interface IVendorOrderService
 {
     Task<IEnumerable<VendorOrderDto>> GetVendorOrdersAsync(CancellationToken ct = default);
+    Task<IEnumerable<VendorOrderDto>> GetVendorOrdersByVendorIdAsync(string vendorId, CancellationToken ct = default);
     Task<VendorOrderDto?> GetVendorOrderAsync(string id, CancellationToken ct = default);
     Task<VendorOrderDto> CreateVendorOrderAsync(VendorOrderDto order, CancellationToken ct = default);
     Task<bool> UpdateVendorOrderAsync(string id, VendorOrderDto order, CancellationToken ct = default);
@@ -32,37 +34,41 @@ public class VendorOrderService : IVendorOrderService
     {
         try
         {
-            // TODO: Implement actual vendor orders endpoint
-            // For now, return sample data
-            return new List<VendorOrderDto>
+            var response = await _httpClient.GetAsync("api/vendor-orders", ct);
+            if (response.IsSuccessStatusCode)
             {
-                new VendorOrderDto
-                {
-                    OrderId = "1",
-                    VendorId = "VENDOR-001",
-                    VendorName = "Coffee Supply Co.",
-                    OrderDate = DateTime.Now.AddDays(-3),
-                    ExpectedDeliveryDate = DateTime.Now.AddDays(2),
-                    Status = "Submitted",
-                    TotalValue = 1250.00m,
-                    ItemCount = 2
-                },
-                new VendorOrderDto
-                {
-                    OrderId = "2",
-                    VendorId = "VENDOR-002",
-                    VendorName = "Meat Suppliers Inc.",
-                    OrderDate = DateTime.Now.AddDays(-1),
-                    ExpectedDeliveryDate = DateTime.Now.AddDays(1),
-                    Status = "In Transit",
-                    TotalValue = 850.00m,
-                    ItemCount = 2
-                }
-            };
+                var orders = await response.Content.ReadFromJsonAsync<IEnumerable<VendorOrderDto>>(ct);
+                return orders ?? new List<VendorOrderDto>();
+            }
+            _logger.LogWarning("Failed to get vendor orders: {StatusCode}", response.StatusCode);
+            return new List<VendorOrderDto>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get vendor orders");
+            return new List<VendorOrderDto>();
+        }
+    }
+
+    public async Task<IEnumerable<VendorOrderDto>> GetVendorOrdersByVendorIdAsync(string vendorId, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(vendorId))
+                return new List<VendorOrderDto>();
+
+            var response = await _httpClient.GetAsync($"api/vendor-orders?vendorId={Uri.EscapeDataString(vendorId)}", ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var orders = await response.Content.ReadFromJsonAsync<IEnumerable<VendorOrderDto>>(ct);
+                return orders ?? new List<VendorOrderDto>();
+            }
+            _logger.LogWarning("Failed to get vendor orders for {VendorId}: {StatusCode}", vendorId, response.StatusCode);
+            return new List<VendorOrderDto>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get vendor orders for {VendorId}", vendorId);
             return new List<VendorOrderDto>();
         }
     }

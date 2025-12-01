@@ -335,7 +335,7 @@ namespace MagiDesk.Frontend
                 var logging = new Services.HttpLoggingHandler(inner);
                 var http = new HttpClient(logging) { BaseAddress = new Uri(usersBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
-                System.Diagnostics.Debug.WriteLine($"UsersApi created successfully with BaseAddress: {UsersApi._http.BaseAddress}");
+                System.Diagnostics.Debug.WriteLine($"UsersApi created successfully");
 
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
