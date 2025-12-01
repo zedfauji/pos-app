@@ -37,11 +37,17 @@ namespace MagiDesk.Frontend.Views
         private readonly PaymentApiService? _paymentService;
         private readonly PaymentIdResolver? _idResolver;
         private readonly SplitPaymentCalculator? _splitCalculator;
+        private readonly BillingService? _billingService;
         private ObservableCollection<OrderItemViewModel> _orderItems = new();
         
         // Split payment properties
         private decimal _cashAmount = 0;
         private decimal _cardAmount = 0;
+        private int _numberOfPeople = 2;
+        private string _splitMode = "Amount"; // "Amount", "Percentage", "People"
+        private decimal _cashPercentage = 0;
+        private decimal _cardPercentage = 0;
+        private decimal _digitalPercentage = 0;
         
         // Customer amount and change properties
         private decimal _customerAmount = 0;
@@ -51,6 +57,9 @@ namespace MagiDesk.Frontend.Views
         // Discount properties
         private decimal _discountAmount = 0;
         private string? _discountReason;
+        
+        // Tip distribution
+        private string _tipDistribution = "SplitEqually"; // "SplitEqually", "OnCardOnly", "OnCashOnly", "Custom"
 
         // Events for parent page communication
         public event EventHandler<PaymentCompletedEventArgs>? PaymentCompleted;
@@ -62,6 +71,7 @@ namespace MagiDesk.Frontend.Views
             _paymentService = App.Payments;
             _idResolver = new PaymentIdResolver(new TableRepository());
             _splitCalculator = new SplitPaymentCalculator();
+            _billingService = new BillingService();
             Loaded += EphemeralPaymentPage_Loaded;
             
             // Initialize order items list
@@ -116,11 +126,19 @@ namespace MagiDesk.Frontend.Views
             }
         }
 
+        // Synchronous wrapper for backward compatibility
         private void LoadOrderItems()
         {
-            if (_bill?.Items != null)
+            _ = LoadOrderItemsAsync();
+        }
+        
+        private async Task LoadOrderItemsAsync()
+        {
+            _orderItems.Clear();
+            
+            // First, try to use items from the bill if available
+            if (_bill?.Items != null && _bill.Items.Count > 0)
             {
-                _orderItems.Clear();
                 foreach (var item in _bill.Items)
                 {
                     _orderItems.Add(new OrderItemViewModel
@@ -131,6 +149,61 @@ namespace MagiDesk.Frontend.Views
                         Subtotal = item.quantity * item.price
                     });
                 }
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Loaded {_orderItems.Count} items from bill");
+                return;
+            }
+            
+            // If items are missing or empty, try to fetch them using BillingId
+            if (_bill?.BillingId != null && _bill.BillingId != Guid.Empty && _billingService != null)
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Items missing, fetching from BillingId {_bill.BillingId}");
+                    var items = await _billingService.GetOrderItemsByBillingIdAsync(_bill.BillingId.Value);
+                    
+                    if (items != null && items.Count > 0)
+                    {
+                        foreach (var item in items)
+                        {
+                            _orderItems.Add(new OrderItemViewModel
+                            {
+                                Name = item.name,
+                                Quantity = item.quantity,
+                                UnitPrice = item.price,
+                                Subtotal = item.quantity * item.price
+                            });
+                        }
+                        System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Fetched {_orderItems.Count} items from BillingService");
+                        
+                        // Update the bill's Items list for future reference
+                        _bill.Items = items;
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Error fetching items: {ex.Message}");
+                }
+            }
+            
+            // If we still don't have items but have ItemsCost or TotalAmount, create a placeholder item
+            if (_orderItems.Count == 0 && _bill != null && (_bill.ItemsCost > 0 || _bill.TotalAmount > 0))
+            {
+                var itemTotal = _bill.ItemsCost > 0 ? _bill.ItemsCost : _bill.TotalAmount;
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Creating placeholder item with total {itemTotal}");
+                
+                _orderItems.Add(new OrderItemViewModel
+                {
+                    Name = "Order Items",
+                    Quantity = 1,
+                    UnitPrice = itemTotal,
+                    Subtotal = itemTotal
+                });
+            }
+            
+            if (_orderItems.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: WARNING - No items loaded. BillId: {_bill?.BillId}, BillingId: {_bill?.BillingId}, TotalAmount: {_bill?.TotalAmount}");
             }
         }
 
@@ -164,12 +237,14 @@ namespace MagiDesk.Frontend.Views
                 if (method == "Split")
                 {
                     SplitPaymentPanel.Visibility = Visibility.Visible;
-                    // Initialize split amounts
-                    var total = _orderItems.Sum(item => item.Subtotal) + _tipAmount - _discountAmount;
-                    CashAmountInput.Value = (double)(total / 3); // Default split equally
-                    CardAmountInput.Value = (double)(total / 3);
-                    DigitalAmountInput.Value = (double)(total / 3);
-                    UpdateSplitTotal();
+                    // Initialize split mode
+                    _splitMode = "Amount";
+                    SplitAmountRadio.IsChecked = true;
+                    AmountModePanel.Visibility = Visibility.Visible;
+                    PeopleModePanel.Visibility = Visibility.Collapsed;
+                    
+                    // Initialize split amounts with equal split
+                    SplitEvenly();
                 }
                 else
                 {
@@ -279,6 +354,259 @@ namespace MagiDesk.Frontend.Views
         {
             var splitTotal = _cashAmount + _cardAmount + _digitalAmount;
             SplitTotalText.Text = splitTotal.ToString("C");
+            
+            // Update balance indicator
+            var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+            var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
+            var difference = splitTotal - expectedTotal;
+            
+            UpdateBalanceIndicator(difference, expectedTotal);
+            
+            // Update percentage displays if in percentage mode
+            if (_splitMode == "Percentage" && expectedTotal > 0)
+            {
+                _cashPercentage = _cashAmount > 0 ? (_cashAmount / expectedTotal) * 100 : 0;
+                _cardPercentage = _cardAmount > 0 ? (_cardAmount / expectedTotal) * 100 : 0;
+                _digitalPercentage = _digitalAmount > 0 ? (_digitalAmount / expectedTotal) * 100 : 0;
+                
+                CashPercentageText.Text = _cashPercentage > 0 ? $"{_cashPercentage:F1}%" : "";
+                CardPercentageText.Text = _cardPercentage > 0 ? $"{_cardPercentage:F1}%" : "";
+                DigitalPercentageText.Text = _digitalPercentage > 0 ? $"{_digitalPercentage:F1}%" : "";
+                
+                CashPercentageText.Visibility = _cashPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                CardPercentageText.Visibility = _cardPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+                DigitalPercentageText.Visibility = _digitalPercentage > 0 ? Visibility.Visible : Visibility.Collapsed;
+            }
+            else
+            {
+                CashPercentageText.Visibility = Visibility.Collapsed;
+                CardPercentageText.Visibility = Visibility.Collapsed;
+                DigitalPercentageText.Visibility = Visibility.Collapsed;
+            }
+        }
+        
+        private void UpdateBalanceIndicator(decimal difference, decimal expectedTotal)
+        {
+            var absDifference = Math.Abs(difference);
+            
+            if (absDifference <= 0.01m) // Balanced (within 1 cent)
+            {
+                BalanceStatusText.Text = $"Balance: {expectedTotal:C} ✅";
+                BalanceStatusText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 124, 16)); // Green
+                BalanceIcon.Text = "✅";
+                BalanceIndicator.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 240, 255, 240)); // Light green
+            }
+            else if (absDifference <= 0.10m) // Close to balanced (within 10 cents)
+            {
+                BalanceStatusText.Text = $"Balance: {expectedTotal:C} (Difference: {difference:C})";
+                BalanceStatusText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 185, 0)); // Yellow
+                BalanceIcon.Text = "⚠️";
+                BalanceIndicator.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 250, 240)); // Light yellow
+            }
+            else // Not balanced
+            {
+                if (difference > 0)
+                {
+                    BalanceStatusText.Text = $"Over by: {difference:C}";
+                }
+                else
+                {
+                    BalanceStatusText.Text = $"Short by: {Math.Abs(difference):C}";
+                }
+                BalanceStatusText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 232, 17, 35)); // Red
+                BalanceIcon.Text = "❌";
+                BalanceIndicator.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 255, 240, 240)); // Light red
+            }
+        }
+        
+        private void SplitMethod_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioButton radio && radio.Tag is string mode)
+            {
+                _splitMode = mode;
+                
+                AmountModePanel.Visibility = mode == "People" ? Visibility.Collapsed : Visibility.Visible;
+                PeopleModePanel.Visibility = mode == "People" ? Visibility.Visible : Visibility.Collapsed;
+                
+                if (mode == "Percentage")
+                {
+                    // Show percentage text blocks
+                    CashPercentageText.Visibility = Visibility.Visible;
+                    CardPercentageText.Visibility = Visibility.Visible;
+                    DigitalPercentageText.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    CashPercentageText.Visibility = Visibility.Collapsed;
+                    CardPercentageText.Visibility = Visibility.Collapsed;
+                    DigitalPercentageText.Visibility = Visibility.Collapsed;
+                }
+                
+                // Recalculate based on new mode
+                if (mode == "People")
+                {
+                    CalculateSplitByPeople();
+                }
+                else if (mode == "Percentage")
+                {
+                    CalculateSplitByPercentage();
+                }
+            }
+        }
+        
+        private void SplitEvenly_Click(object sender, RoutedEventArgs e)
+        {
+            SplitEvenly();
+        }
+        
+        private void SplitEvenly()
+        {
+            var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+            var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
+            
+            if (_splitMode == "People")
+            {
+                CalculateSplitByPeople();
+            }
+            else
+            {
+                // Split equally among 3 payment methods
+                var amountPerMethod = expectedTotal / 3;
+                CashAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                CardAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                DigitalAmountInput.Value = (double)Math.Round(amountPerMethod, 2);
+                
+                // Adjust for rounding - put remainder in cash
+                var splitTotal = _cashAmount + _cardAmount + _digitalAmount;
+                var remainder = expectedTotal - splitTotal;
+                if (Math.Abs(remainder) > 0.01m)
+                {
+                    CashAmountInput.Value = (double)(_cashAmount + remainder);
+                }
+            }
+        }
+        
+        private void AutoFillRemaining_Click(object sender, RoutedEventArgs e)
+        {
+            var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+            var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
+            var currentTotal = _cashAmount + _cardAmount + _digitalAmount;
+            var remaining = expectedTotal - currentTotal;
+            
+            if (remaining > 0)
+            {
+                // Fill remaining in the method with the smallest amount
+                if (_cashAmount <= _cardAmount && _cashAmount <= _digitalAmount)
+                {
+                    CashAmountInput.Value = (double)(_cashAmount + remaining);
+                }
+                else if (_cardAmount <= _digitalAmount)
+                {
+                    CardAmountInput.Value = (double)(_cardAmount + remaining);
+                }
+                else
+                {
+                    DigitalAmountInput.Value = (double)(_digitalAmount + remaining);
+                }
+            }
+        }
+        
+        private void NumberOfPeopleInput_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            _numberOfPeople = (int)args.NewValue;
+            CalculateSplitByPeople();
+        }
+        
+        private void CalculateSplitByPeople()
+        {
+            if (_numberOfPeople < 2) return;
+            
+            var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+            var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
+            var perPerson = expectedTotal / _numberOfPeople;
+            
+            PerPersonAmountText.Text = $"Per Person: {perPerson:C}";
+            
+            // Reset amounts
+            _cashAmount = 0;
+            _cardAmount = 0;
+            _digitalAmount = 0;
+            
+            // Distribute per person amounts across payment methods
+            var remaining = expectedTotal;
+            var methodIndex = 0;
+            
+            for (int i = 0; i < _numberOfPeople && remaining > 0.01m; i++)
+            {
+                var amountToAdd = Math.Min(perPerson, remaining);
+                
+                // Distribute to methods in round-robin fashion
+                if (methodIndex % 3 == 0)
+                {
+                    _cashAmount += amountToAdd;
+                }
+                else if (methodIndex % 3 == 1)
+                {
+                    _cardAmount += amountToAdd;
+                }
+                else
+                {
+                    _digitalAmount += amountToAdd;
+                }
+                
+                remaining -= amountToAdd;
+                methodIndex++;
+            }
+            
+            // Adjust for rounding - put remainder in cash
+            if (remaining > 0.01m)
+            {
+                _cashAmount += remaining;
+            }
+            
+            // Update UI
+            CashAmountInput.Value = (double)_cashAmount;
+            CardAmountInput.Value = (double)_cardAmount;
+            DigitalAmountInput.Value = (double)_digitalAmount;
+        }
+        
+        private void CalculateSplitByPercentage()
+        {
+            var itemsTotal = _orderItems.Sum(item => item.Subtotal);
+            var expectedTotal = itemsTotal + _tipAmount - _discountAmount;
+            
+            if (_cashPercentage + _cardPercentage + _digitalPercentage > 100.01m)
+            {
+                // Percentages exceed 100%, normalize them
+                var totalPercent = _cashPercentage + _cardPercentage + _digitalPercentage;
+                _cashPercentage = (_cashPercentage / totalPercent) * 100;
+                _cardPercentage = (_cardPercentage / totalPercent) * 100;
+                _digitalPercentage = (_digitalPercentage / totalPercent) * 100;
+            }
+            
+            _cashAmount = Math.Round(expectedTotal * (_cashPercentage / 100), 2);
+            _cardAmount = Math.Round(expectedTotal * (_cardPercentage / 100), 2);
+            _digitalAmount = Math.Round(expectedTotal * (_digitalPercentage / 100), 2);
+            
+            // Adjust for rounding
+            var splitTotal = _cashAmount + _cardAmount + _digitalAmount;
+            var remainder = expectedTotal - splitTotal;
+            if (Math.Abs(remainder) > 0.01m)
+            {
+                _cashAmount += remainder;
+            }
+            
+            CashAmountInput.Value = (double)_cashAmount;
+            CardAmountInput.Value = (double)_cardAmount;
+            DigitalAmountInput.Value = (double)_digitalAmount;
+        }
+        
+        private void TipDistribution_Checked(object sender, RoutedEventArgs e)
+        {
+            if (sender is RadioButton radio && radio.Tag is string distribution)
+            {
+                _tipDistribution = distribution;
+            }
         }
 
         // Customer amount and tip calculator methods
@@ -541,11 +869,20 @@ namespace MagiDesk.Frontend.Views
                     if (_cardAmount > 0) splitAmounts["Card"] = _cardAmount;
                     if (_digitalAmount > 0) splitAmounts["Mobile"] = _digitalAmount;
 
+                    // Calculate tip distribution based on selected option
+                    var tipAmounts = DistributeTip(_tipAmount, splitAmounts);
+
                     var splitResult = _splitCalculator.CalculateSplitPayment(
                         _originalAmount, _tipAmount, _discountAmount, splitAmounts);
 
+                    // Override tip amounts based on distribution preference
                     foreach (var split in splitResult.SplitDetails)
                     {
+                        if (tipAmounts.ContainsKey(split.PaymentMethod))
+                        {
+                            split.TipAmount = tipAmounts[split.PaymentMethod];
+                        }
+                        
                         paymentLines.Add(new PaymentApiService.RegisterPaymentLineDto(
                             AmountPaid: split.AmountPaid,
                             PaymentMethod: split.PaymentMethod,
@@ -591,6 +928,56 @@ namespace MagiDesk.Frontend.Views
             }
         }
 
+        private Dictionary<string, decimal> DistributeTip(decimal totalTip, Dictionary<string, decimal> splitAmounts)
+        {
+            var tipAmounts = new Dictionary<string, decimal>();
+            
+            if (_tipDistribution == "NoTip" || totalTip <= 0)
+            {
+                foreach (var method in splitAmounts.Keys)
+                {
+                    tipAmounts[method] = 0;
+                }
+            }
+            else if (_tipDistribution == "OnCardOnly")
+            {
+                foreach (var method in splitAmounts.Keys)
+                {
+                    tipAmounts[method] = method == "Card" ? totalTip : 0;
+                }
+            }
+            else if (_tipDistribution == "OnCashOnly")
+            {
+                foreach (var method in splitAmounts.Keys)
+                {
+                    tipAmounts[method] = method == "Cash" ? totalTip : 0;
+                }
+            }
+            else // SplitEqually or default
+            {
+                var netTotal = splitAmounts.Values.Sum();
+                if (netTotal > 0)
+                {
+                    foreach (var kvp in splitAmounts)
+                    {
+                        var proportion = kvp.Value / netTotal;
+                        tipAmounts[kvp.Key] = Math.Round(totalTip * proportion, 2);
+                    }
+                    
+                    // Adjust for rounding
+                    var actualTip = tipAmounts.Values.Sum();
+                    var difference = totalTip - actualTip;
+                    if (Math.Abs(difference) > 0.01m && tipAmounts.Count > 0)
+                    {
+                        var firstMethod = tipAmounts.Keys.First();
+                        tipAmounts[firstMethod] += difference;
+                    }
+                }
+            }
+            
+            return tipAmounts;
+        }
+        
         private async void ShowError(string message)
         {
             var errorDialog = new ContentDialog()
