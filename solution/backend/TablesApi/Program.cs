@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using NpgsqlTypes;
 using MagiDesk.Shared.DTOs.Tables;
+using System.Text.Json.Nodes;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -1722,6 +1723,601 @@ app.MapPost("/tables/seed", async () =>
     return Results.Ok();
 });
 
+// ============================================
+// FLOORS MANAGEMENT ENDPOINTS
+// ============================================
+
+app.MapGet("/floors", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"SELECT f.floor_id, f.floor_name, f.description, f.is_default, f.is_active, f.display_order, 
+                                f.created_at, f.updated_at,
+                                COUNT(t.table_id) as table_count
+                         FROM public.floors f
+                         LEFT JOIN public.tables t ON f.floor_id = t.floor_id AND t.is_active = true
+                         GROUP BY f.floor_id, f.floor_name, f.description, f.is_default, f.is_active, f.display_order, f.created_at, f.updated_at
+                         ORDER BY f.display_order, f.floor_name";
+    
+    var floors = new List<FloorDto>();
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    while (await rdr.ReadAsync())
+    {
+        floors.Add(new FloorDto
+        {
+            FloorId = rdr.GetGuid(0),
+            FloorName = rdr.GetString(1),
+            Description = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+            IsDefault = rdr.GetBoolean(3),
+            IsActive = rdr.GetBoolean(4),
+            DisplayOrder = rdr.GetInt32(5),
+            CreatedAt = rdr.GetDateTime(6),
+            UpdatedAt = rdr.GetDateTime(7),
+            TableCount = rdr.GetInt32(8)
+        });
+    }
+    return Results.Ok(floors);
+});
+
+app.MapGet("/floors/{floorId:guid}", async (Guid floorId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"SELECT f.floor_id, f.floor_name, f.description, f.is_default, f.is_active, f.display_order, 
+                                f.created_at, f.updated_at,
+                                COUNT(t.table_id) as table_count
+                         FROM public.floors f
+                         LEFT JOIN public.tables t ON f.floor_id = t.floor_id AND t.is_active = true
+                         WHERE f.floor_id = @id
+                         GROUP BY f.floor_id, f.floor_name, f.description, f.is_default, f.is_active, f.display_order, f.created_at, f.updated_at";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", floorId);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    if (await rdr.ReadAsync())
+    {
+        return Results.Ok(new FloorDto
+        {
+            FloorId = rdr.GetGuid(0),
+            FloorName = rdr.GetString(1),
+            Description = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+            IsDefault = rdr.GetBoolean(3),
+            IsActive = rdr.GetBoolean(4),
+            DisplayOrder = rdr.GetInt32(5),
+            CreatedAt = rdr.GetDateTime(6),
+            UpdatedAt = rdr.GetDateTime(7),
+            TableCount = rdr.GetInt32(8)
+        });
+    }
+    return Results.NotFound();
+});
+
+app.MapPost("/floors", async (CreateFloorRequest req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"INSERT INTO public.floors (floor_name, description, is_default, display_order, is_active)
+                         VALUES (@name, @desc, @default, @order, true)
+                         RETURNING floor_id, floor_name, description, is_default, is_active, display_order, created_at, updated_at";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@name", req.FloorName);
+    cmd.Parameters.AddWithValue("@desc", (object?)req.Description ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@default", req.IsDefault);
+    cmd.Parameters.AddWithValue("@order", req.DisplayOrder);
+    
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    if (await rdr.ReadAsync())
+    {
+        return Results.Ok(new FloorDto
+        {
+            FloorId = rdr.GetGuid(0),
+            FloorName = rdr.GetString(1),
+            Description = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+            IsDefault = rdr.GetBoolean(3),
+            IsActive = rdr.GetBoolean(4),
+            DisplayOrder = rdr.GetInt32(5),
+            CreatedAt = rdr.GetDateTime(6),
+            UpdatedAt = rdr.GetDateTime(7),
+            TableCount = 0
+        });
+    }
+    return Results.BadRequest();
+});
+
+app.MapPut("/floors/{floorId:guid}", async (Guid floorId, UpdateFloorRequest req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    var updates = new List<string>();
+    var parameters = new List<NpgsqlParameter> { new("@id", floorId) };
+    
+    if (req.FloorName != null) { updates.Add("floor_name = @name"); parameters.Add(new("@name", req.FloorName)); }
+    if (req.Description != null) { updates.Add("description = @desc"); parameters.Add(new("@desc", req.Description)); }
+    if (req.IsDefault.HasValue) { updates.Add("is_default = @default"); parameters.Add(new("@default", req.IsDefault.Value)); }
+    if (req.IsActive.HasValue) { updates.Add("is_active = @active"); parameters.Add(new("@active", req.IsActive.Value)); }
+    if (req.DisplayOrder.HasValue) { updates.Add("display_order = @order"); parameters.Add(new("@order", req.DisplayOrder.Value)); }
+    
+    if (updates.Count == 0) return Results.BadRequest("No fields to update");
+    
+    updates.Add("updated_at = now()");
+    var sql = $"UPDATE public.floors SET {string.Join(", ", updates)} WHERE floor_id = @id";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    foreach (var p in parameters) cmd.Parameters.Add(p);
+    await cmd.ExecuteNonQueryAsync();
+    
+    return Results.Ok();
+});
+
+app.MapDelete("/floors/{floorId:guid}", async (Guid floorId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    // Check if floor has tables
+    const string checkSql = "SELECT COUNT(*) FROM public.tables WHERE floor_id = @id";
+    await using var checkCmd = new NpgsqlCommand(checkSql, conn);
+    checkCmd.Parameters.AddWithValue("@id", floorId);
+    var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+    
+    if (count > 0)
+    {
+        return Results.BadRequest(new { message = $"Cannot delete floor with {count} tables. Delete or move tables first." });
+    }
+    
+    const string sql = "DELETE FROM public.floors WHERE floor_id = @id";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", floorId);
+    var deleted = await cmd.ExecuteNonQueryAsync();
+    
+    return deleted > 0 ? Results.Ok() : Results.NotFound();
+});
+
+app.MapPost("/floors/{floorId:guid}/duplicate", async (Guid floorId, DuplicateFloorRequest req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    await using var tx = await conn.BeginTransactionAsync();
+    
+    try
+    {
+        // Get source floor
+        const string getFloorSql = "SELECT floor_name, description, display_order FROM public.floors WHERE floor_id = @id";
+        await using var getCmd = new NpgsqlCommand(getFloorSql, conn, tx);
+        getCmd.Parameters.AddWithValue("@id", floorId);
+        await using var rdr = await getCmd.ExecuteReaderAsync();
+        if (!await rdr.ReadAsync()) return Results.NotFound();
+        
+        var sourceName = rdr.GetString(0);
+        var sourceDesc = rdr.IsDBNull(1) ? null : rdr.GetString(1);
+        var sourceOrder = rdr.GetInt32(2);
+        rdr.Close();
+        
+        // Create new floor
+        const string insertFloorSql = @"INSERT INTO public.floors (floor_name, description, display_order, is_default, is_active)
+                                        VALUES (@name, @desc, @order, false, true)
+                                        RETURNING floor_id";
+        await using var insertCmd = new NpgsqlCommand(insertFloorSql, conn, tx);
+        insertCmd.Parameters.AddWithValue("@name", req.NewFloorName);
+        insertCmd.Parameters.AddWithValue("@desc", (object?)sourceDesc ?? DBNull.Value);
+        insertCmd.Parameters.AddWithValue("@order", sourceOrder + 1);
+        var newFloorId = (Guid)await insertCmd.ExecuteScalarAsync()!;
+        
+        // Copy tables if requested
+        if (req.CopyTables)
+        {
+            const string copyTablesSql = @"INSERT INTO public.tables 
+                (floor_id, table_name, table_number, table_type, x_position, y_position, rotation, size, 
+                 billing_rate, auto_start_timer, icon_style, grouping_tags, is_active, is_locked)
+            SELECT 
+                @newFloorId, table_name, table_number, table_type, x_position, y_position, rotation, size,
+                billing_rate, auto_start_timer, icon_style, grouping_tags, is_active, is_locked
+            FROM public.tables WHERE floor_id = @oldFloorId";
+            
+            await using var copyCmd = new NpgsqlCommand(copyTablesSql, conn, tx);
+            copyCmd.Parameters.AddWithValue("@newFloorId", newFloorId);
+            copyCmd.Parameters.AddWithValue("@oldFloorId", floorId);
+            await copyCmd.ExecuteNonQueryAsync();
+        }
+        
+        await tx.CommitAsync();
+        return Results.Ok(new { floorId = newFloorId });
+    }
+    catch (Exception ex)
+    {
+        await tx.RollbackAsync();
+        return Results.Problem(ex.Message);
+    }
+});
+
+// ============================================
+// TABLE LAYOUT ENDPOINTS
+// ============================================
+
+app.MapGet("/floors/{floorId:guid}/tables", async (Guid floorId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"SELECT table_id, floor_id, table_name, table_number, table_type, x_position, y_position, rotation,
+                                size, width, height, status, billing_rate, auto_start_timer, icon_style, grouping_tags,
+                                is_active, is_locked, order_id, start_time, server, created_at, updated_at
+                         FROM public.tables
+                         WHERE floor_id = @floorId
+                         ORDER BY table_name";
+    
+    var tables = new List<TableLayoutDto>();
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@floorId", floorId);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    
+    while (await rdr.ReadAsync())
+    {
+        var groupingTags = new List<string>();
+        if (!rdr.IsDBNull(15))
+        {
+            var tagsArray = (string[])rdr.GetValue(15);
+            groupingTags.AddRange(tagsArray);
+        }
+        
+        tables.Add(new TableLayoutDto
+        {
+            TableId = rdr.GetGuid(0),
+            FloorId = rdr.GetGuid(1),
+            TableName = rdr.GetString(2),
+            TableNumber = rdr.IsDBNull(3) ? null : rdr.GetString(3),
+            TableType = rdr.GetString(4),
+            XPosition = (double)rdr.GetDecimal(5),
+            YPosition = (double)rdr.GetDecimal(6),
+            Rotation = (double)rdr.GetDecimal(7),
+            Size = rdr.GetString(8),
+            Width = rdr.IsDBNull(9) ? null : (double)rdr.GetDecimal(9),
+            Height = rdr.IsDBNull(10) ? null : (double)rdr.GetDecimal(10),
+            Status = rdr.GetString(11),
+            BillingRate = rdr.GetDecimal(12),
+            AutoStartTimer = rdr.GetBoolean(13),
+            IconStyle = rdr.IsDBNull(14) ? null : rdr.GetString(14),
+            GroupingTags = groupingTags,
+            IsActive = rdr.GetBoolean(16),
+            IsLocked = rdr.GetBoolean(17),
+            OrderId = rdr.IsDBNull(18) ? null : rdr.GetString(18),
+            StartTime = rdr.IsDBNull(19) ? null : rdr.GetFieldValue<DateTimeOffset>(19),
+            Server = rdr.IsDBNull(20) ? null : rdr.GetString(20),
+            CreatedAt = rdr.GetDateTime(21),
+            UpdatedAt = rdr.GetDateTime(22)
+        });
+    }
+    
+    return Results.Ok(tables);
+});
+
+app.MapGet("/floors/{floorId:guid}/layout", async (Guid floorId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    // Get floor
+    const string floorSql = @"SELECT floor_id, floor_name, description, is_default, is_active, display_order, created_at, updated_at
+                              FROM public.floors WHERE floor_id = @id";
+    await using var floorCmd = new NpgsqlCommand(floorSql, conn);
+    floorCmd.Parameters.AddWithValue("@id", floorId);
+    await using var floorRdr = await floorCmd.ExecuteReaderAsync();
+    
+    if (!await floorRdr.ReadAsync()) return Results.NotFound();
+    
+    var floor = new FloorDto
+    {
+        FloorId = floorRdr.GetGuid(0),
+        FloorName = floorRdr.GetString(1),
+        Description = floorRdr.IsDBNull(2) ? null : floorRdr.GetString(2),
+        IsDefault = floorRdr.GetBoolean(3),
+        IsActive = floorRdr.GetBoolean(4),
+        DisplayOrder = floorRdr.GetInt32(5),
+        CreatedAt = floorRdr.GetDateTime(6),
+        UpdatedAt = floorRdr.GetDateTime(7)
+    };
+    floorRdr.Close();
+    
+    // Get tables
+    const string tablesSql = @"SELECT table_id, floor_id, table_name, table_number, table_type, x_position, y_position, rotation,
+                                      size, width, height, status, billing_rate, auto_start_timer, icon_style, grouping_tags,
+                                      is_active, is_locked, order_id, start_time, server, created_at, updated_at
+                               FROM public.tables WHERE floor_id = @floorId ORDER BY table_name";
+    
+    var tables = new List<TableLayoutDto>();
+    await using var tablesCmd = new NpgsqlCommand(tablesSql, conn);
+    tablesCmd.Parameters.AddWithValue("@floorId", floorId);
+    await using var tablesRdr = await tablesCmd.ExecuteReaderAsync();
+    
+    while (await tablesRdr.ReadAsync())
+    {
+        var groupingTags = new List<string>();
+        if (!tablesRdr.IsDBNull(15))
+        {
+            var tagsArray = (string[])tablesRdr.GetValue(15);
+            groupingTags.AddRange(tagsArray);
+        }
+        
+        tables.Add(new TableLayoutDto
+        {
+            TableId = tablesRdr.GetGuid(0),
+            FloorId = tablesRdr.GetGuid(1),
+            TableName = tablesRdr.GetString(2),
+            TableNumber = tablesRdr.IsDBNull(3) ? null : tablesRdr.GetString(3),
+            TableType = tablesRdr.GetString(4),
+            XPosition = (double)tablesRdr.GetDecimal(5),
+            YPosition = (double)tablesRdr.GetDecimal(6),
+            Rotation = (double)tablesRdr.GetDecimal(7),
+            Size = tablesRdr.GetString(8),
+            Width = tablesRdr.IsDBNull(9) ? null : (double)tablesRdr.GetDecimal(9),
+            Height = tablesRdr.IsDBNull(10) ? null : (double)tablesRdr.GetDecimal(10),
+            Status = tablesRdr.GetString(11),
+            BillingRate = tablesRdr.GetDecimal(12),
+            AutoStartTimer = tablesRdr.GetBoolean(13),
+            IconStyle = tablesRdr.IsDBNull(14) ? null : tablesRdr.GetString(14),
+            GroupingTags = groupingTags,
+            IsActive = tablesRdr.GetBoolean(16),
+            IsLocked = tablesRdr.GetBoolean(17),
+            OrderId = tablesRdr.IsDBNull(18) ? null : tablesRdr.GetString(18),
+            StartTime = tablesRdr.IsDBNull(19) ? null : tablesRdr.GetFieldValue<DateTimeOffset>(19),
+            Server = tablesRdr.IsDBNull(20) ? null : tablesRdr.GetString(20),
+            CreatedAt = tablesRdr.GetDateTime(21),
+            UpdatedAt = tablesRdr.GetDateTime(22)
+        });
+    }
+    
+    return Results.Ok(new FloorLayoutDto { Floor = floor, Tables = tables });
+});
+
+app.MapPost("/floors/{floorId:guid}/tables", async (Guid floorId, CreateTableLayoutRequest req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"INSERT INTO public.tables 
+        (floor_id, table_name, table_number, table_type, x_position, y_position, rotation, size, width, height,
+         billing_rate, auto_start_timer, icon_style, grouping_tags, status, is_active)
+        VALUES (@floorId, @name, @number, @type, @x, @y, @rot, @size, @width, @height,
+                @rate, @autoStart, @icon, @tags, 'available', true)
+        RETURNING table_id, floor_id, table_name, table_number, table_type, x_position, y_position, rotation,
+                  size, width, height, status, billing_rate, auto_start_timer, icon_style, grouping_tags,
+                  is_active, is_locked, order_id, start_time, server, created_at, updated_at";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@floorId", floorId);
+    cmd.Parameters.AddWithValue("@name", req.TableName);
+    cmd.Parameters.AddWithValue("@number", (object?)req.TableNumber ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@type", req.TableType);
+    cmd.Parameters.AddWithValue("@x", req.XPosition);
+    cmd.Parameters.AddWithValue("@y", req.YPosition);
+    cmd.Parameters.AddWithValue("@rot", req.Rotation);
+    cmd.Parameters.AddWithValue("@size", req.Size);
+    cmd.Parameters.AddWithValue("@width", (object?)req.Width ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@height", (object?)req.Height ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@rate", req.BillingRate);
+    cmd.Parameters.AddWithValue("@autoStart", req.AutoStartTimer);
+    cmd.Parameters.AddWithValue("@icon", (object?)req.IconStyle ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@tags", req.GroupingTags != null ? req.GroupingTags.ToArray() : (object?)DBNull.Value);
+    
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    if (await rdr.ReadAsync())
+    {
+        var groupingTags = new List<string>();
+        if (!rdr.IsDBNull(15))
+        {
+            var tagsArray = (string[])rdr.GetValue(15);
+            groupingTags.AddRange(tagsArray);
+        }
+        
+        return Results.Ok(new TableLayoutDto
+        {
+            TableId = rdr.GetGuid(0),
+            FloorId = rdr.GetGuid(1),
+            TableName = rdr.GetString(2),
+            TableNumber = rdr.IsDBNull(3) ? null : rdr.GetString(3),
+            TableType = rdr.GetString(4),
+            XPosition = (double)rdr.GetDecimal(5),
+            YPosition = (double)rdr.GetDecimal(6),
+            Rotation = (double)rdr.GetDecimal(7),
+            Size = rdr.GetString(8),
+            Width = rdr.IsDBNull(9) ? null : (double)rdr.GetDecimal(9),
+            Height = rdr.IsDBNull(10) ? null : (double)rdr.GetDecimal(10),
+            Status = rdr.GetString(11),
+            BillingRate = rdr.GetDecimal(12),
+            AutoStartTimer = rdr.GetBoolean(13),
+            IconStyle = rdr.IsDBNull(14) ? null : rdr.GetString(14),
+            GroupingTags = groupingTags,
+            IsActive = rdr.GetBoolean(16),
+            IsLocked = rdr.GetBoolean(17),
+            OrderId = rdr.IsDBNull(18) ? null : rdr.GetString(18),
+            StartTime = rdr.IsDBNull(19) ? null : rdr.GetFieldValue<DateTimeOffset>(19),
+            Server = rdr.IsDBNull(20) ? null : rdr.GetString(20),
+            CreatedAt = rdr.GetDateTime(21),
+            UpdatedAt = rdr.GetDateTime(22)
+        });
+    }
+    
+    return Results.BadRequest();
+});
+
+app.MapPut("/floors/{floorId:guid}/tables/{tableId:guid}", async (Guid floorId, Guid tableId, UpdateTableLayoutRequest req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    var updates = new List<string>();
+    var parameters = new List<NpgsqlParameter> 
+    { 
+        new("@tableId", tableId),
+        new("@floorId", floorId)
+    };
+    
+    if (req.TableName != null) { updates.Add("table_name = @name"); parameters.Add(new("@name", req.TableName)); }
+    if (req.TableNumber != null) { updates.Add("table_number = @number"); parameters.Add(new("@number", req.TableNumber)); }
+    if (req.TableType != null) { updates.Add("table_type = @type"); parameters.Add(new("@type", req.TableType)); }
+    if (req.XPosition.HasValue) { updates.Add("x_position = @x"); parameters.Add(new("@x", req.XPosition.Value)); }
+    if (req.YPosition.HasValue) { updates.Add("y_position = @y"); parameters.Add(new("@y", req.YPosition.Value)); }
+    if (req.Rotation.HasValue) { updates.Add("rotation = @rot"); parameters.Add(new("@rot", req.Rotation.Value)); }
+    if (req.Size != null) { updates.Add("size = @size"); parameters.Add(new("@size", req.Size)); }
+    if (req.Width.HasValue) { updates.Add("width = @width"); parameters.Add(new("@width", req.Width.Value)); }
+    if (req.Height.HasValue) { updates.Add("height = @height"); parameters.Add(new("@height", req.Height.Value)); }
+    if (req.Status != null) { updates.Add("status = @status"); parameters.Add(new("@status", req.Status)); }
+    if (req.BillingRate.HasValue) { updates.Add("billing_rate = @rate"); parameters.Add(new("@rate", req.BillingRate.Value)); }
+    if (req.AutoStartTimer.HasValue) { updates.Add("auto_start_timer = @autoStart"); parameters.Add(new("@autoStart", req.AutoStartTimer.Value)); }
+    if (req.IconStyle != null) { updates.Add("icon_style = @icon"); parameters.Add(new("@icon", req.IconStyle)); }
+    if (req.GroupingTags != null) { updates.Add("grouping_tags = @tags"); parameters.Add(new("@tags", req.GroupingTags.ToArray())); }
+    if (req.IsActive.HasValue) { updates.Add("is_active = @active"); parameters.Add(new("@active", req.IsActive.Value)); }
+    if (req.IsLocked.HasValue) { updates.Add("is_locked = @locked"); parameters.Add(new("@locked", req.IsLocked.Value)); }
+    
+    if (updates.Count == 0) return Results.BadRequest("No fields to update");
+    
+    updates.Add("updated_at = now()");
+    var sql = $"UPDATE public.tables SET {string.Join(", ", updates)} WHERE table_id = @tableId AND floor_id = @floorId";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    foreach (var p in parameters) cmd.Parameters.Add(p);
+    var affected = await cmd.ExecuteNonQueryAsync();
+    
+    return affected > 0 ? Results.Ok() : Results.NotFound();
+});
+
+app.MapDelete("/floors/{floorId:guid}/tables/{tableId:guid}", async (Guid floorId, Guid tableId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = "DELETE FROM public.tables WHERE table_id = @tableId AND floor_id = @floorId";
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@tableId", tableId);
+    cmd.Parameters.AddWithValue("@floorId", floorId);
+    var deleted = await cmd.ExecuteNonQueryAsync();
+    
+    return deleted > 0 ? Results.Ok() : Results.NotFound();
+});
+
+app.MapPost("/floors/{floorId:guid}/tables/{tableId:guid}/duplicate", async (Guid floorId, Guid tableId) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"INSERT INTO public.tables 
+        (floor_id, table_name, table_number, table_type, x_position, y_position, rotation, size, width, height,
+         billing_rate, auto_start_timer, icon_style, grouping_tags, status, is_active, is_locked)
+        SELECT floor_id, table_name || ' Copy', table_number, table_type, x_position + 50, y_position + 50, rotation, size, width, height,
+               billing_rate, auto_start_timer, icon_style, grouping_tags, 'available', is_active, false
+        FROM public.tables
+        WHERE table_id = @tableId AND floor_id = @floorId
+        RETURNING table_id";
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@tableId", tableId);
+    cmd.Parameters.AddWithValue("@floorId", floorId);
+    var newTableId = await cmd.ExecuteScalarAsync();
+    
+    return newTableId != null ? Results.Ok(new { tableId = newTableId }) : Results.NotFound();
+});
+
+// Layout Settings
+app.MapGet("/layout/settings", async () =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = "SELECT key, value FROM public.app_settings WHERE key LIKE 'Layout.%'";
+    var settings = new Dictionary<string, string>();
+    
+    await using var cmd = new NpgsqlCommand(sql, conn);
+    await using var rdr = await cmd.ExecuteReaderAsync();
+    while (await rdr.ReadAsync())
+    {
+        settings[rdr.GetString(0)] = rdr.GetString(1);
+    }
+    
+    return Results.Ok(new LayoutSettingsDto
+    {
+        GridSize = int.TryParse(settings.GetValueOrDefault("Layout.GridSize", "20"), out var gs) ? gs : 20,
+        SnapToGrid = bool.TryParse(settings.GetValueOrDefault("Layout.SnapToGrid", "true"), out var stg) ? stg : true,
+        DefaultTableSize = settings.GetValueOrDefault("Layout.DefaultTableSize", "M"),
+        ShowTableNumbers = bool.TryParse(settings.GetValueOrDefault("Layout.ShowTableNumbers", "true"), out var stn) ? stn : true,
+        FloorSwitchLock = bool.TryParse(settings.GetValueOrDefault("Layout.FloorSwitchLock", "false"), out var fsl) ? fsl : false,
+        ProtectLayoutChanges = bool.TryParse(settings.GetValueOrDefault("Layout.ProtectLayoutChanges", "false"), out var plc) ? plc : false
+    });
+});
+
+app.MapPut("/layout/settings", async (LayoutSettingsDto settings) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    await EnsureFloorsSchemaAsync(conn);
+    
+    const string sql = @"INSERT INTO public.app_settings (key, value) VALUES (@key, @value)
+                         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()";
+    
+    await using var tx = await conn.BeginTransactionAsync();
+    try
+    {
+        var updates = new Dictionary<string, string>
+        {
+            { "Layout.GridSize", settings.GridSize.ToString() },
+            { "Layout.SnapToGrid", settings.SnapToGrid.ToString() },
+            { "Layout.DefaultTableSize", settings.DefaultTableSize },
+            { "Layout.ShowTableNumbers", settings.ShowTableNumbers.ToString() },
+            { "Layout.FloorSwitchLock", settings.FloorSwitchLock.ToString() },
+            { "Layout.ProtectLayoutChanges", settings.ProtectLayoutChanges.ToString() }
+        };
+        
+        foreach (var kvp in updates)
+        {
+            await using var cmd = new NpgsqlCommand(sql, conn, tx);
+            cmd.Parameters.AddWithValue("@key", kvp.Key);
+            cmd.Parameters.AddWithValue("@value", kvp.Value);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        
+        await tx.CommitAsync();
+        return Results.Ok(settings);
+    }
+    catch (Exception ex)
+    {
+        await tx.RollbackAsync();
+        return Results.Problem(ex.Message);
+    }
+});
+
 app.Run();
 
 static async Task EnsureSchemaAsync(NpgsqlConnection conn)
@@ -1854,6 +2450,198 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
     await cmd3.ExecuteNonQueryAsync();
     await using var cmd4 = new NpgsqlCommand(sql4, conn);
     await cmd4.ExecuteNonQueryAsync();
+}
+
+static async Task EnsureFloorsSchemaAsync(NpgsqlConnection conn)
+{
+    // Create Floors table
+    const string floorsSql = @"CREATE TABLE IF NOT EXISTS public.floors (
+        floor_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        floor_name text NOT NULL,
+        description text NULL,
+        is_default boolean NOT NULL DEFAULT false,
+        is_active boolean NOT NULL DEFAULT true,
+        display_order integer NOT NULL DEFAULT 0,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT floors_name_unique UNIQUE (floor_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_floors_default ON public.floors(is_default) WHERE is_default = true;
+    CREATE INDEX IF NOT EXISTS idx_floors_active ON public.floors(is_active) WHERE is_active = true;";
+    
+    await using var floorsCmd = new NpgsqlCommand(floorsSql, conn);
+    await floorsCmd.ExecuteNonQueryAsync();
+    
+    // Create default floor if none exists
+    const string defaultFloorSql = @"INSERT INTO public.floors (floor_name, description, is_default, is_active, display_order)
+                                     SELECT 'Main Floor', 'Default floor for existing tables', true, true, 0
+                                     WHERE NOT EXISTS (SELECT 1 FROM public.floors WHERE is_default = true)";
+    await using var defaultFloorCmd = new NpgsqlCommand(defaultFloorSql, conn);
+    await defaultFloorCmd.ExecuteNonQueryAsync();
+    
+    // Create Tables table with layout support
+    const string tablesSql = @"CREATE TABLE IF NOT EXISTS public.tables (
+        table_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        floor_id uuid NOT NULL REFERENCES public.floors(floor_id) ON DELETE CASCADE,
+        table_name text NOT NULL,
+        table_number text NULL,
+        table_type text NOT NULL DEFAULT 'billiard',
+        x_position numeric(10,2) NOT NULL DEFAULT 0,
+        y_position numeric(10,2) NOT NULL DEFAULT 0,
+        rotation numeric(5,2) NOT NULL DEFAULT 0,
+        size text NOT NULL DEFAULT 'M',
+        width numeric(10,2) NULL,
+        height numeric(10,2) NULL,
+        status text NOT NULL DEFAULT 'available',
+        billing_rate numeric(10,2) NOT NULL DEFAULT 0,
+        auto_start_timer boolean NOT NULL DEFAULT false,
+        icon_style text NULL,
+        grouping_tags text[] NULL,
+        is_active boolean NOT NULL DEFAULT true,
+        is_locked boolean NOT NULL DEFAULT false,
+        order_id text NULL,
+        start_time timestamptz NULL,
+        server text NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        CONSTRAINT tables_floor_name_unique UNIQUE (floor_id, table_name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tables_floor_id ON public.tables(floor_id);
+    CREATE INDEX IF NOT EXISTS idx_tables_status ON public.tables(status);
+    CREATE INDEX IF NOT EXISTS idx_tables_type ON public.tables(table_type);
+    CREATE INDEX IF NOT EXISTS idx_tables_active ON public.tables(is_active) WHERE is_active = true;";
+    
+    await using var tablesCmd = new NpgsqlCommand(tablesSql, conn);
+    await tablesCmd.ExecuteNonQueryAsync();
+    
+    // Migrate existing table_status data to tables (one-time migration)
+    const string migrateSql = @"DO $$
+    DECLARE
+        default_floor_id uuid;
+    BEGIN
+        SELECT floor_id INTO default_floor_id FROM public.floors WHERE is_default = true LIMIT 1;
+        IF default_floor_id IS NOT NULL THEN
+            INSERT INTO public.tables (
+                floor_id, table_name, table_number, table_type, 
+                x_position, y_position, status, order_id, start_time, server, is_active
+            )
+            SELECT 
+                default_floor_id,
+                label as table_name,
+                label as table_number,
+                type as table_type,
+                0 as x_position,
+                0 as y_position,
+                CASE WHEN occupied THEN 'occupied' ELSE 'available' END as status,
+                order_id,
+                start_time,
+                server,
+                true as is_active
+            FROM public.table_status
+            WHERE NOT EXISTS (
+                SELECT 1 FROM public.tables t 
+                WHERE t.floor_id = default_floor_id AND t.table_name = public.table_status.label
+            )
+            ON CONFLICT (floor_id, table_name) DO NOTHING;
+        END IF;
+    END $$;";
+    
+    try
+    {
+        await using var migrateCmd = new NpgsqlCommand(migrateSql, conn);
+        await migrateCmd.ExecuteNonQueryAsync();
+    }
+    catch (Exception ex)
+    {
+        // Migration might fail if already done - safe to ignore
+        System.Diagnostics.Debug.WriteLine($"Migration warning: {ex.Message}");
+    }
+    
+    // Create layout history table
+    const string historySql = @"CREATE TABLE IF NOT EXISTS public.table_layout_history (
+        history_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        floor_id uuid NOT NULL REFERENCES public.floors(floor_id) ON DELETE CASCADE,
+        version_number integer NOT NULL,
+        layout_data jsonb NOT NULL,
+        created_by text NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        description text NULL,
+        CONSTRAINT layout_history_version_unique UNIQUE (floor_id, version_number)
+    );
+    CREATE INDEX IF NOT EXISTS idx_layout_history_floor ON public.table_layout_history(floor_id, created_at DESC);";
+    
+    await using var historyCmd = new NpgsqlCommand(historySql, conn);
+    await historyCmd.ExecuteNonQueryAsync();
+    
+    // Create triggers for updated_at
+    const string triggersSql = @"
+        CREATE OR REPLACE FUNCTION update_floors_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = now();
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        
+        DROP TRIGGER IF EXISTS trigger_floors_updated_at ON public.floors;
+        CREATE TRIGGER trigger_floors_updated_at
+            BEFORE UPDATE ON public.floors
+            FOR EACH ROW
+            EXECUTE FUNCTION update_floors_updated_at();
+        
+        CREATE OR REPLACE FUNCTION update_tables_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = now();
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        
+        DROP TRIGGER IF EXISTS trigger_tables_updated_at ON public.tables;
+        CREATE TRIGGER trigger_tables_updated_at
+            BEFORE UPDATE ON public.tables
+            FOR EACH ROW
+            EXECUTE FUNCTION update_tables_updated_at();
+        
+        CREATE OR REPLACE FUNCTION ensure_single_default_floor()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF NEW.is_default = true THEN
+                UPDATE public.floors SET is_default = false WHERE floor_id != NEW.floor_id;
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        
+        DROP TRIGGER IF EXISTS trigger_ensure_single_default_floor ON public.floors;
+        CREATE TRIGGER trigger_ensure_single_default_floor
+            AFTER INSERT OR UPDATE OF is_default ON public.floors
+            FOR EACH ROW
+            WHEN (NEW.is_default = true)
+            EXECUTE FUNCTION ensure_single_default_floor();";
+    
+    try
+    {
+        await using var triggersCmd = new NpgsqlCommand(triggersSql, conn);
+        await triggersCmd.ExecuteNonQueryAsync();
+    }
+    catch (Exception ex)
+    {
+        System.Diagnostics.Debug.WriteLine($"Trigger creation warning: {ex.Message}");
+    }
+    
+    // Ensure layout settings exist
+    const string settingsSql = @"INSERT INTO public.app_settings (key, value) VALUES
+        ('Layout.GridSize', '20'),
+        ('Layout.SnapToGrid', 'true'),
+        ('Layout.DefaultTableSize', 'M'),
+        ('Layout.ShowTableNumbers', 'true'),
+        ('Layout.FloorSwitchLock', 'false'),
+        ('Layout.ProtectLayoutChanges', 'false')
+    ON CONFLICT (key) DO NOTHING;";
+    
+    await using var settingsCmd = new NpgsqlCommand(settingsSql, conn);
+    await settingsCmd.ExecuteNonQueryAsync();
 }
 
 static async Task<decimal> GetRatePerMinuteAsync(NpgsqlConnection conn, decimal fallback)

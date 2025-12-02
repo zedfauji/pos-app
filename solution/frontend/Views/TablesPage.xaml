@@ -43,6 +43,38 @@
                         
                         <!-- Left Side: Controls -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="32">
+                            <!-- Floor Selector -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Floor" 
+                                           Style="{StaticResource BodyTextStyle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <ComboBox x:Name="FloorCombo" 
+                                          Width="200" 
+                                          ItemsSource="{Binding Floors}"
+                                          DisplayMemberPath="FloorName"
+                                          SelectedItem="{Binding SelectedFloor, Mode=TwoWay}"
+                                          SelectionChanged="FloorCombo_SelectionChanged"
+                                          Style="{StaticResource FluentComboBoxStyle}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding FloorName}"/>
+                                                <Border Background="{ThemeResource SystemFillColorAttentionBackground}"
+                                                        CornerRadius="4"
+                                                        Padding="4,2"
+                                                        Visibility="{Binding IsDefault, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="Default" 
+                                                               FontSize="10"
+                                                               Foreground="White"
+                                                               FontWeight="SemiBold"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                            
                             <!-- Filter Control -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Filter Tables" 

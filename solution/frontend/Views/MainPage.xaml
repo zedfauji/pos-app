@@ -114,6 +114,7 @@
 
                 <!-- Administration Group -->
                 <NavigationViewItemHeader Content="Administration"/>
+                <NavigationViewItem Content="Floors &amp; Layouts" Tag="FloorsLayoutsPage" Icon="Map"/>
                 <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
                 <NavigationViewItem Content="Settings" Tag="HierarchicalSettingsPage" Icon="Setting">
                     <NavigationViewItem.MenuItems>

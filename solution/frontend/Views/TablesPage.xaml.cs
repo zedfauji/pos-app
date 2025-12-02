@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using MagiDesk.Shared.DTOs.Users;
 using MagiDesk.Shared.DTOs.Tables;
 using MagiDesk.Shared.DTOs;
+using System.Linq;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -26,10 +27,24 @@ public sealed partial class TablesPage : Page
     public ObservableCollection<TableItem> BarTables { get; } = new();
     public ObservableCollection<TableItem> FilteredBilliardTables { get; } = new();
     public ObservableCollection<TableItem> FilteredBarTables { get; } = new();
+    public ObservableCollection<FloorDto> Floors { get; } = new();
+    private FloorDto? _selectedFloor;
+    
     private TableRepository _repo = new TableRepository();
+    private FloorsTablesService _floorsService = new FloorsTablesService();
     private DispatcherTimer _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
     private readonly string _timerCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "timers.json");
     private readonly string _thresholdsCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "thresholds.json");
+    
+    public FloorDto? SelectedFloor
+    {
+        get => _selectedFloor;
+        set
+        {
+            _selectedFloor = value;
+            _ = LoadFromDatabaseAsync();
+        }
+    }
 
     public TablesPage()
     {
@@ -286,6 +301,7 @@ public class AddItemRow : INotifyPropertyChanged
     private async void TablesPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         FilterCombo.SelectedIndex = 0; // All
+        await LoadFloorsAsync();
         await LoadFromDatabaseAsync();
         // Leverage the unified refresh to load caches, rehydrate, and persist
         await RefreshFromStoreAsync();
@@ -321,6 +337,41 @@ public class AddItemRow : INotifyPropertyChanged
     {
         BilliardTables.Clear();
         BarTables.Clear();
+        
+        try
+        {
+            // Try loading from new multi-floor API first
+            var tables = await _floorsService.GetAllTablesAsync(SelectedFloor?.FloorId);
+            
+            if (tables != null && tables.Count > 0)
+            {
+                foreach (var table in tables.Where(t => t.IsActive))
+                {
+                    var item = new TableItem(table.TableName, table.TableType)
+                    {
+                        Occupied = table.Status == "occupied",
+                        OrderId = table.OrderId,
+                        StartTime = table.StartTime,
+                        Server = table.Server
+                    };
+                    
+                    if (table.TableType == "billiard")
+                        BilliardTables.Add(item);
+                    else if (table.TableType == "bar")
+                        BarTables.Add(item);
+                }
+                
+                ApplyFilter();
+                UpdateStatus();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading from floors API: {ex.Message}");
+        }
+        
+        // Fallback to old API for backward compatibility
         await _repo.EnsureSchemaAsync();
         var rows = await _repo.GetAllAsync();
         foreach (var r in rows)
@@ -330,34 +381,32 @@ public class AddItemRow : INotifyPropertyChanged
             if (r.Type == "billiard") BilliardTables.Add(item);
             else BarTables.Add(item);
         }
-        // Seed if empty
-        if (rows.Count == 0)
-        {
-            var toInsert = new System.Collections.Generic.List<TableStatusDto>();
-            for (int i = 1; i <= 5; i++) toInsert.Add(new TableStatusDto { Label = $"Billiard {i}", Type = "billiard", Occupied = false });
-            for (int i = 1; i <= 10; i++) toInsert.Add(new TableStatusDto { Label = $"Bar {i}", Type = "bar", Occupied = false });
-            await _repo.UpsertManyAsync(toInsert);
-            // Populate UI immediately
-            foreach (var rec in toInsert)
-            {
-                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
-                if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
-            }
-        }
-        // Safety: if still empty for any reason, seed in-memory and persist
-        if (BilliardTables.Count == 0 && BarTables.Count == 0)
-        {
-            var toInsert = new System.Collections.Generic.List<TableStatusDto>();
-            for (int i = 1; i <= 5; i++) toInsert.Add(new TableStatusDto { Label = $"Billiard {i}", Type = "billiard", Occupied = false });
-            for (int i = 1; i <= 10; i++) toInsert.Add(new TableStatusDto { Label = $"Bar {i}", Type = "bar", Occupied = false });
-            foreach (var rec in toInsert)
-            {
-                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
-                if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
-            }
-            try { await _repo.UpsertManyAsync(toInsert); } catch { }
-        }
+        
         ApplyFilter();
+        UpdateStatus();
+    }
+    
+    private async Task LoadFloorsAsync()
+    {
+        try
+        {
+            var floors = await _floorsService.GetFloorsAsync();
+            Floors.Clear();
+            foreach (var floor in floors.Where(f => f.IsActive).OrderBy(f => f.DisplayOrder))
+            {
+                Floors.Add(floor);
+            }
+            
+            // Select default floor if available
+            if (SelectedFloor == null)
+            {
+                SelectedFloor = Floors.FirstOrDefault(f => f.IsDefault) ?? Floors.FirstOrDefault();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading floors: {ex.Message}");
+        }
     }
 
     // Click disabled per request; no handler needed.
@@ -374,6 +423,20 @@ public class AddItemRow : INotifyPropertyChanged
     }
 
     private void FilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+    
+    private async void FloorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (FloorCombo.SelectedItem is FloorDto floor)
+        {
+            SelectedFloor = floor;
+            await LoadFromDatabaseAsync();
+        }
+        else if (FloorCombo.SelectedIndex == -1)
+        {
+            SelectedFloor = null;
+            await LoadFromDatabaseAsync();
+        }
+    }
 
     private async Task ShowSafeContentDialog(string title, string content, string closeButtonText)
     {
