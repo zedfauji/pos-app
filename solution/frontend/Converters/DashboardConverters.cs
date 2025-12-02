@@ -43,11 +43,23 @@ public class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, string language)
     {
+        bool invert = parameter?.ToString()?.Equals("Invert", StringComparison.OrdinalIgnoreCase) == true;
+        
         if (value is int count)
         {
-            return count > 0 ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+            bool shouldShow = count > 0;
+            if (invert) shouldShow = !shouldShow;
+            return shouldShow ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
         }
-        return Microsoft.UI.Xaml.Visibility.Collapsed;
+        
+        if (value is System.Collections.ICollection collection)
+        {
+            bool shouldShow = collection.Count > 0;
+            if (invert) shouldShow = !shouldShow;
+            return shouldShow ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+        }
+        
+        return invert ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, string language)

@@ -134,8 +134,10 @@ namespace MagiDesk.Frontend.ViewModels
                 ErrorMessage = null;
 
                 System.Diagnostics.Debug.WriteLine("UnsettledBillsViewModel: Loading unsettled bills...");
-                var bills = await _tableRepository.GetBillsAsync();
-                System.Diagnostics.Debug.WriteLine($"UnsettledBillsViewModel: Received {bills.Count} bills from TableRepository");
+                
+                // Use GetUnsettledBillsAsync instead of GetBillsAsync to get only unsettled bills
+                var bills = await _tableRepository.GetUnsettledBillsAsync();
+                System.Diagnostics.Debug.WriteLine($"UnsettledBillsViewModel: Received {bills.Count} unsettled bills from TableRepository");
                 
                 // CRITICAL FIX: Use SafeObservableCollection to avoid COM interop issues
                 // SafeObservableCollection suppresses COM exceptions that cause Marshal.ThrowExceptionForHR errors
@@ -143,7 +145,7 @@ namespace MagiDesk.Frontend.ViewModels
                 foreach (var bill in bills)
                 {
                     UnsettledBills.Add(bill);
-                    System.Diagnostics.Debug.WriteLine($"UnsettledBillsViewModel: Added bill {bill.BillId} - ${bill.TotalAmount:F2}");
+                    System.Diagnostics.Debug.WriteLine($"UnsettledBillsViewModel: Added bill {bill.BillId} (BillingId: {bill.BillingId}) - ${bill.TotalAmount:F2} - Table: {bill.TableLabel}");
                 }
                 
                 ApplyFilters();

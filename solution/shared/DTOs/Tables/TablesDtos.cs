@@ -2,6 +2,13 @@ namespace MagiDesk.Shared.DTOs.Tables;
 
 public record StartSessionRequest(string ServerId, string ServerName);
 
+public sealed record ReopenSessionResult(
+    Guid SessionId,
+    Guid BillingId,
+    string TableLabel,
+    string Message
+);
+
 public class TableStatusDto
 {
     public string Label { get; set; } = string.Empty;

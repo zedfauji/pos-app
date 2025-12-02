@@ -10,6 +10,7 @@
     <Page.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
         <conv:OccupiedToColorConverter x:Key="OccupiedToColorConverter"/>
+        <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
         
         <!-- Modern Color Palette - Dark Theme Optimized -->
         <SolidColorBrush x:Key="AvailableBrush" Color="#00C851"/>
@@ -350,18 +351,60 @@
                                         </Border.RenderTransform>
                                         <Border.ContextFlyout>
                                             <MenuFlyout>
-                                                <MenuFlyoutItem Text="Start Session" Click="StartMenu_Click" 
-                                                                Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"
+                                                <!-- Bar Table Specific Options -->
+                                                <MenuFlyoutItem Text="Open Table" Click="OpenTableMenu_Click" 
+                                                                Visibility="{Binding IsBarTable, Converter={StaticResource BoolToVisibility}}"
                                                                 Icon="Play"/>
                                                 <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" 
-                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
-                                                                Icon="Add"/>
+                                                                Icon="Add">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Check Summary" Click="CheckSummaryMenu_Click" 
+                                                                Icon="View">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Close Table" Click="CloseTableMenu_Click" 
+                                                                Icon="Cancel">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
                                                 <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" 
-                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
-                                                                Icon="Forward"/>
-                                                <MenuFlyoutItem Text="Stop Session" Click="StopMenu_Click" 
-                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
-                                                                Icon="Cancel"/>
+                                                                Icon="Forward">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Assign to Billiard Table" Click="AssignToBilliardMenu_Click" 
+                                                                Icon="Forward">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
                                                 <MenuFlyoutSeparator/>
                                                 <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
                                                                 Icon="Repair"/>

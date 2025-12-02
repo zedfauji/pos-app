@@ -15,6 +15,7 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:CurrencyConverter x:Key="CurrencyConverter"/>
         <converters:ItemCountConverter x:Key="ItemCountConverter"/>
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
         
         <!-- Modern Color Palette -->
         <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
@@ -259,17 +260,69 @@
                     </StackPanel>
                 </Grid>
                 
+                <!-- Loading Indicator -->
+                <ProgressRing Grid.Row="1" 
+                             IsActive="{Binding IsLoading}" 
+                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                             Width="50" Height="50" 
+                             HorizontalAlignment="Center" 
+                             VerticalAlignment="Center"/>
+                
+                <!-- Error Message -->
+                <Border Grid.Row="1" 
+                       Background="{StaticResource ErrorBrush}" 
+                       CornerRadius="8" 
+                       Padding="16" 
+                       Margin="16"
+                       Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Error Loading Bills" 
+                                 FontSize="16" 
+                                 FontWeight="SemiBold" 
+                                 Foreground="White"/>
+                        <TextBlock Text="{Binding ErrorMessage}" 
+                                 FontSize="14" 
+                                 Foreground="White" 
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Empty State -->
+                <StackPanel Grid.Row="1" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Spacing="16"
+                           Visibility="{Binding HasEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <SymbolIcon Symbol="Document" 
+                               Width="64" 
+                               Height="64" 
+                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBlock Text="No bills found" 
+                             FontSize="18" 
+                             FontWeight="SemiBold" 
+                             Foreground="{StaticResource TextSecondaryBrush}"
+                             HorizontalAlignment="Center"/>
+                    <TextBlock Text="Try adjusting your filters or date range" 
+                             FontSize="14" 
+                             Foreground="{StaticResource TextSecondaryBrush}"
+                             HorizontalAlignment="Center"/>
+                </StackPanel>
+                
                 <!-- Bills ListView -->
                 <ListView Grid.Row="1" x:Name="BillsList" 
                         ItemsSource="{Binding FilteredBills}"
                         Style="{StaticResource ModernDataGridStyle}"
-                        RightTapped="BillsList_RightTapped">
+                        RightTapped="BillsList_RightTapped"
+                        Visibility="{Binding HasBills, Converter={StaticResource BoolToVisibilityConverter}}">
                     
                     <ListView.ContextFlyout>
                         <MenuFlyout>
                             <MenuFlyoutItem Text="View Receipt" Click="ViewReceipt_Click" />
                             <MenuFlyoutItem Text="Reprint" Click="Reprint_Click" />
-                            <MenuFlyoutItem Text="Close Bill" Click="CloseBill_Click" />
+                            <MenuFlyoutItem Text="Reopen Bill" Click="ReopenBill_Click" 
+                                          Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                            <MenuFlyoutItem Text="Close Bill" Click="CloseBill_Click" 
+                                          Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                     
@@ -370,6 +423,10 @@
                                             <Button Content="Print" FontSize="12" Padding="8,4" 
                                                   Style="{StaticResource SecondaryButtonStyle}"
                                                   Click="Reprint_Click" Tag="{Binding}"/>
+                                            <Button Content="Reopen" FontSize="12" Padding="8,4" 
+                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Click="ReopenBill_Click" Tag="{Binding}"
+                                                  Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                                             <Button Content="Close" FontSize="12" Padding="8,4" 
                                                   Style="{StaticResource SecondaryButtonStyle}"
                                                   Click="CloseBill_Click" Tag="{Binding}"
@@ -382,10 +439,40 @@
                                 <Expander.Content>
                                     <Border Style="{StaticResource ModernCardStyle}" Margin="20,8,8,8" Background="#1A1A1A">
                                         <StackPanel>
-                                            <TextBlock Text="Order Items" FontWeight="SemiBold" FontSize="14" 
-                                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                            <Grid Margin="0,0,0,12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <TextBlock Grid.Column="0" Text="Order Items" FontWeight="SemiBold" FontSize="14" 
+                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                
+                                                <TextBlock Grid.Column="1" 
+                                                         Text="{Binding Items.Count, Converter={StaticResource ItemCountConverter}}" 
+                                                         FontSize="12" FontStyle="Italic"
+                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            </Grid>
                                             
-                                            <ItemsControl ItemsSource="{Binding Items}">
+                                            <!-- Empty State -->
+                                            <StackPanel Visibility="{Binding Items.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=Invert}"
+                                                       HorizontalAlignment="Center" 
+                                                       VerticalAlignment="Center"
+                                                       Spacing="8"
+                                                       Margin="0,20">
+                                                <SymbolIcon Symbol="Document" 
+                                                           Width="32" 
+                                                           Height="32" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="No items found" 
+                                                         FontSize="12" 
+                                                         Foreground="{StaticResource TextSecondaryBrush}"
+                                                         HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Items List -->
+                                            <ItemsControl ItemsSource="{Binding Items}"
+                                                       Visibility="{Binding Items.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
                                                         <Grid Margin="0,4" Padding="12,8" Background="#2A2A2A" CornerRadius="6">
@@ -407,12 +494,6 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            
-                                            <!-- Show count if no items to expand -->
-                                            <TextBlock Text="{Binding Items.Count, Converter={StaticResource ItemCountConverter}}" 
-                                                     FontSize="12" FontStyle="Italic"
-                                                     Foreground="{StaticResource TextSecondaryBrush}"
-                                                     HorizontalAlignment="Right" Margin="0,8,0,0"/>
                                         </StackPanel>
                                     </Border>
                                 </Expander.Content>

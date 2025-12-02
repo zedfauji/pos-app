@@ -239,6 +239,7 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
             var modifier = option.ParentModifier;
             if (modifier != null)
             {
+                // The IsChecked binding will update IsSelected, but we need to handle SelectedOptions collection
                 if (checkBox.IsChecked == true)
                 {
                     if (!modifier.AllowMultiple)
@@ -246,13 +247,27 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                         // Clear other selections for single-select modifiers
                         foreach (var otherOption in modifier.Options)
                         {
-                            if (otherOption != option)
+                            if (otherOption != option && otherOption.IsSelected)
                             {
                                 otherOption.IsSelected = false;
+                                modifier.SelectedOptions.Remove(otherOption);
                             }
                         }
                     }
-                    modifier.SelectedOptions.Add(option);
+                    
+                    // Check MaxSelections limit
+                    if (modifier.MaxSelections.HasValue && modifier.SelectedOptions.Count >= modifier.MaxSelections.Value)
+                    {
+                        // Don't allow selection if max is reached
+                        checkBox.IsChecked = false;
+                        option.IsSelected = false;
+                        return;
+                    }
+                    
+                    if (!modifier.SelectedOptions.Contains(option))
+                    {
+                        modifier.SelectedOptions.Add(option);
+                    }
                 }
                 else
                 {
@@ -269,17 +284,8 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
     {
         if (sender is Button button && button.DataContext is MenuItemViewModel item)
         {
-            // Find the customization panel for this item
-            var parent = button.Parent as FrameworkElement;
-            while (parent != null)
-            {
-                if (parent.FindName("CustomizationPanel") is StackPanel panel)
-                {
-                    panel.Visibility = panel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-                }
-                parent = parent.Parent as FrameworkElement;
-            }
+            // Toggle the customization panel visibility for this specific item
+            item.ShowCustomization = !item.ShowCustomization;
         }
     }
 
@@ -453,9 +459,27 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
     public decimal BasePrice { get; }
     public string PriceText => $"${BasePrice:F2}";
     public string SKU { get; }
-    public bool HasModifiers => Modifiers.Count > 0;
     
     public ObservableCollection<ModifierViewModel> Modifiers { get; } = new();
+    
+    public bool HasModifiers
+    {
+        get => Modifiers.Count > 0;
+    }
+    
+    private bool _showCustomization;
+    public bool ShowCustomization
+    {
+        get => _showCustomization;
+        set
+        {
+            if (_showCustomization != value)
+            {
+                _showCustomization = value;
+                OnPropertyChanged(nameof(ShowCustomization));
+            }
+        }
+    }
     
     private int _selectedQuantity;
     public int SelectedQuantity
@@ -492,6 +516,10 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
         {
             Modifiers.Add(new ModifierViewModel(modifier));
         }
+        
+        // Notify that HasModifiers might have changed after modifiers are added
+        Modifiers.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasModifiers));
+        OnPropertyChanged(nameof(HasModifiers));
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

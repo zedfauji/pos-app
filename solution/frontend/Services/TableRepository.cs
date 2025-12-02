@@ -407,6 +407,41 @@ public class TableRepository
         }
     }
 
+    public async Task<List<BillResult>> GetUnsettledBillsAsync(CancellationToken ct = default)
+    {
+        var list = new List<BillResult>();
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return list;
+        try
+        {
+            var url = new Uri(new Uri(_apiBaseUrl!), "/bills/unsettled");
+            System.Diagnostics.Debug.WriteLine($"TableRepository.GetUnsettledBillsAsync calling: {url}");
+            
+            var res = await _http.GetAsync(url, ct);
+            if (!res.IsSuccessStatusCode) 
+            {
+                System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync failed with status {res.StatusCode}");
+                return list;
+            }
+            
+            var data = await res.Content.ReadFromJsonAsync<List<BillResult>>(cancellationToken: ct) ?? new();
+            System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync returned {data.Count} unsettled bills");
+            
+            // Add detailed logging for each bill
+            foreach (var bill in data)
+            {
+                System.Diagnostics.Debug.WriteLine($"  - Bill {bill.BillId} (BillingId: {bill.BillingId}) - ${bill.TotalAmount:F2} - Table: {bill.TableLabel}");
+            }
+            
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("GetUnsettledBillsAsync failed", ex);
+            System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync exception: {ex.Message}");
+            return list;
+        }
+    }
+
     public async Task<bool> CloseBillAsync(Guid billId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return false;
@@ -558,6 +593,30 @@ public class TableRepository
             if (!t.Occupied) labels.Add(t.Label);
         }
         return labels;
+    }
+
+    public async Task<ReopenSessionResult?> ReopenSessionAsync(Guid billingId, string? targetTableLabel = null, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_apiBaseUrl)) return null;
+        try
+        {
+            var url = new Uri(new Uri(_apiBaseUrl!), $"/bills/{billingId}/reopen");
+            var request = new { targetTableLabel = targetTableLabel };
+            var res = await _http.PostAsJsonAsync(url, request, ct);
+            if (!res.IsSuccessStatusCode)
+            {
+                var errorContent = await res.Content.ReadAsStringAsync(ct);
+                System.Diagnostics.Debug.WriteLine($"ReopenSessionAsync failed: {res.StatusCode} - {errorContent}");
+                return null;
+            }
+            var result = await res.Content.ReadFromJsonAsync<ReopenSessionResult>(cancellationToken: ct);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ReopenSessionAsync exception: {ex.Message}");
+            return null;
+        }
     }
 
     // --- Get order items by billing ID for receipt generation ---

@@ -291,4 +291,70 @@ public sealed partial class BillingPage : Page
             XamlRoot = GetXamlRoot()
         }.ShowAsync();
     }
+
+    private async void ReopenBill_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var billItem = GetBillItemFromSender(sender);
+            if (billItem == null) return;
+
+            if (billItem.BillingId == Guid.Empty)
+            {
+                await ShowErrorDialog("Bill does not have a valid billing ID. Cannot reopen.");
+                return;
+            }
+
+            // Create BillResult from BillItemViewModel for the dialog
+            var bill = new BillResult
+            {
+                BillId = billItem.BillId,
+                BillingId = billItem.BillingId,
+                TableLabel = billItem.TableLabel,
+                ServerId = billItem.ServerName, // Note: ServerId might be different, but we'll use ServerName
+                ServerName = billItem.ServerName,
+                StartTime = billItem.StartTime,
+                EndTime = billItem.EndTime,
+                TotalTimeMinutes = billItem.TotalTimeMinutes,
+                TotalAmount = billItem.Amount,
+                Items = billItem.Items
+            };
+
+            var dialog = new ReopenBillDialog(bill, _tableRepository)
+            {
+                XamlRoot = this.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                string? targetTable = dialog.ReopenWithSameTable ? bill.TableLabel : dialog.SelectedTableLabel;
+                if (string.IsNullOrEmpty(targetTable))
+                {
+                    await ShowErrorDialog("No target table selected for reopening.");
+                    return;
+                }
+
+                var reopenResult = await _tableRepository.ReopenSessionAsync(billItem.BillingId, targetTable);
+
+                if (reopenResult != null)
+                {
+                    await ShowInfoDialog("Success", $"Bill reopened successfully on table {reopenResult.TableLabel}.");
+                    // Refresh bills list
+                    await _viewModel?.LoadBillsAsync();
+                    // Navigate to tables page to see the reopened session
+                    Frame.Navigate(typeof(TablesPage));
+                }
+                else
+                {
+                    await ShowErrorDialog("Failed to reopen bill. Please try again.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Reopen bill failed", ex);
+            await ShowErrorDialog($"Failed to reopen bill: {ex.Message}");
+        }
+    }
 }

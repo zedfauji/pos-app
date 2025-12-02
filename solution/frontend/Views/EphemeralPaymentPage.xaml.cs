@@ -362,7 +362,8 @@ namespace MagiDesk.Frontend.Views
             CustomerAmountInput.Value = 0;
             TipAmountInput.Value = 0;
             TipPercentageText.Text = "0%";
-            ChangeAmountText.Text = "";
+            if (ChangeAmountBorder != null) ChangeAmountBorder.Visibility = Visibility.Collapsed;
+            if (ChangeAmountText != null) ChangeAmountText.Text = "";
             
             // Reset order items to original quantities
             LoadOrderItems();
@@ -890,25 +891,38 @@ namespace MagiDesk.Frontend.Views
             CalculateChange();
         }
 
-        private void CalculateChange_Click(object sender, RoutedEventArgs e)
-        {
-            CalculateChange();
-        }
-
         private void CalculateChange()
         {
+            if (ChangeAmountBorder == null || ChangeAmountText == null) return;
+            
             var orderTotal = _orderItems.Sum(item => item.Subtotal) + _tipAmount - _discountAmount;
             _changeAmount = _customerAmount - orderTotal;
             
-            if (_changeAmount >= 0)
+            // Only show change if customer amount is greater than 0
+            if (_customerAmount > 0)
             {
-                ChangeAmountText.Text = $"Change: {_changeAmount:C}";
-                ChangeAmountText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Green);
+                ChangeAmountBorder.Visibility = Visibility.Visible;
+                
+                if (_changeAmount >= 0)
+                {
+                    ChangeAmountText.Text = $"Change: {_changeAmount:C}";
+                    // Green background with white text for high contrast
+                    ChangeAmountText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.White);
+                    ChangeAmountBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.Green);
+                    ChangeAmountBorder.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.DarkGreen);
+                }
+                else
+                {
+                    ChangeAmountText.Text = $"Short: {Math.Abs(_changeAmount):C}";
+                    // Red background with white text for high contrast
+                    ChangeAmountText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.White);
+                    ChangeAmountBorder.Background = new SolidColorBrush(Microsoft.UI.Colors.Red);
+                    ChangeAmountBorder.BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.DarkRed);
+                }
             }
             else
             {
-                ChangeAmountText.Text = $"Short: {Math.Abs(_changeAmount):C}";
-                ChangeAmountText.Foreground = new SolidColorBrush(Microsoft.UI.Colors.Red);
+                ChangeAmountBorder.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -1039,6 +1053,9 @@ namespace MagiDesk.Frontend.Views
                         DiscountAmount = _discountAmount,
                         DiscountReason = _discountReason
                     });
+                    
+                    // Add a small delay to ensure payment is fully processed on backend
+                    await Task.Delay(500);
                     
                     // Navigate back to previous page
                     if (Frame.CanGoBack)
