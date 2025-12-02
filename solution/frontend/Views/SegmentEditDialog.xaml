@@ -19,8 +19,7 @@
             <!-- Basic Information -->
             <StackPanel Spacing="12">
                 <TextBlock Text="Basic Information" 
-                           Style="{ThemeResource SubtitleTextBlockStyle}"
-                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                           Style="{StaticResource SubtitleTextStyle}"/>
                 
                 <TextBox x:Name="NameTextBox"
                          Header="Segment Name"

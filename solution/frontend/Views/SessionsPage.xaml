@@ -8,90 +8,25 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <!-- Professional Styles -->
-        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="32"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-        </Style>
-
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style x:Key="FilterCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
-            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+        <!-- Local style overrides using Fluent design system -->
+        <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource DisplayTextStyle}"/>
+        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextStyle}"/>
+        <Style x:Key="CardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="MinWidth" Value="120"/>
         </Style>
-
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        <Style x:Key="FilterCardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
         </Style>
-
-        <Style x:Key="SessionCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource FluentPrimaryButtonStyle}"/>
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource FluentSecondaryButtonStyle}"/>
+        <Style x:Key="SessionCardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
+            <Setter Property="CornerRadius" Value="8"/>
         </Style>
-
-        <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="0,0,16,0"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="MinWidth" Value="200"/>
+        <Style x:Key="MetricCardStyle" TargetType="Border" BasedOn="{StaticResource FluentMetricCardStyle}">
+            <Setter Property="CornerRadius" Value="8"/>
         </Style>
-
-        <Style x:Key="MetricTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-        </Style>
+        <Style x:Key="MetricTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextStyle}"/>
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleTextStyle}"/>
 
         <Style x:Key="StatusActiveStyle" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
@@ -124,7 +59,7 @@
 
         <Style x:Key="AutoRefreshIndicatorStyle" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="Margin" Value="0,0,12,0"/>
         </Style>
@@ -135,7 +70,7 @@
             <!-- Header Section -->
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <TextBlock Text="Session Management" Style="{StaticResource PageTitleStyle}"/>
+                    <TextBlock Text="Session Management" Style="{StaticResource TitleTextStyle}"/>
                     <Border Style="{StaticResource AutoRefreshIndicatorStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="8" Height="8" Fill="White"/>
@@ -143,7 +78,7 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
-                <TextBlock Text="Monitor and manage active sessions across all tables" Style="{StaticResource PageSubtitleStyle}"/>
+                <TextBlock Text="Monitor and manage active sessions across all tables" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Metrics Overview -->

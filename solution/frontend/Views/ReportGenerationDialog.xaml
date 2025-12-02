@@ -23,7 +23,7 @@
         </Grid.RowDefinitions>
 
         <!-- Report Type -->
-        <TextBlock Grid.Row="0" Text="Report Type" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="0" Text="Report Type" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,4"/>
         <ComboBox Grid.Row="1" x:Name="ReportTypeComboBox" PlaceholderText="Select report type" Margin="0,0,0,8">
             <ComboBoxItem Content="Inventory Summary" Tag="InventorySummary"/>
             <ComboBoxItem Content="Vendor Performance" Tag="VendorPerformance"/>

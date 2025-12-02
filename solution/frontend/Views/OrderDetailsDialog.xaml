@@ -10,7 +10,7 @@
     DefaultButton="Primary">
 
     <Grid MinWidth="500" MinHeight="400">
-        <TextBlock Text="Order details will be displayed here" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+        <TextBlock Text="Order details will be displayed here" Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
     </Grid>
 </ContentDialog>
 

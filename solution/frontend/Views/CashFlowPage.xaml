@@ -14,38 +14,7 @@
         <converters:DecimalToDoubleConverter x:Key="DecimalToDoubleConverter"/>
         
         <!-- Professional Styles -->
-        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="32"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-        </Style>
-
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style x:Key="FormCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
+        <!-- Using Fluent styles from DesignSystem.xaml -->
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
             <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
@@ -68,13 +37,21 @@
 
         <Style x:Key="CashFlowItemStyle" TargetType="Grid">
             <Setter Property="Padding" Value="16"/>
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
 
+        <Style x:Key="FormCardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <Style x:Key="CardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
         <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="0,0,16,0"/>
@@ -101,8 +78,8 @@
         <StackPanel Spacing="24">
             <!-- Header Section -->
             <StackPanel>
-                <TextBlock Text="Cash Flow Management" Style="{StaticResource PageTitleStyle}"/>
-                <TextBlock Text="Track daily cash entries and monitor cash flow patterns" Style="{StaticResource PageSubtitleStyle}"/>
+                <TextBlock Text="Cash Flow Management" Style="{StaticResource TitleTextStyle}"/>
+                <TextBlock Text="Track daily cash entries and monitor cash flow patterns" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Metrics Overview -->

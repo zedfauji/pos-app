@@ -15,7 +15,7 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Inventory Management" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Inventory Management" Style="{StaticResource TitleTextStyle}"/>
             <Button Content="Add Item" Click="AddItem_Click" HorizontalAlignment="Right"/>
             <Button Content="Import" Click="Import_Click"/>
             <Button Content="Export" Click="Export_Click"/>

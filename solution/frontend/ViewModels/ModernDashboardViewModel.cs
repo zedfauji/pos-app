@@ -376,32 +376,26 @@ public class ModernDashboardViewModel : INotifyPropertyChanged
         try
         {
             var tables = await _tableRepository.GetAllAsync();
-            if (tables != null)
+            if (tables != null && tables.Count > 0)
             {
-                // Update existing table items with real data
-                for (int i = 0; i < tables.Count && i < Tables.Count; i++)
+                // Clear and repopulate the collection to ensure all tables are shown
+                Tables.Clear();
+                foreach (var table in tables)
                 {
-                    Tables[i] = tables[i];
-                }
-
-                // Update remaining items with default data if we have fewer real tables
-                var tableLabels = new[] { "B1", "B2", "B3", "B4", "B5", "Bar1", "Bar2", "Bar3", "Bar4", "Bar5" };
-                for (int i = tables.Count; i < Tables.Count; i++)
-                {
-                    Tables[i] = new TableStatusDto
-                    {
-                        Label = tableLabels[i],
-                        Type = i < 5 ? "billiard" : "bar",
-                        Occupied = false,
-                        OrderId = null,
-                        StartTime = null,
-                        Server = null
-                    };
+                    Tables.Add(table);
                 }
 
                 TotalTables = tables.Count;
                 OccupiedTables = tables.Count(t => t.Occupied);
                 AvailableTables = tables.Count(t => !t.Occupied);
+                OccupancyPercentage = TotalTables > 0 ? (OccupiedTables * 100.0 / TotalTables) : 0;
+            }
+            else
+            {
+                // If no tables returned, keep the default initialized tables
+                TotalTables = Tables.Count;
+                OccupiedTables = Tables.Count(t => t.Occupied);
+                AvailableTables = Tables.Count(t => !t.Occupied);
                 OccupancyPercentage = TotalTables > 0 ? (OccupiedTables * 100.0 / TotalTables) : 0;
             }
         }

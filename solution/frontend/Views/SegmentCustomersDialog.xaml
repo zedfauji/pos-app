@@ -22,10 +22,9 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
             <TextBlock x:Name="SegmentNameText" 
-                       Style="{ThemeResource SubtitleTextBlockStyle}"
-                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                       Style="{StaticResource SubtitleTextStyle}"/>
             <TextBlock x:Name="CustomerCountText" 
-                       Style="{ThemeResource BodyTextBlockStyle}"
+                       Style="{StaticResource BodyTextStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
@@ -43,7 +42,7 @@
                      Margin="0,0,12,0"
                      TextChanged="SearchBox_TextChanged">
                 <TextBox.Resources>
-                    <Style TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+                    <Style TargetType="TextBox" BasedOn="{StaticResource FluentTextBoxStyle}">
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="TextBox">

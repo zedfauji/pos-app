@@ -13,38 +13,26 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <muxc:XamlControlsResources />
-                <!-- Other merged dictionaries here -->
+                <!-- Fluent 2 Design System -->
+                <ResourceDictionary Source="DesignSystem.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
-            <Color x:Key="Primary">#512BD4</Color>
-
-            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
-            <SolidColorBrush x:Key="WhiteBrush" Color="White" />
-            <SolidColorBrush x:Key="BlackBrush" Color="Black" />
+            
+            <!-- Legacy compatibility - map old keys to Fluent tokens -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{ThemeResource SystemAccentColor}" />
+            <SolidColorBrush x:Key="WhiteBrush" Color="{ThemeResource SystemFillColorAttentionBackground}" />
+            <SolidColorBrush x:Key="BlackBrush" Color="{ThemeResource TextFillColorPrimary}" />
 
             <x:Double x:Key="AppFontSize">14</x:Double>
 
-            <Style x:Key="MyLabel" TargetType="TextBlock">
-                <Setter Property="Foreground"
-                        Value="{StaticResource PrimaryBrush}" />
+            <!-- Legacy styles - use Fluent styles instead -->
+            <Style x:Key="MyLabel" TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
             </Style>
 
-            <Style x:Key="Action" TargetType="Button">
-                <Setter Property="FontSize"
-                        Value="{StaticResource AppFontSize}" />
-                <Setter Property="Padding"
-                        Value="14,10" />
+            <Style x:Key="Action" TargetType="Button" BasedOn="{StaticResource FluentSecondaryButtonStyle}">
             </Style>
 
-            <Style x:Key="PrimaryAction"
-                   TargetType="Button"
-                   BasedOn="{StaticResource Action}">
-                <Setter Property="Background"
-                        Value="{StaticResource PrimaryBrush}" />
-                <Setter Property="CornerRadius"
-                        Value="8" />
-                <Setter Property="Foreground"
-                        Value="{StaticResource WhiteBrush}" />
+            <Style x:Key="PrimaryAction" TargetType="Button" BasedOn="{StaticResource FluentPrimaryButtonStyle}">
             </Style>
 
             <!-- Dashboard Converters -->
@@ -75,6 +63,19 @@
             <converters:BoolToStatusBrushConverter x:Key="BoolToStatusBrushConverter" />
             <converters:BoolToStatusTextConverter x:Key="BoolToStatusTextConverter" />
             <converters:DateTimeToStringConverter x:Key="DateTimeToStringConverter" />
+            
+            <!-- Status Styles for Session Converters -->
+            <Style x:Key="StatusActiveStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="Padding" Value="8,4"/>
+            </Style>
+            
+            <Style x:Key="StatusClosedStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorNeutralBrush}"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="Padding" Value="8,4"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

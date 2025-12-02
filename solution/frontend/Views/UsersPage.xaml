@@ -27,15 +27,15 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="User Management" FontSize="28" FontWeight="Bold" Margin="0,0,0,4"/>
-                <TextBlock x:Name="UserStatsText" Text="Loading..." Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="14"/>
+            <StackPanel Grid.Column="0" Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="User Management" Style="{StaticResource DisplayTextStyle}"/>
+                <TextBlock x:Name="UserStatsText" Text="Loading..." Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
             
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                <Button x:Name="RefreshButton" Click="Refresh_Click">
+                <Button x:Name="RefreshButton" Click="Refresh_Click" Style="{StaticResource FluentSecondaryButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE149;" FontSize="16"/>
+                        <FontIcon Glyph="&#xE72C;" FontSize="16"/>
                         <TextBlock Text="Refresh"/>
                     </StackPanel>
                 </Button>
@@ -76,7 +76,7 @@
                         BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" 
                         CornerRadius="8" Padding="16">
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Button x:Name="ExportButton" Click="Export_Click" Style="{ThemeResource AccentButtonStyle}">
+                        <Button x:Name="ExportButton" Click="Export_Click" Style="{StaticResource FluentPrimaryButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon Glyph="&#xE896;" FontSize="16"/>
                                 <TextBlock Text="Export"/>

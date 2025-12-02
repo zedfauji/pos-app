@@ -12,7 +12,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="Vendors Inventory" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="Vendors Inventory" Style="{StaticResource TitleTextStyle}"/>
             <Button Content="Sync Product Names" Click="Sync_Click"/>
             <Button Content="Refresh" Click="Refresh_Click"/>
             <Button Content="Job History" Click="JobHistory_Click"/>

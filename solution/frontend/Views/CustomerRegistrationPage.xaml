@@ -10,54 +10,7 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
-        <Style x:Key="FormSectionStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-
-        <Style x:Key="FormFieldStyle" TargetType="StackPanel">
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-
-        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="FormInputStyle" TargetType="TextBox">
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-
-        <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="24,12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="MinWidth" Value="120"/>
-        </Style>
-
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{ThemeResource ControlFillColorDefaultBrush}"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="24,12"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="MinWidth" Value="120"/>
-        </Style>
+        <!-- Using Fluent styles from DesignSystem.xaml -->
     </Page.Resources>
 
     <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
@@ -86,16 +39,14 @@
                         <FontIcon Glyph="&#xE72B;" FontSize="16"/>
                     </Button>
 
-                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource FluentPageHeaderStyle}">
                         <TextBlock Text="Add New Customer" 
-                                   FontSize="24" 
-                                   FontWeight="Bold" 
-                                   HorizontalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                   Style="{StaticResource TitleTextStyle}"
+                                   HorizontalAlignment="Center"/>
                         <TextBlock Text="Create a new customer profile" 
-                                   FontSize="14" 
-                                   HorizontalAlignment="Center"
+                                   Style="{StaticResource CaptionTextStyle}"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                   HorizontalAlignment="Center"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
 
@@ -110,13 +61,11 @@
             <!-- Form Content -->
             <StackPanel Grid.Row="1">
                 <!-- Personal Information -->
-                <Border Style="{StaticResource FormSectionStyle}">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <StackPanel>
                         <TextBlock Text="Personal Information" 
-                                   FontSize="18" 
-                                   FontWeight="SemiBold" 
-                                   Margin="0,0,0,20"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                   Style="{StaticResource SubtitleTextStyle}"
+                                   Margin="0,0,0,20"/>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -153,7 +102,7 @@
                 </Border>
 
                 <!-- Contact Information -->
-                <Border Style="{StaticResource FormSectionStyle}">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <StackPanel>
                         <TextBlock Text="Contact Information" 
                                    FontSize="18" 
@@ -190,7 +139,7 @@
                 </Border>
 
                 <!-- Membership Information -->
-                <Border Style="{StaticResource FormSectionStyle}">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <StackPanel>
                         <TextBlock Text="Membership Information" 
                                    FontSize="18" 
@@ -231,7 +180,7 @@
                 </Border>
 
                 <!-- Additional Information -->
-                <Border Style="{StaticResource FormSectionStyle}">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <StackPanel>
                         <TextBlock Text="Additional Information" 
                                    FontSize="18" 
@@ -284,14 +233,14 @@
                     <Button Grid.Column="1" 
                             x:Name="CancelButton"
                             Content="Cancel" 
-                            Style="{StaticResource SecondaryButtonStyle}"
+                            Style="{StaticResource FluentSecondaryButtonStyle}"
                             Click="CancelButton_Click"/>
 
                     <!-- Save Button -->
                     <Button Grid.Column="3" 
                             x:Name="SaveButton"
                             Content="Create Customer" 
-                            Style="{StaticResource ActionButtonStyle}"
+                            Style="{StaticResource FluentPrimaryButtonStyle}"
                             Click="SaveButton_Click"/>
                 </Grid>
             </Border>

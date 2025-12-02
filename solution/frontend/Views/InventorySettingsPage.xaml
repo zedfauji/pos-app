@@ -9,18 +9,17 @@
     <ScrollViewer Padding="24">
         <StackPanel Spacing="24">
             <!-- Header -->
-            <StackPanel Spacing="8">
-                <TextBlock Text="Inventory Settings" FontSize="24" FontWeight="SemiBold"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Inventory Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure stock thresholds, reorder settings, and vendor defaults" 
-                           Opacity="0.7" TextWrapping="Wrap"/>
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Stock Management Settings -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="24">
+            <Border Style="{StaticResource FluentCardStyle}">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Stock Management" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Stock Management" Style="{StaticResource SubtitleTextStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>

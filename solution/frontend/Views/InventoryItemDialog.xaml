@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!-- SKU -->
-        <TextBlock Grid.Row="0" Text="SKU" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="0" Text="SKU" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,4"/>
         <TextBox Grid.Row="1" x:Name="SkuBox" Margin="0,0,0,16"/>
 
         <!-- Name -->

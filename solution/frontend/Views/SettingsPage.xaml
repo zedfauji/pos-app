@@ -14,7 +14,9 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" x:Name="TitleText" Text="Settings" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,16"/>
+        <StackPanel Grid.Row="0" Style="{StaticResource FluentPageHeaderStyle}">
+            <TextBlock x:Name="TitleText" Text="Settings" Style="{StaticResource DisplayTextStyle}"/>
+        </StackPanel>
 
         <!-- Main Content -->
         <ScrollViewer Grid.Row="1">
@@ -22,7 +24,7 @@
                 
                 <!-- General Settings -->
                 <StackPanel x:Name="GeneralPanel" Spacing="8">
-                    <TextBlock Text="General Settings" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="General Settings" Style="{StaticResource SubtitleTextStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -65,7 +67,7 @@
 
                 <!-- API Connections -->
                 <StackPanel x:Name="ConnectionsPanel" Spacing="8">
-                    <TextBlock Text="API Connections" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="API Connections" Style="{StaticResource SubtitleTextStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>

@@ -10,7 +10,7 @@
         <StackPanel Spacing="24">
             <!-- Header -->
             <StackPanel Spacing="8">
-                <TextBlock Text="General Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="General Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure business information, appearance, and basic system settings" 
                            Opacity="0.7" TextWrapping="Wrap"/>
             </StackPanel>

@@ -9,18 +9,17 @@
     <ScrollViewer Padding="24">
         <StackPanel Spacing="24">
             <!-- Header -->
-            <StackPanel Spacing="8">
-                <TextBlock Text="Security &amp; Roles Settings" FontSize="24" FontWeight="SemiBold"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Security &amp; Roles Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure user roles, login policies, session timeouts, and audit logging" 
-                           Opacity="0.7" TextWrapping="Wrap"/>
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- RBAC Settings -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="24">
+            <Border Style="{StaticResource FluentCardStyle}">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Role-Based Access Control (RBAC)" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Role-Based Access Control (RBAC)" Style="{StaticResource SubtitleTextStyle}"/>
                     <ToggleSwitch x:Name="EnforceRolePermissionsSwitch" Header="Enforce Role Permissions"/>
                     <ToggleSwitch x:Name="AllowRoleInheritanceSwitch" Header="Allow Role Inheritance"/>
                     <ToggleSwitch x:Name="RequireManagerOverrideForRestrictedSwitch" Header="Require Manager Override for Restricted Operations"/>

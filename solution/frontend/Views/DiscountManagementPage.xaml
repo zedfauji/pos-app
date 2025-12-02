@@ -18,16 +18,9 @@
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
 
-        <Style x:Key="HeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="28"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="SubHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
+        <Style x:Key="HeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource DisplayTextStyle}"/>
+        <Style x:Key="SubHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextStyle}">
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
         </Style>
     </Page.Resources>
 
@@ -35,7 +28,7 @@
         <StackPanel Padding="24" MaxWidth="1400">
             <!-- Header -->
             <StackPanel Margin="0,0,0,32">
-                <TextBlock Text="🎯 Discount Management" Style="{StaticResource HeaderStyle}"/>
+                <TextBlock Text="Discount Management" Style="{StaticResource HeaderStyle}"/>
                 <TextBlock Text="Create, edit, and manage discount campaigns, vouchers, and combo deals" 
                            Style="{StaticResource SubHeaderStyle}"/>
             </StackPanel>
@@ -66,12 +59,12 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                        <Button Content="📊 Analytics" 
+                        <Button Content="Analytics" 
                                 Click="Analytics_Click"
-                                Style="{StaticResource DefaultButtonStyle}"/>
-                        <Button Content="➕ New Discount" 
+                                Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                        <Button Content="New Discount" 
                                 Click="NewDiscount_Click"
-                                Style="{StaticResource AccentButtonStyle}"/>
+                                Style="{StaticResource FluentPrimaryButtonStyle}"/>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -95,7 +88,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="🟢 Active Discounts" FontSize="18" FontWeight="SemiBold"/>
-                            <Button Grid.Column="1" Content="➕" 
+                            <Button Grid.Column="1" Content="Add" 
                                     Width="32" Height="32"
                                     Click="NewActiveDiscount_Click"
                                     ToolTipService.ToolTip="Add Active Discount"/>
@@ -134,12 +127,12 @@
                                                    Margin="8,0"/>
 
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                                            <Button Content="✏️" 
+                                            <Button Content="Edit" 
                                                     Width="28" Height="28"
                                                     Click="EditDiscount_Click"
                                                     Tag="{Binding}"
                                                     ToolTipService.ToolTip="Edit"/>
-                                            <Button Content="🗑️" 
+                                            <Button Content="Delete" 
                                                     Width="28" Height="28"
                                                     Click="DeleteDiscount_Click"
                                                     Tag="{Binding}"
@@ -161,7 +154,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="🎫 Vouchers" FontSize="18" FontWeight="SemiBold"/>
-                            <Button Grid.Column="1" Content="➕" 
+                            <Button Grid.Column="1" Content="Add" 
                                     Width="32" Height="32"
                                     Click="NewVoucher_Click"
                                     ToolTipService.ToolTip="Add Voucher"/>
@@ -192,12 +185,12 @@
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                            <Button Content="✏️" 
+                                            <Button Content="Edit" 
                                                     Width="28" Height="28"
                                                     Click="EditVoucher_Click"
                                                     Tag="{Binding}"
                                                     ToolTipService.ToolTip="Edit"/>
-                                            <Button Content="🗑️" 
+                                            <Button Content="Delete" 
                                                     Width="28" Height="28"
                                                     Click="DeleteVoucher_Click"
                                                     Tag="{Binding}"
@@ -219,7 +212,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="🍔 Combo Deals" FontSize="18" FontWeight="SemiBold"/>
-                            <Button Grid.Column="1" Content="➕" 
+                            <Button Grid.Column="1" Content="Add" 
                                     Width="32" Height="32"
                                     Click="NewCombo_Click"
                                     ToolTipService.ToolTip="Add Combo Deal"/>
@@ -262,12 +255,12 @@
                                                    Margin="8,0"/>
 
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                                            <Button Content="✏️" 
+                                            <Button Content="Edit" 
                                                     Width="28" Height="28"
                                                     Click="EditCombo_Click"
                                                     Tag="{Binding}"
                                                     ToolTipService.ToolTip="Edit"/>
-                                            <Button Content="🗑️" 
+                                            <Button Content="Delete" 
                                                     Width="28" Height="28"
                                                     Click="DeleteCombo_Click"
                                                     Tag="{Binding}"
