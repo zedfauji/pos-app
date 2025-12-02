@@ -12,56 +12,28 @@
         <conv:OccupiedToColorConverter x:Key="OccupiedToColorConverter"/>
         <conv:StringEqualsConverter x:Key="StringEqualsConverter"/>
         
-        <!-- Modern Color Palette - Dark Theme Optimized -->
-        <SolidColorBrush x:Key="AvailableBrush" Color="#00C851"/>
-        <SolidColorBrush x:Key="OccupiedBrush" Color="#FF4444"/>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#2D2D2D"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#0078D4"/>
-        
-        <!-- Modern Card Style -->
-        <Style x:Key="ModernCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="8"/>
-        </Style>
-        
-        <!-- Status Indicator Style -->
-        <Style x:Key="StatusIndicatorStyle" TargetType="Border">
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-        </Style>
-        
-        <!-- Badge Style -->
-        <Style x:Key="BadgeStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-        </Style>
-        
         <!-- Easing Functions -->
         <CubicEase x:Key="CubicEase" EasingMode="EaseOut"/>
     </Page.Resources>
     
-    <Grid Background="{StaticResource SurfaceBrush}">
+    <Grid Background="Transparent">
+        <!-- Page Header -->
+        <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+            <TextBlock Text="Tables" 
+                       Style="{StaticResource DisplayTextStyle}"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="Manage and monitor table status" 
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
         <ScrollViewer VerticalScrollBarVisibility="Auto" 
                       VerticalScrollMode="Auto"
-                      Padding="24">
+                      Padding="24"
+                      Margin="0,16,0,0">
             <StackPanel Spacing="32">
-                <!-- Modern Top Bar -->
-                <Border Background="{StaticResource CardBackgroundBrush}" 
-                        CornerRadius="16" 
-                        Padding="24" 
-                        Margin="0,0,0,16">
+                <!-- Fluent Top Bar -->
+                <Border Style="{StaticResource FluentCardStyle}">
                     
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -74,14 +46,13 @@
                             <!-- Filter Control -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Filter Tables" 
-                                           FontSize="14" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                           Style="{StaticResource BodyTextStyle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 <ComboBox x:Name="FilterCombo" 
                                           Width="200" 
                                           SelectionChanged="FilterCombo_SelectionChanged"
-                                          CornerRadius="8"
-                                          Background="{StaticResource CardBackgroundBrush}"
-                                          BorderBrush="{StaticResource BorderBrush}">
+                                          Style="{StaticResource FluentComboBoxStyle}">
                                     <ComboBoxItem Content="All Tables"/>
                                     <ComboBoxItem Content="Available Only"/>
                                     <ComboBoxItem Content="Occupied Only"/>
@@ -91,8 +62,9 @@
                             <!-- Live Updates Toggle -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="Live Updates" 
-                                           FontSize="14" FontWeight="SemiBold" 
-                                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                                           Style="{StaticResource BodyTextStyle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 <ToggleSwitch x:Name="LiveToggle" 
                                               Toggled="LiveToggle_Toggled"
                                               OnContent="Enabled"
@@ -103,14 +75,14 @@
                         <!-- Right Side: Status Info -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                             <!-- Source Badge -->
-                            <Border Style="{StaticResource BadgeStyle}">
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}">
                                 <TextBlock x:Name="SourceText" 
                                            Foreground="White" 
                                            FontSize="12" FontWeight="SemiBold"/>
                             </Border>
                             
                             <!-- Counts Badge -->
-                            <Border Style="{StaticResource BadgeStyle}">
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}">
                                 <TextBlock x:Name="CountsText" 
                                            Foreground="White" 
                                            FontSize="12" FontWeight="SemiBold"/>
@@ -120,43 +92,37 @@
                 </Border>
                 
                 <!-- Legend -->
-                <Border Background="{StaticResource CardBackgroundBrush}" 
-                        CornerRadius="12" 
+                <Border Background="{StaticResource AcrylicCardBrush}" 
+                        CornerRadius="8" 
                         Padding="16" 
                         HorizontalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="24">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Border Style="{StaticResource StatusIndicatorStyle}">
-                                <Border.Background>
-                                    <SolidColorBrush Color="#00C851"/>
-                                </Border.Background>
-                            </Border>
-                            <TextBlock Text="Available" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <Border Width="12" Height="12" CornerRadius="6"
+                                    Background="{ThemeResource SystemFillColorSuccessBrush}"/>
+                            <TextBlock Text="Available" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Border Style="{StaticResource StatusIndicatorStyle}">
-                                <Border.Background>
-                                    <SolidColorBrush Color="#FF4444"/>
-                                </Border.Background>
-                            </Border>
-                            <TextBlock Text="Occupied" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <Border Width="12" Height="12" CornerRadius="6"
+                                    Background="{ThemeResource SystemFillColorCriticalBrush}"/>
+                            <TextBlock Text="Occupied" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Billiard Tables Section -->
-                <Border Background="{StaticResource CardBackgroundBrush}" 
+                <Border Background="{StaticResource AcrylicCardBrush}" 
                         CornerRadius="16" 
                         Padding="24">
                     
                     <StackPanel Spacing="20">
                         <!-- Section Header -->
                         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE7F7;" FontSize="24" Foreground="{StaticResource AccentBrush}"/>
+                            <FontIcon Glyph="&#xE7F7;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
                             <TextBlock Text="Billiard Tables" 
                                        FontSize="24" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <Border Style="{StaticResource BadgeStyle}" Margin="12,0,0,0">
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}" Margin="12,0,0,0">
                                 <TextBlock Text="{Binding FilteredBilliardTables.Count}" 
                                            Foreground="White" FontSize="12" FontWeight="SemiBold"/>
                             </Border>
@@ -185,7 +151,7 @@
                             </GridView.ItemContainerStyle>
                             <GridView.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource ModernCardStyle}" 
+                                    <Border Style="{StaticResource FluentCardStyle}" 
                                             Width="240" Height="180"
                                             RenderTransformOrigin="0.5,0.5">
                                         <Border.RenderTransform>
@@ -236,11 +202,11 @@
                                             
                                             <!-- Header with Status -->
                                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                                                <Border Style="{StaticResource StatusIndicatorStyle}"
+                                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,0,8,0"
                                                         Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
                                                     <TextBlock Text="{Binding Label}" 
                                                                FontSize="16" FontWeight="SemiBold" 
-                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                                                VerticalAlignment="Center"/>
                                                 </Border>
                                             </StackPanel>
@@ -284,11 +250,11 @@
                                             <StackPanel Grid.Row="2" Spacing="4">
                                                 <TextBlock Text="{Binding StatusText}" 
                                                            HorizontalAlignment="Center" 
-                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                            FontSize="12"/>
                                                 <TextBlock Text="{Binding ItemsSummary}" 
                                                            HorizontalAlignment="Center" 
-                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                            FontSize="11" 
                                                            TextWrapping="Wrap"
                                                            TextTrimming="CharacterEllipsis"
@@ -303,18 +269,18 @@
                 </Border>
                 
                 <!-- Bar Tables Section -->
-                <Border Background="{StaticResource CardBackgroundBrush}" 
+                <Border Background="{StaticResource AcrylicCardBrush}" 
                         CornerRadius="16" 
                         Padding="24">
                     
                     <StackPanel Spacing="20">
                         <!-- Section Header -->
                         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                            <FontIcon Glyph="&#xE7F8;" FontSize="24" Foreground="{StaticResource AccentBrush}"/>
+                            <FontIcon Glyph="&#xE7F8;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
                             <TextBlock Text="Bar Tables" 
                                        FontSize="24" FontWeight="SemiBold" 
-                                       Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <Border Style="{StaticResource BadgeStyle}" Margin="12,0,0,0">
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}" Margin="12,0,0,0">
                                 <TextBlock Text="{Binding FilteredBarTables.Count}" 
                                            Foreground="White" FontSize="12" FontWeight="SemiBold"/>
                             </Border>
@@ -343,7 +309,7 @@
                             </GridView.ItemContainerStyle>
                             <GridView.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource ModernCardStyle}" 
+                                    <Border Style="{StaticResource FluentCardStyle}" 
                                             Width="200" Height="180"
                                             RenderTransformOrigin="0.5,0.5">
                                         <Border.RenderTransform>
@@ -428,11 +394,11 @@
                                             
                                             <!-- Header with Status -->
                                             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                                                <Border Style="{StaticResource StatusIndicatorStyle}"
+                                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,0,8,0"
                                                         Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
                                                     <TextBlock Text="{Binding Label}" 
                                                                FontSize="16" FontWeight="SemiBold" 
-                                                               Foreground="{StaticResource TextPrimaryBrush}"
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                                                VerticalAlignment="Center"/>
                                                 </Border>
                                             </StackPanel>
@@ -450,7 +416,7 @@
                                             <StackPanel Grid.Row="2" Spacing="4">
                                                 <TextBlock Text="{Binding StatusText}" 
                                                            HorizontalAlignment="Center" 
-                                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                            FontSize="12"/>
                                             </StackPanel>
                                         </Grid>

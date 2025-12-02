@@ -26,7 +26,7 @@
         </Grid.RowDefinitions>
 
         <!-- Vendor Selection -->
-        <TextBlock Grid.Row="0" Text="Vendor" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="0" Text="Vendor" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,4"/>
         <ComboBox Grid.Row="1" x:Name="VendorComboBox" PlaceholderText="Select vendor" Margin="0,0,0,8"/>
 
         <!-- Priority -->

@@ -18,7 +18,7 @@
 
         <!-- Header with Actions -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Audit &amp; Reports" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Audit &amp; Reports" Style="{StaticResource TitleTextStyle}"/>
             <Button Content="Generate Report" Click="GenerateReport_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
             <Button Content="Export Data" Click="ExportData_Click" Background="{ThemeResource SystemAccentColor}"/>
             <Button Content="Refresh" Click="Refresh_Click"/>

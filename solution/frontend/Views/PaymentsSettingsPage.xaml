@@ -9,18 +9,17 @@
     <ScrollViewer Padding="24">
         <StackPanel Spacing="24">
             <!-- Header -->
-            <StackPanel Spacing="8">
-                <TextBlock Text="Payments Settings" FontSize="24" FontWeight="SemiBold"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Payments Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure payment methods, discounts, surcharges, and split payments" 
-                           Opacity="0.7" TextWrapping="Wrap"/>
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Discount Settings -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="24">
+            <Border Style="{StaticResource FluentCardStyle}">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Discounts" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Discounts" Style="{StaticResource SubtitleTextStyle}"/>
                     <ToggleSwitch x:Name="RequireManagerApprovalSwitch" Header="Require Manager Approval for Discounts"/>
                     <ToggleSwitch x:Name="AllowStackingDiscountsSwitch" Header="Allow Stacking Discounts"/>
                     <TextBox x:Name="MaxDiscountPercentageBox" Header="Max Discount Percentage (%)" PlaceholderText="e.g., 50"/>

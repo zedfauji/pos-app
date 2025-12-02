@@ -13,7 +13,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-            <TextBlock x:Name="TitleText" Text="Sign in" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock x:Name="TitleText" Text="Sign in" Style="{StaticResource TitleTextStyle}"/>
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <TextBlock x:Name="LanguageLabel" Text="Language:" Margin="24,0,0,0"/>
                 <ComboBox x:Name="LanguageSelector" Width="100" SelectionChanged="LanguageSelector_SelectionChanged">
@@ -27,7 +27,7 @@
             <InfoBar x:Name="Info" IsOpen="False" Severity="Error"/>
             <TextBox x:Name="UsernameBox" PlaceholderText="Username"/>
             <PasswordBox x:Name="PasswordBox" Header="Passcode"/>
-            <Button x:Name="LoginButton" Content="Login" Click="Login_Click"/>
+            <Button x:Name="LoginButton" Content="Login" Style="{StaticResource FluentPrimaryButtonStyle}" Click="Login_Click"/>
         </StackPanel>
     </Grid>
 </Page>

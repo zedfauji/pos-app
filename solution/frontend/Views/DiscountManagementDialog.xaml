@@ -15,14 +15,7 @@
     Height="600">
 
     <ContentDialog.Resources>
-        <Style x:Key="DiscountCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
+        <!-- Using FluentCardStyle from DesignSystem.xaml -->
 
         <Style x:Key="DiscountTypeStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
@@ -142,7 +135,7 @@
                           SelectionChanged="ManualDiscountsList_SelectionChanged">
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <Border Style="{StaticResource DiscountCardStyle}">
+                            <Border Style="{StaticResource FluentCardStyle}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>

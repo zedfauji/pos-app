@@ -18,7 +18,7 @@
 
         <!-- Header with Actions -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Vendor Orders" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Vendor Orders" Style="{StaticResource TitleTextStyle}"/>
             <Button Content="Create Purchase Order" Click="CreatePurchaseOrder_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
             <Button Content="Import Orders" Click="ImportOrders_Click" Background="{ThemeResource SystemAccentColor}"/>
             <Button Content="Export Orders" Click="ExportOrders_Click"/>

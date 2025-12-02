@@ -16,73 +16,9 @@
         <converters:CurrencyConverter x:Key="CurrencyConverter"/>
         <converters:ItemCountConverter x:Key="ItemCountConverter"/>
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
-        
-        <!-- Modern Color Palette -->
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
-        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
-        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
-
-        <!-- Modern Card Style -->
-        <Style x:Key="ModernCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="8"/>
-        </Style>
-
-        <!-- Metric Card Style -->
-        <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="8"/>
-            <Setter Property="MinHeight" Value="120"/>
-        </Style>
-
-        <!-- Status Badge Style -->
-        <Style x:Key="StatusBadgeStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-        </Style>
-
-        <!-- Button Styles -->
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-
-        <!-- DataGrid Style -->
-        <Style x:Key="ModernDataGridStyle" TargetType="ListView">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-        </Style>
     </Page.Resources>
 
-    <Grid Background="{StaticResource SurfaceBrush}">
+    <Grid Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -91,94 +27,110 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16" Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Billing Management" FontSize="24" FontWeight="Bold" 
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
-                    <TextBlock Text="Manage bills, receipts, and billing analytics" FontSize="14" 
-                             Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                </StackPanel>
-                
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
-                    <Button Content="Refresh" Style="{StaticResource SecondaryButtonStyle}"
-                            Command="{Binding RefreshCommand}"/>
-                    <Button Content="Export" Style="{StaticResource PrimaryButtonStyle}"
-                            Command="{Binding ExportCommand}"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- Fluent Page Header -->
+        <StackPanel Grid.Row="0" Style="{StaticResource FluentPageHeaderStyle}">
+            <TextBlock Text="Billing Management" 
+                       Style="{StaticResource DisplayTextStyle}"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="Manage bills, receipts, and billing analytics" 
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,8,0,0">
+                <Button Content="Refresh" 
+                        Style="{StaticResource FluentSecondaryButtonStyle}"
+                        Command="{Binding RefreshCommand}"/>
+                <Button Content="Export" 
+                        Style="{StaticResource FluentPrimaryButtonStyle}"
+                        Command="{Binding ExportCommand}"/>
+            </StackPanel>
+        </StackPanel>
 
         <!-- Analytics Cards -->
         <ScrollViewer Grid.Row="1" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto" 
                       VerticalScrollMode="Disabled" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal" Spacing="8" Padding="8,0">
                 <!-- Total Revenue Card -->
-                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="Revenue" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Revenue" 
+                                 Style="{StaticResource TitleTextStyle}"
+                                 HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding TotalRevenueText}" 
-                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Total Revenue" FontSize="12" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 FontSize="20" FontWeight="Bold" FontFamily="Segoe UI Variable"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="Total Revenue" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Average Bill Card -->
-                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200" Margin="8,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="Average" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Average" 
+                                 Style="{StaticResource TitleTextStyle}"
+                                 HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding AverageBillAmountText}" 
-                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Average Bill" FontSize="12" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 FontSize="20" FontWeight="Bold" FontFamily="Segoe UI Variable"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="Average Bill" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Total Sessions Card -->
-                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200" Margin="8,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="Sessions" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Sessions" 
+                                 Style="{StaticResource TitleTextStyle}"
+                                 HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding TotalSessions}" 
-                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Total Sessions" FontSize="12" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 FontSize="20" FontWeight="Bold" FontFamily="Segoe UI Variable"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="Total Sessions" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Average Duration Card -->
-                <Border Style="{StaticResource MetricCardStyle}" MinWidth="200">
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200" Margin="8,0,0,0">
                     <StackPanel>
-                        <TextBlock Text="Duration" FontSize="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Duration" 
+                                 Style="{StaticResource TitleTextStyle}"
+                                 HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding AverageSessionDurationText}" 
-                                 FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Avg Duration" FontSize="12" HorizontalAlignment="Center"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                 FontSize="20" FontWeight="Bold" FontFamily="Segoe UI Variable"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock Text="Avg Duration" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 HorizontalAlignment="Center"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </ScrollViewer>
 
         <!-- Filters -->
-        <Border Grid.Row="2" Style="{StaticResource ModernCardStyle}" Margin="0,0,0,8">
+        <Border Grid.Row="2" Style="{StaticResource FluentCardStyle}" Margin="0,0,0,8">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Grid.Row="0" Text="Filters" FontSize="16" FontWeight="SemiBold" 
-                         Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                <TextBlock Grid.Row="0" Text="Filters" 
+                         Style="{StaticResource SubtitleTextStyle}"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}" 
+                         Margin="0,0,0,16"/>
                 
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
@@ -191,42 +143,46 @@
                     
                     <!-- Date Range -->
                     <StackPanel Grid.Column="0" Spacing="8">
-                        <TextBlock Text="From Date" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <DatePicker Date="{Binding FromDate, Mode=TwoWay}" 
-                                  Background="{StaticResource CardBrush}" 
-                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="From Date" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <DatePicker Date="{Binding FromDate, Mode=TwoWay}"/>
                     </StackPanel>
                     
                     <StackPanel Grid.Column="1" Spacing="8">
-                        <TextBlock Text="To Date" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <DatePicker Date="{Binding ToDate, Mode=TwoWay}" 
-                                  Background="{StaticResource CardBrush}" 
-                                  Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="To Date" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <DatePicker Date="{Binding ToDate, Mode=TwoWay}"/>
                     </StackPanel>
                     
                     <!-- Table Filter -->
                     <StackPanel Grid.Column="2" Spacing="8">
-                        <TextBlock Text="Table" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="Table" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBox Text="{Binding TableFilter, Mode=TwoWay}" 
                                PlaceholderText="Filter by table..."
-                               Background="{StaticResource CardBrush}" 
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                               Style="{StaticResource FluentTextBoxStyle}"/>
                     </StackPanel>
                     
                     <!-- Server Filter -->
                     <StackPanel Grid.Column="3" Spacing="8">
-                        <TextBlock Text="Server" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="Server" 
+                                 Style="{StaticResource CaptionTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         <TextBox Text="{Binding ServerFilter, Mode=TwoWay}" 
                                PlaceholderText="Filter by server..."
-                               Background="{StaticResource CardBrush}" 
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                               Style="{StaticResource FluentTextBoxStyle}"/>
                     </StackPanel>
                     
                     <!-- Filter Actions -->
                     <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
-                        <Button Content="Apply" Style="{StaticResource PrimaryButtonStyle}"
+                        <Button Content="Apply" 
+                                Style="{StaticResource FluentPrimaryButtonStyle}"
                                 Command="{Binding ApplyFiltersCommand}"/>
-                        <Button Content="Clear" Style="{StaticResource SecondaryButtonStyle}"
+                        <Button Content="Clear" 
+                                Style="{StaticResource FluentSecondaryButtonStyle}"
                                 Command="{Binding ClearFiltersCommand}"/>
                     </StackPanel>
                 </Grid>
@@ -234,7 +190,7 @@
         </Border>
 
         <!-- Bills List -->
-        <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
+        <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -248,15 +204,22 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0" Text="Bills" FontSize="18" FontWeight="SemiBold" 
-                             Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <TextBlock Grid.Column="0" Text="Bills" 
+                             Style="{StaticResource TitleTextStyle}"
+                             Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding FilteredBillsCount}" FontSize="14" FontWeight="SemiBold"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="of" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <TextBlock Text="{Binding TotalBillsCount}" FontSize="14" FontWeight="SemiBold"
-                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                        <TextBlock Text="{Binding FilteredBillsCount}" 
+                                 Style="{StaticResource BodyTextStyle}"
+                                 FontWeight="SemiBold"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="of" 
+                                 Style="{StaticResource BodyTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding TotalBillsCount}" 
+                                 Style="{StaticResource BodyTextStyle}"
+                                 FontWeight="SemiBold"
+                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Grid>
                 
@@ -270,7 +233,7 @@
                 
                 <!-- Error Message -->
                 <Border Grid.Row="1" 
-                       Background="{StaticResource ErrorBrush}" 
+                       Background="{ThemeResource SystemFillColorCriticalBrush}" 
                        CornerRadius="8" 
                        Padding="16" 
                        Margin="16"
@@ -296,22 +259,22 @@
                     <SymbolIcon Symbol="Document" 
                                Width="64" 
                                Height="64" 
-                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <TextBlock Text="No bills found" 
                              FontSize="18" 
                              FontWeight="SemiBold" 
-                             Foreground="{StaticResource TextSecondaryBrush}"
+                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                              HorizontalAlignment="Center"/>
                     <TextBlock Text="Try adjusting your filters or date range" 
                              FontSize="14" 
-                             Foreground="{StaticResource TextSecondaryBrush}"
+                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                              HorizontalAlignment="Center"/>
                 </StackPanel>
                 
                 <!-- Bills ListView -->
                 <ListView Grid.Row="1" x:Name="BillsList" 
                         ItemsSource="{Binding FilteredBills}"
-                        Style="{StaticResource ModernDataGridStyle}"
+                        Style="{StaticResource FluentListViewStyle}"
                         RightTapped="BillsList_RightTapped"
                         Visibility="{Binding HasBills, Converter={StaticResource BoolToVisibilityConverter}}">
                     
@@ -327,7 +290,7 @@
                     </ListView.ContextFlyout>
                     
                     <ListView.Header>
-                        <Grid Padding="16,12" Background="{StaticResource BorderBrush}" CornerRadius="8,8,0,0">
+                        <Grid Padding="16,12" Background="{ThemeResource ControlStrokeColorDefaultBrush}" CornerRadius="8,8,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="100"/>
                                 <ColumnDefinition Width="120"/>
@@ -339,21 +302,21 @@
                                 <ColumnDefinition Width="200"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Billing ID" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="1" Text="Table" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="2" Text="Server" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="3" Text="Duration" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="4" Text="Amount" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="5" Text="Status" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="6" Text="Start" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             <TextBlock Grid.Column="7" Text="Actions" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         </Grid>
                     </ListView.Header>
                     
@@ -376,13 +339,13 @@
                                         <!-- Billing ID -->
                                         <TextBlock Grid.Column="0" Text="{Binding ShortBillingId}" 
                                                  FontFamily="Consolas" FontSize="12"
-                                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         
                                         <!-- Table -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
                                             <TextBlock Text="{Binding TableDisplayText}" 
                                                      FontWeight="SemiBold"
-                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                             <TextBlock Text="{Binding MovementIndicator}" 
                                                      FontSize="10"
                                                      VerticalAlignment="Center"
@@ -391,20 +354,20 @@
                                         
                                         <!-- Server -->
                                         <TextBlock Grid.Column="2" Text="{Binding ServerName}" 
-                                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         
                                         <!-- Duration -->
                                         <TextBlock Grid.Column="3" Text="{Binding DurationText}" 
                                                  FontFamily="Consolas" FontSize="12"
-                                                 Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                         
                                         <!-- Amount -->
                                         <TextBlock Grid.Column="4" Text="{Binding AmountText}" 
                                                  FontWeight="SemiBold" FontSize="14"
-                                                 Foreground="{StaticResource SuccessBrush}"/>
+                                                 Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                                         
                                         <!-- Status -->
-                                        <Border Grid.Column="5" Style="{StaticResource StatusBadgeStyle}"
+                                        <Border Grid.Column="5" Style="{StaticResource FluentStatusBadgeStyle}"
                                               Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}">
                                             <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold" 
                                                      Foreground="White"/>
@@ -413,22 +376,22 @@
                                         <!-- Start Time -->
                                         <TextBlock Grid.Column="6" Text="{Binding StartLocal}" 
                                                  FontSize="11" FontFamily="Consolas"
-                                                 Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         
                                         <!-- Actions -->
                                         <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="4">
                                             <Button Content="View" FontSize="12" Padding="8,4" 
-                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Style="{StaticResource FluentSecondaryButtonStyle}"
                                                   Click="ViewReceipt_Click" Tag="{Binding}"/>
                                             <Button Content="Print" FontSize="12" Padding="8,4" 
-                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Style="{StaticResource FluentSecondaryButtonStyle}"
                                                   Click="Reprint_Click" Tag="{Binding}"/>
                                             <Button Content="Reopen" FontSize="12" Padding="8,4" 
-                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Style="{StaticResource FluentSecondaryButtonStyle}"
                                                   Click="ReopenBill_Click" Tag="{Binding}"
                                                   Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                                             <Button Content="Close" FontSize="12" Padding="8,4" 
-                                                  Style="{StaticResource SecondaryButtonStyle}"
+                                                  Style="{StaticResource FluentSecondaryButtonStyle}"
                                                   Click="CloseBill_Click" Tag="{Binding}"
                                                   Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                                         </StackPanel>
@@ -437,7 +400,7 @@
                                 
                                 <!-- Order Items Details -->
                                 <Expander.Content>
-                                    <Border Style="{StaticResource ModernCardStyle}" Margin="20,8,8,8" Background="#1A1A1A">
+                                    <Border Style="{StaticResource FluentCardStyle}" Margin="20,8,8,8" Background="#1A1A1A">
                                         <StackPanel>
                                             <Grid Margin="0,0,0,12">
                                                 <Grid.ColumnDefinitions>
@@ -446,12 +409,12 @@
                                                 </Grid.ColumnDefinitions>
                                                 
                                                 <TextBlock Grid.Column="0" Text="Order Items" FontWeight="SemiBold" FontSize="14" 
-                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                                 
                                                 <TextBlock Grid.Column="1" 
                                                          Text="{Binding Items.Count, Converter={StaticResource ItemCountConverter}}" 
                                                          FontSize="12" FontStyle="Italic"
-                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             </Grid>
                                             
                                             <!-- Empty State -->
@@ -463,10 +426,10 @@
                                                 <SymbolIcon Symbol="Document" 
                                                            Width="32" 
                                                            Height="32" 
-                                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                 <TextBlock Text="No items found" 
                                                          FontSize="12" 
-                                                         Foreground="{StaticResource TextSecondaryBrush}"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                                          HorizontalAlignment="Center"/>
                                             </StackPanel>
                                             
@@ -483,13 +446,13 @@
                                                             </Grid.ColumnDefinitions>
                                                             
                                                             <TextBlock Grid.Column="0" Text="{Binding name}" 
-                                                                     Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                                             <TextBlock Grid.Column="1" Text="{Binding quantity}" 
                                                                      HorizontalAlignment="Center"
-                                                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                             <TextBlock Grid.Column="2" Text="{Binding price, Converter={StaticResource CurrencyConverter}}" 
                                                                      HorizontalAlignment="Right" FontWeight="SemiBold"
-                                                                     Foreground="{StaticResource SuccessBrush}"/>
+                                                                     Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -505,21 +468,26 @@
         </Border>
 
         <!-- Loading Overlay -->
-        <Grid Grid.RowSpan="5" Background="#80000000" 
+        <Grid Grid.RowSpan="5" 
+              Background="{ThemeResource SystemFillColorAttentionBackground}" 
+              Opacity="0.8"
               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
                 <ProgressRing IsActive="True" Width="40" Height="40" 
-                            Foreground="{StaticResource PrimaryBrush}"/>
-                <TextBlock Text="Loading billing data..." Foreground="White" 
-                         Margin="0,16,0,0" FontSize="16"/>
+                            Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                <TextBlock Text="Loading billing data..." 
+                         Style="{StaticResource BodyTextStyle}"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
             </StackPanel>
         </Grid>
 
         <!-- Error Message -->
-        <InfoBar Grid.Row="4" x:Name="ErrorInfoBar"
+        <InfoBar Grid.Row="4" 
+               x:Name="ErrorInfoBar"
                IsOpen="{Binding HasError}"
                Message="{Binding ErrorMessage}"
                Severity="Error"
-               Margin="8"/>
+               Style="{StaticResource FluentInfoBarStyle}"
+               Margin="24"/>
     </Grid>
 </Page>

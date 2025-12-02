@@ -17,14 +17,9 @@
             <!-- Campaign Overview -->
             <StackPanel x:Name="CampaignOverviewPanel" Spacing="12">
                 <TextBlock Text="Campaign Overview" 
-                           Style="{ThemeResource SubtitleTextBlockStyle}"
-                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                           Style="{StaticResource SubtitleTextStyle}"/>
                 
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="20">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -290,11 +285,7 @@
                            Style="{ThemeResource SubtitleTextBlockStyle}"
                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                 
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="20">
+                <Border Style="{StaticResource FluentCardStyle}">
                     <StackPanel Spacing="16">
                         <Grid>
                             <Grid.ColumnDefinitions>

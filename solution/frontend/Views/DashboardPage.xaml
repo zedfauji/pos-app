@@ -14,16 +14,20 @@
         <InfoBar x:Name="FeedbackBar" Grid.Row="0" IsOpen="False" Severity="Informational" Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="1" Spacing="12">
-            <TextBlock Text="Dashboard" FontSize="24"/>
+            <TextBlock Text="Dashboard" Style="{StaticResource TitleTextStyle}"/>
             <StackPanel Orientation="Horizontal" Spacing="24">
-                <StackPanel Width="200" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                    <TextBlock Text="Vendors" FontSize="18"/>
-                    <TextBlock x:Name="VendorsCountText" Text="0" FontSize="28"/>
-                </StackPanel>
-                <StackPanel Width="200" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                    <TextBlock Text="Items" FontSize="18"/>
-                    <TextBlock x:Name="ItemsCountText" Text="0" FontSize="28"/>
-                </StackPanel>
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Vendors" Style="{StaticResource SubtitleTextStyle}"/>
+                        <TextBlock x:Name="VendorsCountText" Text="0" Style="{StaticResource DisplayTextStyle}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FluentMetricCardStyle}" MinWidth="200">
+                    <StackPanel>
+                        <TextBlock Text="Items" Style="{StaticResource SubtitleTextStyle}"/>
+                        <TextBlock x:Name="ItemsCountText" Text="0" Style="{StaticResource DisplayTextStyle}"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <!-- Reminders -->
@@ -32,7 +36,7 @@
                 <TextBlock x:Name="NoRemindersText" Text="No reminders" Visibility="Collapsed" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Spacing="6" Margin="0,12,0,0">
-                <TextBlock Text="Upcoming Reminder" FontSize="18"/>
+                <TextBlock Text="Upcoming Reminder" Style="{StaticResource SubtitleTextStyle}"/>
                 <ListView x:Name="UpcomingList" SelectionMode="None" Height="140">
                     <ListView.ItemTemplate>
                         <DataTemplate>

@@ -13,16 +13,24 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Inventory Management" FontSize="24" FontWeight="SemiBold"/>
-            <Button Content="Refresh" Click="Refresh_Click" HorizontalAlignment="Right"/>
-        </StackPanel>
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Inventory Management" Style="{StaticResource DisplayTextStyle}"/>
+            </StackPanel>
+            <Button Grid.Column="1" Content="Refresh" Click="Refresh_Click" Style="{StaticResource FluentSecondaryButtonStyle}"/>
+        </Grid>
 
         <!-- KPI Cards -->
         <ScrollViewer Grid.Row="1" HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto" VerticalScrollMode="Disabled">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <!-- Total Stock Value -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CornerRadius="8" Padding="16" MinWidth="200">
                     <StackPanel>
                         <TextBlock Text="Total Stock Value" FontSize="12" Opacity="0.7"/>
@@ -34,7 +42,9 @@
                 </Border>
 
                 <!-- Low Stock Alerts -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CornerRadius="8" Padding="16" MinWidth="200">
                     <StackPanel>
                         <TextBlock Text="Low Stock Items" FontSize="12" Opacity="0.7"/>
@@ -45,7 +55,9 @@
                 </Border>
 
                 <!-- Pending Orders -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CornerRadius="8" Padding="16" MinWidth="200">
                     <StackPanel>
                         <TextBlock Text="Pending Orders" FontSize="12" Opacity="0.7"/>
@@ -56,7 +68,9 @@
                 </Border>
 
                 <!-- Fast Movers -->
-                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                <Border Background="{ThemeResource SolidBackgroundFillColorSecondary}" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CornerRadius="8" Padding="16" MinWidth="200">
                     <StackPanel>
                         <TextBlock Text="Fast Movers" FontSize="12" Opacity="0.7"/>

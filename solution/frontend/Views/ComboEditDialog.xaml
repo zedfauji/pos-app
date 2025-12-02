@@ -33,7 +33,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Items in Combo" FontWeight="SemiBold" FontSize="16"/>
-                    <Button Grid.Column="1" Content="➕ Add Item" 
+                    <Button Grid.Column="1" Content="Add Item" 
                             Click="AddItem_Click"
                             Style="{StaticResource AccentButtonStyle}"/>
                 </Grid>
@@ -68,13 +68,13 @@
                                           IsChecked="{Binding IsRequired}"
                                           Margin="8,0"/>
 
-                                <Button Grid.Column="2" Content="✏️" 
+                                <Button Grid.Column="2" Content="Edit" 
                                         Width="28" Height="28"
                                         Click="EditItem_Click"
                                         Tag="{Binding}"
                                         ToolTipService.ToolTip="Edit Item"/>
 
-                                <Button Grid.Column="3" Content="🗑️" 
+                                <Button Grid.Column="3" Content="Delete" 
                                         Width="28" Height="28"
                                         Click="RemoveItem_Click"
                                         Tag="{Binding}"

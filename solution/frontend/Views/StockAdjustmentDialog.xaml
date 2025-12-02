@@ -16,10 +16,10 @@
         </Grid.RowDefinitions>
 
         <!-- Item Info -->
-        <TextBlock Grid.Row="0" x:Name="ItemInfoText" FontWeight="SemiBold" Margin="0,0,0,16"/>
+        <TextBlock Grid.Row="0" x:Name="ItemInfoText" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,16"/>
 
         <!-- Adjustment Type -->
-        <TextBlock Grid.Row="1" Text="Adjustment Type" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Text="Adjustment Type" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,4"/>
         <ComboBox Grid.Row="2" x:Name="AdjustmentTypeBox" Margin="0,0,0,16" SelectionChanged="AdjustmentTypeBox_SelectionChanged">
             <ComboBoxItem Content="Add Stock" Tag="Add"/>
             <ComboBoxItem Content="Remove Stock" Tag="Remove"/>

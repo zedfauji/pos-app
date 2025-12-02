@@ -30,7 +30,7 @@
         <StackPanel Padding="24" MaxWidth="1200">
             <!-- Header -->
             <StackPanel Margin="0,0,0,32">
-                <TextBlock Text="🎯 Discount &amp; Promotion System Demo" 
+                <TextBlock Text="Discount &amp; Promotion System Demo" 
                            FontSize="32" 
                            FontWeight="Bold" 
                            Margin="0,0,0,8"/>
@@ -51,7 +51,10 @@
                     <!-- Mock Order Summary -->
                     <Border Style="{StaticResource DemoCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="📋 Current Order" Style="{StaticResource SectionTitleStyle}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8A5;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                <TextBlock Text="Current Order" Style="{StaticResource SectionTitleStyle}"/>
+                            </StackPanel>
                             
                             <Grid Margin="0,0,0,16">
                                 <Grid.ColumnDefinitions>
@@ -109,16 +112,19 @@
                     <!-- Discount Panel Integration -->
                     <Border Style="{StaticResource DemoCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="💰 Smart Discount System" Style="{StaticResource SectionTitleStyle}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B9;" FontSize="16" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                <TextBlock Text="Smart Discount System" Style="{StaticResource SectionTitleStyle}"/>
+                            </StackPanel>
                             
                             <!-- This is where the DiscountPanel would be integrated -->
                             <local:DiscountPanel x:Name="DemoDiscountPanel"/>
                             
                             <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
-                                <Button Content="🎯 Browse All Discounts" 
+                                <Button Content="Browse All Discounts" 
                                         Click="BrowseDiscounts_Click"
                                         Style="{StaticResource AccentButtonStyle}"/>
-                                <Button Content="⚡ Auto-Apply Best Offers" 
+                                <Button Content="Auto-Apply Best Offers" 
                                         Click="AutoApply_Click"/>
                                 <Button Content="🎫 Redeem Voucher" 
                                         Click="RedeemVoucher_Click"/>
