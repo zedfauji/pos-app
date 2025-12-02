@@ -151,15 +151,18 @@ app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
     await using var conn = new NpgsqlConnection(connString);
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
-    // Get active sessions
-    const string findActives = @"SELECT session_id, table_label, server_id, server_name, start_time FROM public.table_sessions WHERE status='active'";
-    var sessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start)>();
+    // Get active sessions with table type
+    const string findActives = @"SELECT ts.session_id, ts.table_label, ts.server_id, ts.server_name, ts.start_time, COALESCE(tst.type, 'billiard') as table_type
+                                 FROM public.table_sessions ts
+                                 LEFT JOIN public.table_status tst ON ts.table_label = tst.label
+                                 WHERE ts.status='active'";
+    var sessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start, string tableType)>();
     await using (var cmd = new NpgsqlCommand(findActives, conn))
     await using (var rdr = await cmd.ExecuteReaderAsync())
     {
         while (await rdr.ReadAsync())
         {
-            sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4)));
+            sessions.Add((rdr.GetFieldValue<Guid>(0), rdr.GetString(1), rdr.GetString(2), rdr.GetString(3), rdr.GetFieldValue<DateTime>(4), rdr.IsDBNull(5) ? "billiard" : rdr.GetString(5)));
         }
     }
     foreach (var s in sessions)
@@ -174,7 +177,7 @@ app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
             close.Parameters.AddWithValue("@sid", s.sid);
             await close.ExecuteNonQueryAsync();
         }
-        // items
+        // Read items from session (legacy support)
         var items = new List<ItemLine>();
         const string itemsSql = @"SELECT items FROM public.table_sessions WHERE session_id = @sid";
         await using (var gi = new NpgsqlCommand(itemsSql, conn))
@@ -187,9 +190,74 @@ app.MapPost("/sessions/enforce", async ([FromQuery] string? host) =>
                 try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(json) ?? new(); } catch { items = new(); }
             }
         }
-        decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+        
+        // CRITICAL FIX: Also fetch items from orders for this session
+        const string orderItemsSql = @"
+            SELECT 
+                COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name,
+                oi.quantity,
+                (oi.base_price + oi.price_delta) as item_price,
+                oi.menu_item_id::text as item_id
+            FROM ord.order_items oi
+            INNER JOIN ord.orders o ON oi.order_id = o.order_id
+            LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
+            WHERE o.session_id = @sid 
+              AND oi.is_deleted = false
+              AND o.is_deleted = false
+              AND oi.delivered_quantity > 0
+            ORDER BY oi.created_at";
+        
+        var orderItemsDict = new Dictionary<string, ItemLine>();
+        
+        // First, add existing items from table_sessions to the dictionary
+        foreach (var item in items)
+        {
+            if (!string.IsNullOrEmpty(item.itemId))
+            {
+                orderItemsDict[item.itemId] = item;
+            }
+        }
+        
+        // Then, fetch and merge items from orders
+        await using (var getOrderItems = new NpgsqlCommand(orderItemsSql, conn))
+        {
+            getOrderItems.Parameters.AddWithValue("@sid", s.sid);
+            await using (var rdr = await getOrderItems.ExecuteReaderAsync())
+            {
+                while (await rdr.ReadAsync())
+                {
+                    var itemName = rdr.IsDBNull(0) ? "Unknown Item" : rdr.GetString(0);
+                    var quantity = rdr.GetInt32(1);
+                    var itemPrice = rdr.GetDecimal(2);
+                    var itemId = rdr.IsDBNull(3) ? Guid.NewGuid().ToString() : rdr.GetString(3);
+                    
+                    if (orderItemsDict.ContainsKey(itemId))
+                    {
+                        // Merge quantities if item already exists
+                        orderItemsDict[itemId].quantity += quantity;
+                    }
+                    else
+                    {
+                        // Add new item
+                        orderItemsDict[itemId] = new ItemLine
+                        {
+                            itemId = itemId,
+                            name = itemName,
+                            quantity = quantity,
+                            price = itemPrice
+                        };
+                    }
+                }
+            }
+        }
+        
+        // Convert dictionary back to list
+        items = orderItemsDict.Values.ToList();
+        
+        // Only apply time cost for billiard tables, not bar/restaurant tables
+        decimal ratePerMinute = s.tableType.ToLower() == "billiard" ? await GetRatePerMinuteAsync(conn, defaultRatePerMinute) : 0m;
         decimal itemsCost = items.Sum(i => i.price * i.quantity);
-        decimal timeCost = ratePerMinute * minutes;
+        decimal timeCost = s.tableType.ToLower() == "billiard" ? ratePerMinute * minutes : 0m;
         decimal total = timeCost + itemsCost;
         var billId = Guid.NewGuid();
         const string billSql = @"INSERT INTO public.bills(bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount)
@@ -556,13 +624,16 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         await conn.OpenAsync();
         await EnsureSchemaAsync(conn);
 
-    // Find active session
-    const string findSql = @"SELECT session_id, server_id, server_name, start_time, billing_id FROM public.table_sessions
-                             WHERE table_label = @label AND status = 'active' ORDER BY start_time DESC LIMIT 1";
+    // Find active session and get table type
+    const string findSql = @"SELECT ts.session_id, ts.server_id, ts.server_name, ts.start_time, ts.billing_id, tst.type
+                             FROM public.table_sessions ts
+                             INNER JOIN public.table_status tst ON ts.table_label = tst.label
+                             WHERE ts.table_label = @label AND ts.status = 'active' ORDER BY ts.start_time DESC LIMIT 1";
     Guid sessionId; Guid? billingGuid = null;
     string serverId;
     string serverName;
     DateTimeOffset startTime;
+    string tableType = "billiard"; // Default to billiard for backward compatibility
     await using (var find = new NpgsqlCommand(findSql, conn))
     {
         find.Parameters.AddWithValue("@label", label);
@@ -573,6 +644,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         serverName = rdr.GetString(2);
         startTime = rdr.GetFieldValue<DateTimeOffset>(3);
         if (!rdr.IsDBNull(4)) billingGuid = rdr.GetFieldValue<Guid>(4);
+        if (!rdr.IsDBNull(5)) tableType = rdr.GetString(5);
     }
 
     var end = DateTimeOffset.UtcNow; // Use DateTimeOffset for consistency
@@ -587,7 +659,7 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         await close.ExecuteNonQueryAsync();
     }
 
-    // Read items from active session
+    // Read items from active session (legacy support)
     var items = new List<ItemLine>();
     const string itemsSql = @"SELECT items FROM public.table_sessions WHERE session_id = @sid";
     await using (var getItems = new NpgsqlCommand(itemsSql, conn))
@@ -603,10 +675,75 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         }
     }
 
+    // CRITICAL FIX: Also fetch items from orders for this session
+    // This ensures items added via OrderApi are included in the bill
+    const string orderItemsSql = @"
+        SELECT 
+            COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name,
+            oi.quantity,
+            (oi.base_price + oi.price_delta) as item_price,
+            oi.menu_item_id::text as item_id
+        FROM ord.order_items oi
+        INNER JOIN ord.orders o ON oi.order_id = o.order_id
+        LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
+        WHERE o.session_id = @sid 
+          AND oi.is_deleted = false
+          AND o.is_deleted = false
+          AND oi.delivered_quantity > 0  -- Only include delivered items
+        ORDER BY oi.created_at";
+    
+    var orderItemsDict = new Dictionary<string, ItemLine>(); // Use item_id as key to merge duplicates
+    
+    // First, add existing items from table_sessions to the dictionary
+    foreach (var item in items)
+    {
+        if (!string.IsNullOrEmpty(item.itemId))
+        {
+            orderItemsDict[item.itemId] = item;
+        }
+    }
+    
+    // Then, fetch and merge items from orders
+    await using (var getOrderItems = new NpgsqlCommand(orderItemsSql, conn))
+    {
+        getOrderItems.Parameters.AddWithValue("@sid", sessionId);
+        await using (var rdr = await getOrderItems.ExecuteReaderAsync())
+        {
+            while (await rdr.ReadAsync())
+            {
+                var itemName = rdr.IsDBNull(0) ? "Unknown Item" : rdr.GetString(0);
+                var quantity = rdr.GetInt32(1);
+                var itemPrice = rdr.GetDecimal(2);
+                var itemId = rdr.IsDBNull(3) ? Guid.NewGuid().ToString() : rdr.GetString(3);
+                
+                if (orderItemsDict.ContainsKey(itemId))
+                {
+                    // Merge quantities if item already exists
+                    orderItemsDict[itemId].quantity += quantity;
+                }
+                else
+                {
+                    // Add new item
+                    orderItemsDict[itemId] = new ItemLine
+                    {
+                        itemId = itemId,
+                        name = itemName,
+                        quantity = quantity,
+                        price = itemPrice
+                    };
+                }
+            }
+        }
+    }
+    
+    // Convert dictionary back to list
+    items = orderItemsDict.Values.ToList();
+
     // Compute costs (fetch dynamic rate if exists)
-    decimal ratePerMinute = await GetRatePerMinuteAsync(conn, defaultRatePerMinute);
+    // Only apply time cost for billiard tables, not bar/restaurant tables
+    decimal ratePerMinute = tableType.ToLower() == "billiard" ? await GetRatePerMinuteAsync(conn, defaultRatePerMinute) : 0m;
     decimal itemsCost = items.Sum(i => i.price * i.quantity);
-    decimal timeCost = ratePerMinute * minutes;
+    decimal timeCost = tableType.ToLower() == "billiard" ? ratePerMinute * minutes : 0m;
     decimal total = timeCost + itemsCost;
 
     // Create bill
@@ -905,6 +1042,209 @@ app.MapPost("/bills/{billId}/settle", async (Guid billId) =>
     return rows > 0 ? Results.Ok(new { billId, settled = true }) : Results.NotFound();
 });
 
+// Reopen a bill/session
+app.MapPost("/bills/{billingId}/reopen", async (Guid billingId, ReopenBillRequest? req) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    
+    // Get the bill details
+    const string getBillSql = @"SELECT bill_id, table_label, server_id, server_name, start_time, items, billing_id
+                                FROM public.bills WHERE billing_id = @bid AND COALESCE(is_settled, false) = false
+                                ORDER BY end_time DESC LIMIT 1";
+    
+    Guid billId;
+    string originalTableLabel;
+    string serverId;
+    string serverName;
+    DateTime startTime;
+    List<ItemLine> items = new();
+    Guid? existingBillingId = null;
+    
+    await using (var getBill = new NpgsqlCommand(getBillSql, conn))
+    {
+        getBill.Parameters.AddWithValue("@bid", billingId);
+        await using var rdr = await getBill.ExecuteReaderAsync();
+        if (!await rdr.ReadAsync())
+        {
+            return Results.NotFound(new { message = "Bill not found or already settled." });
+        }
+        billId = rdr.GetFieldValue<Guid>(0);
+        originalTableLabel = rdr.GetString(1);
+        serverId = rdr.GetString(2);
+        serverName = rdr.GetString(3);
+        startTime = rdr.GetFieldValue<DateTime>(4);
+        if (!rdr.IsDBNull(5))
+        {
+            var itemsJsonStr = rdr.GetString(5);
+            try { items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(itemsJsonStr) ?? new(); } 
+            catch { items = new(); }
+        }
+        if (!rdr.IsDBNull(6)) existingBillingId = rdr.GetFieldValue<Guid>(6);
+    }
+    
+    // CRITICAL FIX: Also fetch items from orders for this billing_id
+    // This ensures we get all items that were actually ordered, not just what's in bills.items
+    const string orderItemsSql = @"
+        SELECT 
+            COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name,
+            oi.delivered_quantity as quantity,
+            (oi.base_price + oi.price_delta) as item_price,
+            oi.menu_item_id::text as item_id
+        FROM ord.order_items oi
+        INNER JOIN ord.orders o ON oi.order_id = o.order_id
+        LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
+        WHERE o.billing_id = @bid 
+          AND oi.is_deleted = false
+          AND o.is_deleted = false
+          AND oi.delivered_quantity > 0
+        ORDER BY oi.created_at";
+    
+    var orderItemsDict = new Dictionary<string, ItemLine>();
+    
+    // First, add existing items from bills.items to the dictionary
+    foreach (var item in items)
+    {
+        if (!string.IsNullOrEmpty(item.itemId))
+        {
+            orderItemsDict[item.itemId] = item;
+        }
+    }
+    
+    // Then, fetch and merge items from orders
+    await using (var getOrderItems = new NpgsqlCommand(orderItemsSql, conn))
+    {
+        getOrderItems.Parameters.AddWithValue("@bid", billingId);
+        await using (var rdr = await getOrderItems.ExecuteReaderAsync())
+        {
+            while (await rdr.ReadAsync())
+            {
+                var itemName = rdr.IsDBNull(0) ? "Unknown Item" : rdr.GetString(0);
+                var quantity = rdr.GetInt32(1);
+                var itemPrice = rdr.GetDecimal(2);
+                var itemId = rdr.IsDBNull(3) ? Guid.NewGuid().ToString() : rdr.GetString(3);
+                
+                if (orderItemsDict.ContainsKey(itemId))
+                {
+                    // Merge quantities if item already exists
+                    orderItemsDict[itemId].quantity += quantity;
+                }
+                else
+                {
+                    // Add new item
+                    orderItemsDict[itemId] = new ItemLine
+                    {
+                        itemId = itemId,
+                        name = itemName,
+                        quantity = quantity,
+                        price = itemPrice
+                    };
+                }
+            }
+        }
+    }
+    
+    // Convert dictionary back to list and serialize to JSON
+    items = orderItemsDict.Values.ToList();
+    string itemsJson = System.Text.Json.JsonSerializer.Serialize(items);
+    
+    // Determine target table
+    string targetTableLabel = req?.targetTableLabel ?? originalTableLabel;
+    
+    // Check if target table is available
+    const string checkTableSql = "SELECT occupied FROM public.table_status WHERE label = @label";
+    bool isOccupied = false;
+    await using (var checkTable = new NpgsqlCommand(checkTableSql, conn))
+    {
+        checkTable.Parameters.AddWithValue("@label", targetTableLabel);
+        var result = await checkTable.ExecuteScalarAsync();
+        if (result != null && result != DBNull.Value)
+        {
+            isOccupied = (bool)result;
+        }
+    }
+    
+    // Allow reopening to the same table even if it's marked as occupied
+    // Only reject if reopening to a different table that's occupied
+    if (isOccupied && targetTableLabel != originalTableLabel)
+    {
+        return Results.Conflict(new { message = $"Table {targetTableLabel} is currently occupied." });
+    }
+    
+    // Create new session
+    var newSessionId = Guid.NewGuid();
+    var newBillingId = existingBillingId ?? Guid.NewGuid();
+    var now = DateTimeOffset.UtcNow;
+    
+    await using var tx = await conn.BeginTransactionAsync();
+    
+    try
+    {
+        // Insert new session
+        const string insertSessionSql = @"INSERT INTO public.table_sessions(session_id, table_label, server_id, server_name, start_time, status, billing_id, items)
+                                         VALUES(@sid, @label, @srvId, @srvName, @start, 'active', @bid, @items)";
+        await using (var ins = new NpgsqlCommand(insertSessionSql, conn, tx))
+        {
+            ins.Parameters.AddWithValue("@sid", newSessionId);
+            ins.Parameters.AddWithValue("@label", targetTableLabel);
+            ins.Parameters.AddWithValue("@srvId", serverId);
+            ins.Parameters.AddWithValue("@srvName", serverName);
+            ins.Parameters.AddWithValue("@start", now);
+            ins.Parameters.AddWithValue("@bid", newBillingId);
+            // Use NpgsqlDbType.Jsonb for jsonb column - items are now fetched from orders
+            ins.Parameters.Add("@items", NpgsqlTypes.NpgsqlDbType.Jsonb).Value = itemsJson;
+            await ins.ExecuteNonQueryAsync();
+        }
+        
+        // Update table status to occupied
+        const string updateTableSql = @"INSERT INTO public.table_status(label, type, occupied, start_time, server, updated_at)
+                                       VALUES(@label, COALESCE((SELECT type FROM public.table_status WHERE label = @label), 'billiard'), true, @start, @srv, now())
+                                       ON CONFLICT (label) DO UPDATE SET occupied = true, start_time = @start, server = @srv, updated_at = now()";
+        await using (var upd = new NpgsqlCommand(updateTableSql, conn, tx))
+        {
+            upd.Parameters.AddWithValue("@label", targetTableLabel);
+            upd.Parameters.AddWithValue("@start", now);
+            upd.Parameters.AddWithValue("@srv", serverName);
+            await upd.ExecuteNonQueryAsync();
+        }
+        
+        // CRITICAL: Update orders to link them to the new session_id
+        // This ensures Check Summary can find the orders when querying by session_id
+        if (existingBillingId.HasValue)
+        {
+            const string updateOrdersSql = @"UPDATE ord.orders 
+                                            SET session_id = @newSid 
+                                            WHERE billing_id = @bid 
+                                              AND is_deleted = false";
+            await using (var updOrders = new NpgsqlCommand(updateOrdersSql, conn, tx))
+            {
+                updOrders.Parameters.AddWithValue("@newSid", newSessionId);
+                updOrders.Parameters.AddWithValue("@bid", existingBillingId.Value);
+                await updOrders.ExecuteNonQueryAsync();
+            }
+        }
+        
+        // Mark the original bill as reopened (optional - you might want to keep it for history)
+        // For now, we'll leave it as is since it's already unsettled
+        
+        await tx.CommitAsync();
+        
+        return Results.Ok(new
+        {
+            sessionId = newSessionId,
+            billingId = newBillingId,
+            tableLabel = targetTableLabel,
+            message = $"Bill reopened on table {targetTableLabel}"
+        });
+    }
+    catch (Exception ex)
+    {
+        await tx.RollbackAsync();
+        return Results.Problem($"Failed to reopen bill: {ex.Message}");
+    }
+});
+
 // Mark bill settled by billingId (used by PaymentApi when ledger reaches paid)
 app.MapPost("/bills/by-billing/{billingId}/settle", async (Guid billingId) =>
 {
@@ -1055,13 +1395,14 @@ app.MapPost("/sessions/cleanup-stale", async ([FromQuery] int? timeoutMinutes) =
     await conn.OpenAsync();
     await EnsureSchemaAsync(conn);
     
-    // Find sessions with no heartbeat for the specified timeout
-    const string findStaleSql = @"SELECT session_id, table_label, server_id, server_name, start_time, billing_id, items
-                                 FROM public.table_sessions 
-                                 WHERE status = 'active' 
-                                 AND (last_heartbeat IS NULL OR last_heartbeat < @timeout)";
+    // Find sessions with no heartbeat for the specified timeout, including table type
+    const string findStaleSql = @"SELECT ts.session_id, ts.table_label, ts.server_id, ts.server_name, ts.start_time, ts.billing_id, ts.items, COALESCE(tst.type, 'billiard') as table_type
+                                 FROM public.table_sessions ts
+                                 LEFT JOIN public.table_status tst ON ts.table_label = tst.label
+                                 WHERE ts.status = 'active' 
+                                 AND (ts.last_heartbeat IS NULL OR ts.last_heartbeat < @timeout)";
     
-    var staleSessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start, Guid? billingId, string items)>();
+    var staleSessions = new List<(Guid sid, string table, string serverId, string serverName, DateTime start, Guid? billingId, string items, string tableType)>();
     
     await using (var cmd = new NpgsqlCommand(findStaleSql, conn))
     {
@@ -1076,7 +1417,8 @@ app.MapPost("/sessions/cleanup-stale", async ([FromQuery] int? timeoutMinutes) =
                 rdr.GetString(3),
                 rdr.GetFieldValue<DateTime>(4),
                 rdr.IsDBNull(5) ? null : rdr.GetFieldValue<Guid>(5),
-                rdr.IsDBNull(6) ? "[]" : rdr.GetString(6)
+                rdr.IsDBNull(6) ? "[]" : rdr.GetString(6),
+                rdr.IsDBNull(7) ? "billiard" : rdr.GetString(7)
             ));
         }
     }
@@ -1098,9 +1440,77 @@ app.MapPost("/sessions/cleanup-stale", async ([FromQuery] int? timeoutMinutes) =
             // Create bill for the closed session
             var end = DateTime.UtcNow;
             var minutes = (int)Math.Max(0, (end - session.start).TotalMinutes);
+            
+            // Read items from session (legacy support)
             var items = System.Text.Json.JsonSerializer.Deserialize<List<ItemLine>>(session.items) ?? new();
+            
+            // CRITICAL FIX: Also fetch items from orders for this session
+            const string orderItemsSql = @"
+                SELECT 
+                    COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name,
+                    oi.quantity,
+                    (oi.base_price + oi.price_delta) as item_price,
+                    oi.menu_item_id::text as item_id
+                FROM ord.order_items oi
+                INNER JOIN ord.orders o ON oi.order_id = o.order_id
+                LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
+                WHERE o.session_id = @sid 
+                  AND oi.is_deleted = false
+                  AND o.is_deleted = false
+                  AND oi.delivered_quantity > 0
+                ORDER BY oi.created_at";
+            
+            var orderItemsDict = new Dictionary<string, ItemLine>();
+            
+            // First, add existing items from table_sessions to the dictionary
+            foreach (var item in items)
+            {
+                if (!string.IsNullOrEmpty(item.itemId))
+                {
+                    orderItemsDict[item.itemId] = item;
+                }
+            }
+            
+            // Then, fetch and merge items from orders
+            await using (var getOrderItems = new NpgsqlCommand(orderItemsSql, conn))
+            {
+                getOrderItems.Parameters.AddWithValue("@sid", session.sid);
+                await using (var rdr = await getOrderItems.ExecuteReaderAsync())
+                {
+                    while (await rdr.ReadAsync())
+                    {
+                        var itemName = rdr.IsDBNull(0) ? "Unknown Item" : rdr.GetString(0);
+                        var quantity = rdr.GetInt32(1);
+                        var itemPrice = rdr.GetDecimal(2);
+                        var itemId = rdr.IsDBNull(3) ? Guid.NewGuid().ToString() : rdr.GetString(3);
+                        
+                        if (orderItemsDict.ContainsKey(itemId))
+                        {
+                            // Merge quantities if item already exists
+                            orderItemsDict[itemId].quantity += quantity;
+                        }
+                        else
+                        {
+                            // Add new item
+                            orderItemsDict[itemId] = new ItemLine
+                            {
+                                itemId = itemId,
+                                name = itemName,
+                                quantity = quantity,
+                                price = itemPrice
+                            };
+                        }
+                    }
+                }
+            }
+            
+            // Convert dictionary back to list
+            items = orderItemsDict.Values.ToList();
+            
+            // Only apply time cost for billiard tables, not bar/restaurant tables
+            var ratePerMinute = session.tableType.ToLower() == "billiard" ? await GetRatePerMinuteAsync(conn, defaultRatePerMinute) : 0m;
             var itemsCost = items.Sum(i => i.price * i.quantity);
-            var timeCost = await GetRatePerMinuteAsync(conn, defaultRatePerMinute) * minutes;
+            var timeCost = session.tableType.ToLower() == "billiard" ? ratePerMinute * minutes : 0m;
             var total = timeCost + itemsCost;
             
             const string billSql = @"INSERT INTO public.bills(bill_id, billing_id, session_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status, is_settled, payment_state)
@@ -1458,3 +1868,5 @@ static async Task<decimal> GetRatePerMinuteAsync(NpgsqlConnection conn, decimal 
 // Using shared TableStatusDto instead of local TableRecord
 
 // DTOs now live in MagiDesk.Shared.DTOs.Tables
+
+public sealed record ReopenBillRequest(string? targetTableLabel);

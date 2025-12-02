@@ -1,0 +1,33 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'backend/TablesApi/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/magidesk-tables:latest', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/magidesk-tables:latest']
+  
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'magidesk-tables'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/magidesk-tables:latest'
+      - '--region'
+      - 'northamerica-south1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--set-env-vars'
+      - 'ASPNETCORE_URLS=http://0.0.0.0:8080,ASPNETCORE_ENVIRONMENT=Production'
+      - '--add-cloudsql-instances'
+      - 'bola8pos:northamerica-south1:pos-app-1'
+
+images:
+  - 'gcr.io/$PROJECT_ID/magidesk-tables:latest'
+

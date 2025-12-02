@@ -136,7 +136,8 @@ namespace MagiDesk.Frontend.ViewModels
                 HasError = false;
                 ErrorMessage = null;
 
-                var payments = await _paymentService.GetAllPaymentsAsync();
+                // Request a large limit to get all payments (backend max is 1000, so we'll request that)
+                var payments = await _paymentService.GetAllPaymentsAsync(limit: 1000);
                 
                 // Debug: Show info in UI
                 DebugInfo = $"API returned {payments.Count} payments";
@@ -289,7 +290,7 @@ namespace MagiDesk.Frontend.ViewModels
             }
         }
 
-        public async Task ProcessRefundAsync(long paymentId)
+        public async Task ProcessRefundAsync(Guid paymentId)
         {
             try
             {

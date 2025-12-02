@@ -4,43 +4,178 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:data="using:Microsoft.UI.Xaml.Data"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
     mc:Ignorable="d"
     Background="Transparent">
+    
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
+        
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="InfoBrush" Color="#0078D4"/>
+        
+        <!-- Modern Card Style -->
+        <Style x:Key="ModernCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <!-- Section Card Style (for nested sections) -->
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        
+        <!-- Primary Button Style -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        
+        <!-- Payment Method Button Style -->
+        <Style x:Key="PaymentMethodButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Section Header Style -->
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        
+        <!-- Metric Value Style -->
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+    </Page.Resources>
 
-    <Grid Margin="20">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header Section -->
-        <Grid Grid.Row="0" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="Payment Processing" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,8,0,0">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="Transaction:" FontSize="14" Foreground="Gray"/>
-                        <TextBlock x:Name="TransactionIdText" FontSize="16" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="Table:" FontSize="14" Foreground="Gray"/>
-                        <TextBlock x:Name="TableNumberText" FontSize="16" FontWeight="Bold"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="Customer:" FontSize="14" Foreground="Gray"/>
-                        <TextBlock x:Name="CustomerNameText" FontSize="16" FontWeight="Bold"/>
-                    </StackPanel>
+        <!-- Modern Header Section with Gradient -->
+        <Border Grid.Row="0" Margin="0,0,0,24" CornerRadius="16" Padding="24,20">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0078D4" Offset="0"/>
+                    <GradientStop Color="#106EBE" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Payment Processing" FontSize="32" FontWeight="SemiBold" 
+                               Foreground="White" Margin="0,0,0,16"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Transaction Badge -->
+                        <Border Grid.Column="0" Background="White" CornerRadius="12" Padding="20,16" 
+                                Opacity="0.95" MinWidth="180" Margin="0,0,8,0">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" 
+                                        Padding="10" Width="40" Height="40" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="20" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Transaction" FontSize="12" FontWeight="Medium"
+                                          Foreground="#666666" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TransactionIdText" FontSize="13" FontWeight="SemiBold" 
+                                          Foreground="#1A1A1A" TextTrimming="CharacterEllipsis" 
+                                          MaxWidth="160" HorizontalAlignment="Center" TextAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Table Badge -->
+                        <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="20,16" 
+                                Opacity="0.95" MinWidth="180" Margin="4,0">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" 
+                                        Padding="10" Width="40" Height="40" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE7C3;" FontSize="20" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Table" FontSize="12" FontWeight="Medium"
+                                          Foreground="#666666" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TableNumberText" FontSize="15" FontWeight="SemiBold" 
+                                          Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Customer Badge -->
+                        <Border Grid.Column="2" Background="White" CornerRadius="12" Padding="20,16" 
+                                Opacity="0.95" MinWidth="180" Margin="8,0,0,0">
+                            <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" 
+                                        Padding="10" Width="40" Height="40" HorizontalAlignment="Center">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="20" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Customer" FontSize="12" FontWeight="Medium"
+                                          Foreground="#666666" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="CustomerNameText" FontSize="15" FontWeight="SemiBold" 
+                                          Foreground="#1A1A1A" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
-            </StackPanel>
-            <Button Grid.Column="1" Content="✕" FontSize="18" Width="36" Height="36" CornerRadius="18"
-                    Background="Transparent" Foreground="Gray" Click="CloseButton_Click"
-                    HorizontalAlignment="Right" VerticalAlignment="Top"/>
-        </Grid>
+                <Button Grid.Column="1" Click="CloseButton_Click" 
+                        Background="White" Foreground="{StaticResource PrimaryBrush}"
+                        CornerRadius="20" Width="40" Height="40" Padding="0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <FontIcon Glyph="&#xE711;" FontSize="18"/>
+                </Button>
+            </Grid>
+        </Border>
 
         <!-- Main Content Area - Two Columns -->
         <Grid Grid.Row="1" Margin="0,0,0,20">
@@ -51,32 +186,54 @@
 
             <!-- Left Column: Order Items List -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,20,0">
-                <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1">
+                <Border Style="{StaticResource ModernCardStyle}">
                     <StackPanel>
-                        <TextBlock Text="Order Items" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                <FontIcon Glyph="&#xE8A5;" FontSize="20" Foreground="White"/>
+                            </Border>
+                            <TextBlock Text="Order Items" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+                        </StackPanel>
                         
                         <ItemsControl x:Name="OrderItemsList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,4" Padding="12" BorderBrush="#E0E0E0" BorderThickness="1">
+                                    <Border Margin="0,0,0,8" Padding="16" 
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" CornerRadius="8">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
-                                                <TextBlock Text="{Binding UnitPrice}" FontSize="12" Foreground="Gray"/>
+                                            <StackPanel Grid.Column="0" Spacing="4">
+                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                <TextBlock FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <Run Text="Unit Price: $"/>
+                                                    <Run Text="{Binding UnitPrice}"/>
+                                                </TextBlock>
                                             </StackPanel>
                                             
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                                <Button Content="-" Width="24" Height="24" Click="DecreaseQuantity_Click" 
-                                                        Background="#E0E0E0" Foreground="Black" FontSize="12"/>
-                                                <TextBlock Text="{Binding Quantity}" Width="30" TextAlignment="Center" VerticalAlignment="Center"/>
-                                                <Button Content="+" Width="24" Height="24" Click="IncreaseQuantity_Click" 
-                                                        Background="#E0E0E0" Foreground="Black" FontSize="12"/>
-                                                <TextBlock Text="{Binding Subtotal}" Width="50" TextAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <Button Content="−" Width="32" Height="32" Click="DecreaseQuantity_Click" 
+                                                            Style="{StaticResource SecondaryButtonStyle}" Padding="0" FontSize="16"
+                                                            FontWeight="Bold"/>
+                                                    <Border Background="{ThemeResource ControlFillColorDefaultBrush}" 
+                                                            CornerRadius="4" Padding="12,6" MinWidth="40">
+                                                        <TextBlock Text="{Binding Quantity}" TextAlignment="Center" 
+                                                                  FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                    </Border>
+                                                    <Button Content="+" Width="32" Height="32" Click="IncreaseQuantity_Click" 
+                                                            Style="{StaticResource SecondaryButtonStyle}" Padding="0" FontSize="16"
+                                                            FontWeight="Bold"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Subtotal}" Width="80" TextAlignment="Right" 
+                                                          VerticalAlignment="Center" FontWeight="Bold" FontSize="16"
+                                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -85,14 +242,19 @@
                         </ItemsControl>
                         
                         <!-- Items Total -->
-                        <Border Padding="12" Margin="0,8,0,0" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <Border Padding="16" Margin="0,12,0,0" 
+                                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" CornerRadius="8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="Items Total:" FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Grid.Column="1" x:Name="ItemsTotalText" Text="$0.00" FontSize="16" FontWeight="Bold"/>
+                                <TextBlock Grid.Column="0" Text="Items Total:" FontSize="16" FontWeight="SemiBold"
+                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="1" x:Name="ItemsTotalText" Text="$0.00" 
+                                          Style="{StaticResource MetricValueStyle}"/>
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -104,22 +266,36 @@
                 <StackPanel Spacing="16">
                     
                     <!-- Customer Amount Input -->
-                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                    <Border Style="{StaticResource SectionCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Amount Given by Customer" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
-                            <NumberBox x:Name="CustomerAmountInput" PlaceholderText="Enter amount given" FontSize="14" Margin="0,0,0,12" 
-                                       MinHeight="40"/>
-                            <Button Content="Calculate Change" Click="CalculateChange_Click" 
-                                    Background="#4CAF50" Foreground="White" Padding="12,8" FontSize="14" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="ChangeAmountText" FontSize="14" FontWeight="Bold" Margin="0,12,0,0" 
-                                       HorizontalAlignment="Center" Foreground="#4CAF50"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Background="{StaticResource SuccessBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Amount Given by Customer" Style="{StaticResource SectionHeaderStyle}" 
+                                          VerticalAlignment="Center" FontSize="16"/>
+                            </StackPanel>
+                            <NumberBox x:Name="CustomerAmountInput" PlaceholderText="Enter amount given" FontSize="14" 
+                                      Margin="0,0,0,12" MinHeight="44" CornerRadius="8"/>
+                            <Border CornerRadius="8" Padding="16" 
+                                    Margin="0,0,0,0" Visibility="Collapsed" x:Name="ChangeAmountBorder"
+                                    BorderThickness="2">
+                                <TextBlock x:Name="ChangeAmountText" FontSize="20" FontWeight="Bold" 
+                                          HorizontalAlignment="Center"/>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <!-- Tip Calculator -->
-                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                    <Border Style="{StaticResource SectionCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Tip Calculator" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Background="{StaticResource WarningBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Tip Calculator" Style="{StaticResource SectionHeaderStyle}" 
+                                          VerticalAlignment="Center" FontSize="16"/>
+                            </StackPanel>
                             
                             <!-- Tip Percentage Buttons -->
                             <Grid Margin="0,0,0,12">
@@ -130,26 +306,34 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 
-                                <Button Grid.Column="0" Content="10%" Tag="10" Click="TipPercentage_Click" Margin="0,0,4,0"
-                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip10Button"/>
-                                <Button Grid.Column="1" Content="15%" Tag="15" Click="TipPercentage_Click" Margin="2,0"
-                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip15Button"/>
-                                <Button Grid.Column="2" Content="20%" Tag="20" Click="TipPercentage_Click" Margin="2,0"
-                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="Tip20Button"/>
-                                <Button Grid.Column="3" Content="Custom" Tag="Custom" Click="TipPercentage_Click" Margin="4,0,0,0"
-                                        Background="#F0F0F0" Foreground="Black" Padding="8,6" FontSize="12" x:Name="TipCustomButton"/>
+                                <Button Grid.Column="0" Content="10%" Tag="10" Click="TipPercentage_Click" 
+                                        Style="{StaticResource SecondaryButtonStyle}" FontSize="13" x:Name="Tip10Button" Margin="0,0,2,0"/>
+                                <Button Grid.Column="1" Content="15%" Tag="15" Click="TipPercentage_Click" 
+                                        Style="{StaticResource SecondaryButtonStyle}" FontSize="13" x:Name="Tip15Button" Margin="2,0"/>
+                                <Button Grid.Column="2" Content="20%" Tag="20" Click="TipPercentage_Click" 
+                                        Style="{StaticResource SecondaryButtonStyle}" FontSize="13" x:Name="Tip20Button" Margin="2,0"/>
+                                <Button Grid.Column="3" Content="Custom" Tag="Custom" Click="TipPercentage_Click" 
+                                        Style="{StaticResource SecondaryButtonStyle}" FontSize="13" x:Name="TipCustomButton" Margin="2,0,0,0"/>
                             </Grid>
                             
-                            <NumberBox x:Name="TipAmountInput" PlaceholderText="Enter tip amount" FontSize="14" Margin="0,0,0,8" 
-                                       MinHeight="40"/>
-                            <TextBlock x:Name="TipPercentageText" Text="0%" FontSize="12" Foreground="Gray" HorizontalAlignment="Center"/>
+                            <NumberBox x:Name="TipAmountInput" PlaceholderText="Enter tip amount" FontSize="14" 
+                                      Margin="0,0,0,8" MinHeight="44" CornerRadius="8"/>
+                            <TextBlock x:Name="TipPercentageText" Text="0%" FontSize="13" 
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                                      HorizontalAlignment="Center" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Customer Selection -->
-                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                    <Border Style="{StaticResource SectionCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Customer (Optional)" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Background="{StaticResource InfoBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE77B;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Customer (Optional)" Style="{StaticResource SectionHeaderStyle}" 
+                                          VerticalAlignment="Center" FontSize="16"/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -241,9 +425,15 @@
                     </Border>
 
                     <!-- Payment Methods -->
-                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4">
+                    <Border Style="{StaticResource SectionCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="Payment Method" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Payment Method" Style="{StaticResource SectionHeaderStyle}" 
+                                          VerticalAlignment="Center" FontSize="16"/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -255,100 +445,331 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                  
-                                <Button x:Name="CashButton" Grid.Row="0" Grid.Column="0" Content="💵 Cash" Tag="Cash" 
-                                        Margin="0,0,4,4" Height="50" Click="PaymentMethod_Click"
-                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
-                                <Button x:Name="CardButton" Grid.Row="0" Grid.Column="1" Content="💳 Card" Tag="Card" 
-                                        Margin="4,0,0,4" Height="50" Click="PaymentMethod_Click"
-                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
-                                <Button x:Name="MobileButton" Grid.Row="1" Grid.Column="0" Content="📱 Mobile" Tag="Mobile" 
-                                        Margin="0,4,4,0" Height="50" Click="PaymentMethod_Click"
-                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
-                                <Button x:Name="SplitButton" Grid.Row="1" Grid.Column="1" Content="🔄 Split" Tag="Split" 
-                                        Margin="4,4,0,0" Height="50" Click="PaymentMethod_Click"
-                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"/>
-                                <Button x:Name="WalletButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Content="💰 Wallet" Tag="Wallet" 
-                                        Margin="0,4,0,0" Height="50" Click="PaymentMethod_Click"
-                                        Background="LightGray" Foreground="Black" BorderBrush="Gray"
-                                        IsEnabled="False"/>
+                                <Button x:Name="CashButton" Grid.Row="0" Grid.Column="0" Tag="Cash" 
+                                        Click="PaymentMethod_Click" Style="{StaticResource PaymentMethodButtonStyle}" Margin="0,0,4,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="18"/>
+                                        <TextBlock Text="Cash" FontSize="14"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="CardButton" Grid.Row="0" Grid.Column="1" Tag="Card" 
+                                        Click="PaymentMethod_Click" Style="{StaticResource PaymentMethodButtonStyle}" Margin="4,0,0,4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="18"/>
+                                        <TextBlock Text="Card" FontSize="14"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="MobileButton" Grid.Row="1" Grid.Column="0" Tag="Mobile" 
+                                        Click="PaymentMethod_Click" Style="{StaticResource PaymentMethodButtonStyle}" Margin="0,4,4,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="18"/>
+                                        <TextBlock Text="Mobile" FontSize="14"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="SplitButton" Grid.Row="1" Grid.Column="1" Tag="Split" 
+                                        Click="PaymentMethod_Click" Style="{StaticResource PaymentMethodButtonStyle}" Margin="4,4,0,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="18"/>
+                                        <TextBlock Text="Split" FontSize="14"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="WalletButton" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Tag="Wallet" 
+                                        Click="PaymentMethod_Click" Style="{StaticResource PaymentMethodButtonStyle}"
+                                        IsEnabled="False" Opacity="0.6" Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="18"/>
+                                        <TextBlock Text="Wallet" FontSize="14"/>
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Border>
 
                     <!-- Split Payment Panel -->
-                    <Border x:Name="SplitPaymentPanel" Padding="12" Margin="0,8,0,0" 
-                            BorderBrush="#E0E0E0" BorderThickness="1" Visibility="Collapsed">
-                        <StackPanel>
-                            <TextBlock Text="Split Amounts" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                             
-                            <StackPanel Spacing="4">
-                                <StackPanel>
-                                    <TextBlock Text="Cash" FontSize="12" Foreground="Gray"/>
-                                    <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Card" FontSize="12" Foreground="Gray"/>
-                                    <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="Digital" FontSize="12" Foreground="Gray"/>
-                                    <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"/>
+                    <Border x:Name="SplitPaymentPanel" Style="{StaticResource SectionCardStyle}" 
+                            Visibility="Collapsed" Margin="0,0,0,0">
+                        <StackPanel Spacing="16">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Split Payment" Style="{StaticResource SectionHeaderStyle}" 
+                                          VerticalAlignment="Center" FontSize="16"/>
+                            </StackPanel>
+                            
+                            <!-- Split Method Selection -->
+                            <StackPanel Margin="0,0,0,8" Spacing="8">
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="SplitAmountRadio" Grid.Column="0" Content="Amount" Tag="Amount" 
+                                               Checked="SplitMethod_Checked" IsChecked="True" Margin="0,0,4,0" GroupName="SplitMethodGroup"/>
+                                    <RadioButton x:Name="SplitPercentageRadio" Grid.Column="1" Content="Percentage" Tag="Percentage" 
+                                               Checked="SplitMethod_Checked" Margin="2,0" GroupName="SplitMethodGroup"/>
+                                    <RadioButton x:Name="SplitPeopleRadio" Grid.Column="2" Content="By People" Tag="People" 
+                                               Checked="SplitMethod_Checked" Margin="2,0" GroupName="SplitMethodGroup"/>
+                                    <RadioButton x:Name="SplitItemsRadio" Grid.Column="3" Content="By Items" Tag="Items" 
+                                               Checked="SplitMethod_Checked" Margin="4,0,0,0" GroupName="SplitMethodGroup"/>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Quick Actions -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                                <Button x:Name="SplitEvenlyButton" Content="Split Evenly" Click="SplitEvenly_Click" 
+                                       Style="{StaticResource SecondaryButtonStyle}" FontSize="13"/>
+                                <Button x:Name="AutoFillRemainingButton" Content="Auto-Fill Remaining" Click="AutoFillRemaining_Click" 
+                                       Style="{StaticResource SecondaryButtonStyle}" FontSize="13"/>
+                            </StackPanel>
+                            
+                            <!-- By People Mode -->
+                            <StackPanel x:Name="PeopleModePanel" Spacing="4" Visibility="Collapsed" Margin="0,0,0,8">
+                                <TextBlock Text="Number of People" FontSize="12" Foreground="Gray"/>
+                                <NumberBox x:Name="NumberOfPeopleInput" Value="2" Minimum="2" Maximum="20" 
+                                          ValueChanged="NumberOfPeopleInput_ValueChanged" FontSize="12"/>
+                                <TextBlock x:Name="PerPersonAmountText" Text="Per Person: $0.00" FontSize="11" 
+                                          Foreground="Gray" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- By Items Mode -->
+                            <StackPanel x:Name="ItemsModePanel" Spacing="8" Visibility="Collapsed" Margin="0,0,0,8">
+                                <TextBlock Text="Assign Items to Payment Methods" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="4" MaxHeight="300">
+                                    <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="ItemsSplitList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                                            BorderThickness="0,0,0,1" Padding="12,10"
+                                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            Opacity="{Binding IsIncluded, Converter={StaticResource BoolToOpacityConverter}}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                                            <CheckBox Grid.Column="0" 
+                                                                     IsChecked="{Binding IsIncluded, Mode=TwoWay}"
+                                                                     Checked="ItemInclude_Checked"
+                                                                     Unchecked="ItemInclude_Unchecked"
+                                                                     Margin="0,0,8,0"
+                                                                     VerticalAlignment="Center"/>
+                                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                                <TextBlock FontSize="12" FontWeight="SemiBold">
+                                                                    <Run Text="{Binding Name}"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text="(Excluded)" FontSize="11" Foreground="Gray" 
+                                                                           Visibility="{Binding IsExcluded, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                           Margin="0,-2,0,0"/>
+                                                                <TextBlock FontSize="11" Foreground="Gray">
+                                                                    <Run Text="{Binding Quantity}"/>
+                                                                    <Run Text=" x $"/>
+                                                                    <Run Text="{Binding UnitPrice}"/>
+                                                                    <Run Text=" = $"/>
+                                                                    <Run Text="{Binding Subtotal}" FontWeight="SemiBold"/>
+                                                                </TextBlock>
+                                                            </StackPanel>
+                                                            <ComboBox Grid.Column="2" 
+                                                                     Width="120" 
+                                                                     FontSize="11"
+                                                                     SelectionChanged="ItemPaymentMethod_SelectionChanged"
+                                                                     Tag="{Binding}"
+                                                                     IsEnabled="{Binding IsIncluded}"
+                                                                     PlaceholderText="Select method">
+                                                                <ComboBox.Items>
+                                                                    <x:String>Cash</x:String>
+                                                                    <x:String>Card</x:String>
+                                                                    <x:String>Digital</x:String>
+                                                                </ComboBox.Items>
+                                                            </ComboBox>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="AutoAssignItemsButton" Content="Auto-Assign Items" Click="AutoAssignItems_Click" 
+                                           Style="{StaticResource SecondaryButtonStyle}" FontSize="13" HorizontalAlignment="Stretch"/>
+                                    <Button x:Name="IncludeAllItemsButton" Content="Include All" Click="IncludeAllItems_Click" 
+                                           Style="{StaticResource SecondaryButtonStyle}" FontSize="13"/>
+                                    <Button x:Name="ExcludeAllItemsButton" Content="Exclude All" Click="ExcludeAllItems_Click" 
+                                           Style="{StaticResource SecondaryButtonStyle}" FontSize="13"/>
                                 </StackPanel>
                             </StackPanel>
-                                
-                            <Border Padding="8" Margin="0,8,0,0">
+                            
+                            <!-- Amount/Percentage Mode -->
+                            <StackPanel x:Name="AmountModePanel" Spacing="4" Margin="0,0,0,8">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Cash" FontSize="12" Foreground="Gray"/>
+                                        <TextBlock Grid.Column="1" x:Name="CashPercentageText" Text="" FontSize="11" 
+                                                  Foreground="Gray" Visibility="Collapsed"/>
+                                    </Grid>
+                                    <NumberBox x:Name="CashAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
+                                              ValueChanged="CashAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Card" FontSize="12" Foreground="Gray"/>
+                                        <TextBlock Grid.Column="1" x:Name="CardPercentageText" Text="" FontSize="11" 
+                                                  Foreground="Gray" Visibility="Collapsed"/>
+                                    </Grid>
+                                    <NumberBox x:Name="CardAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
+                                              ValueChanged="CardAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
+                                </StackPanel>
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Digital" FontSize="12" Foreground="Gray"/>
+                                        <TextBlock Grid.Column="1" x:Name="DigitalPercentageText" Text="" FontSize="11" 
+                                                  Foreground="Gray" Visibility="Collapsed"/>
+                                    </Grid>
+                                    <NumberBox x:Name="DigitalAmountInput" PlaceholderText="0.00" FontSize="12" Margin="0,2,0,0"
+                                              ValueChanged="DigitalAmountInput_ValueChanged"
+                                              SmallChange="0.01"
+                                              LargeChange="10.00"
+                                              Minimum="0"
+                                              AcceptsExpression="False"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Balance Indicator -->
+                            <Border x:Name="BalanceIndicator" Padding="16" Margin="0,4,0,0" CornerRadius="8"
+                                    Background="{ThemeResource ControlFillColorDefaultBrush}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Split Total:" FontSize="12" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="1" x:Name="SplitTotalText" Text="$0.00" FontSize="12" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="0" x:Name="BalanceStatusText" Text="Balance: $0.00" 
+                                              FontSize="14" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="BalanceIcon" Text="✅" FontSize="16"/>
                                 </Grid>
                             </Border>
+                                
+                            <Border Padding="16" Margin="0,8,0,0" 
+                                    Background="{ThemeResource ControlFillColorDefaultBrush}" 
+                                    CornerRadius="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Split Total:" FontSize="14" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="SplitTotalText" Text="$0.00" 
+                                              FontSize="16" FontWeight="Bold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Tip Distribution Options -->
+                            <StackPanel Margin="0,12,0,0" Spacing="8">
+                                <TextBlock Text="Tip Distribution" FontSize="14" FontWeight="SemiBold" 
+                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <RadioButton x:Name="TipSplitEquallyRadio" Grid.Row="0" Grid.Column="0" Content="Split Equally" 
+                                               Tag="SplitEqually" Checked="TipDistribution_Checked" IsChecked="True" 
+                                               FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,0,4,4"/>
+                                    <RadioButton x:Name="TipOnCardOnlyRadio" Grid.Row="0" Grid.Column="1" Content="On Card Only" 
+                                               Tag="OnCardOnly" Checked="TipDistribution_Checked" 
+                                               FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="4,0,0,4"/>
+                                    <RadioButton x:Name="TipOnCashOnlyRadio" Grid.Row="1" Grid.Column="0" Content="On Cash Only" 
+                                               Tag="OnCashOnly" Checked="TipDistribution_Checked" 
+                                               FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="0,4,4,0"/>
+                                    <RadioButton x:Name="TipNoTipRadio" Grid.Row="1" Grid.Column="1" Content="No Tip" 
+                                               Tag="NoTip" Checked="TipDistribution_Checked" 
+                                               FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="4,4,0,0"/>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Payment Summary -->
-                    <Border Padding="16" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <Border Style="{StaticResource SectionCardStyle}" 
+                            Background="{ThemeResource ControlFillColorDefaultBrush}">
                         <StackPanel>
-                            <TextBlock Text="Payment Summary" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16" HorizontalAlignment="Center">
+                                <Border Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="8" Margin="0,0,12,0">
+                                    <FontIcon Glyph="&#xE8A5;" FontSize="18" Foreground="White"/>
+                                </Border>
+                                <TextBlock Text="Payment Summary" FontSize="18" FontWeight="SemiBold" 
+                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}" 
+                                          VerticalAlignment="Center"/>
+                            </StackPanel>
                             
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="12">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Items Total:" FontSize="12"/>
-                                    <TextBlock Grid.Column="1" x:Name="SummaryItemsTotalText" FontSize="12"/>
+                                    <TextBlock Grid.Column="0" Text="Items Total:" FontSize="14"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryItemsTotalText" FontSize="14" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 </Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Tip:" FontSize="12"/>
-                                    <TextBlock Grid.Column="1" x:Name="SummaryTipText" FontSize="12"/>
+                                    <TextBlock Grid.Column="0" Text="Tip:" FontSize="14"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryTipText" FontSize="14" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 </Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Discount:" FontSize="12"/>
-                                    <TextBlock Grid.Column="1" x:Name="SummaryDiscountText" FontSize="12"/>
+                                    <TextBlock Grid.Column="0" Text="Discount:" FontSize="14"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="SummaryDiscountText" FontSize="14" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 </Grid>
                                 
-                                <Rectangle Height="1" Fill="#E0E0E0" Margin="0,4"/>
+                                <Rectangle Height="1" Fill="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,8"/>
                                 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Total:" FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Grid.Column="1" x:Name="TotalAmountText" FontSize="16" FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="0" Text="Total:" FontSize="18" FontWeight="SemiBold"
+                                              Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Grid.Column="1" x:Name="TotalAmountText" FontSize="24" FontWeight="Bold"
+                                              Foreground="{StaticResource PrimaryBrush}"/>
                                 </Grid>
                             </StackPanel>
                         </StackPanel>
@@ -358,21 +779,34 @@
         </Grid>
 
         <!-- Action Buttons -->
-        <Grid Grid.Row="2" Margin="0,20,0,0">
+        <Grid Grid.Row="2" Margin="0,24,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             
-            <Button Grid.Column="0" Content="Cancel" Click="Cancel_Click" Margin="0,0,8,0"
-                    Background="#F0F0F0" Foreground="Black" Padding="12,8"/>
+            <Button Grid.Column="0" Click="Cancel_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,6,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE711;" FontSize="16"/>
+                    <TextBlock Text="Cancel"/>
+                </StackPanel>
+            </Button>
             
-            <Button Grid.Column="1" Content="Reset" Click="Reset_Click" Margin="4,0"
-                    Background="#F0F0F0" Foreground="Black" Padding="12,8"/>
+            <Button Grid.Column="1" Click="Reset_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="6,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                    <TextBlock Text="Reset"/>
+                </StackPanel>
+            </Button>
             
-            <Button Grid.Column="2" Content="Process Payment" Click="ProcessPayment_Click" Margin="8,0,0,0"
-                    Background="#4CAF50" Foreground="White" Padding="12,8" FontWeight="SemiBold" x:Name="ProcessPaymentButton"/>
+            <Button Grid.Column="2" Click="ProcessPayment_Click" Style="{StaticResource PrimaryButtonStyle}" 
+                    Background="{StaticResource SuccessBrush}" x:Name="ProcessPaymentButton" Margin="6,0,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE8A5;" FontSize="16"/>
+                    <TextBlock Text="Process Payment"/>
+                </StackPanel>
+            </Button>
         </Grid>
     </Grid>
 </Page>

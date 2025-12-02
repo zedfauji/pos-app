@@ -53,8 +53,7 @@ create table if not exists pay.payments (
   created_by       text null,
   created_at       timestamptz not null default now(),
   -- Immutability constraints
-  CONSTRAINT payments_immutable_payment_id CHECK (payment_id > 0),
-  CONSTRAINT payments_immutable_billing_id CHECK (billing_id IS NOT NULL AND billing_id != '')
+  CONSTRAINT payments_immutable_billing_id CHECK (billing_id IS NOT NULL AND billing_id != '00000000-0000-0000-0000-000000000000'::uuid)
 );
 create index if not exists ix_payments_billing on pay.payments(billing_id);
 

@@ -57,6 +57,29 @@ namespace MagiDesk.Frontend
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
+        private static void SafeAppendToLog(string logPath, string message)
+        {
+            try
+            {
+                // Use FileShare.ReadWrite to allow multiple processes to access the file
+                using (var fileStream = new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                using (var writer = new StreamWriter(fileStream))
+                {
+                    writer.WriteLine(message);
+                }
+            }
+            catch (IOException)
+            {
+                // File is locked by another process - silently ignore to prevent crash
+                System.Diagnostics.Debug.WriteLine($"Could not write to log file (locked): {message}");
+            }
+            catch (Exception ex)
+            {
+                // Any other error - log to debug output only
+                System.Diagnostics.Debug.WriteLine($"Log write error: {ex.Message}");
+            }
+        }
+
         public App()
         {
             try
@@ -64,39 +87,39 @@ namespace MagiDesk.Frontend
                 // CRITICAL: Log to file for debugging crashes
                 var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
                 Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] App constructor started\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] App constructor started");
                 
                 Log.Info("App constructor started");
                 this.InitializeComponent();
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] InitializeComponent completed\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] InitializeComponent completed");
                 Log.Info("InitializeComponent completed");
                 
                 // CRITICAL: Configure global JSON serialization to use reflection
                 // Note: JsonSerializerOptions.Default.TypeInfoResolver = null; causes crashes when called too early
                 // We'll configure JSON serialization per-service instead
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] JSON serialization will be configured per-service\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] JSON serialization will be configured per-service");
                 Log.Info("JSON serialization will be configured per-service");
                 
                 // CRITICAL: Initialize WebView2 runtime EARLY
                 try
                 {
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Initializing WebView2 runtime\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Initializing WebView2 runtime");
                     System.Diagnostics.Debug.WriteLine("Initializing WebView2 runtime...");
                     
                     // Ensure WebView2 runtime is available
                     var webView2Version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 version: {webView2Version}\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 version: {webView2Version}");
                     System.Diagnostics.Debug.WriteLine($"WebView2 version: {webView2Version}");
                     
                     // Create WebView2 environment to ensure it's properly initialized
                     var webView2Environment = Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync();
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 environment created successfully\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 environment created successfully");
                     Log.Info("WebView2 runtime initialized successfully");
                 }
                 catch (Exception webViewEx)
                 {
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 initialization failed: {webViewEx.Message}\n");
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 stack trace: {webViewEx.StackTrace}\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 initialization failed: {webViewEx.Message}");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 stack trace: {webViewEx.StackTrace}");
                     Log.Error("WebView2 runtime initialization failed", webViewEx);
                     // Don't throw - continue without WebView2 if needed
                 }
@@ -108,12 +131,12 @@ namespace MagiDesk.Frontend
                 {
                     try
                     {
-                        File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] FIRST-CHANCE EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}\n");
-                        File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {e.Exception.StackTrace}\n");
+                        SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] FIRST-CHANCE EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}");
+                        SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {e.Exception.StackTrace}");
                         
                         if (e.Exception is System.Runtime.InteropServices.COMException comEx)
                         {
-                            File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] COM EXCEPTION HRESULT: 0x{comEx.HResult:X8}\n");
+                            SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] COM EXCEPTION HRESULT: 0x{comEx.HResult:X8}");
                             System.Diagnostics.Debug.WriteLine($"FIRST-CHANCE COM EXCEPTION: {comEx.Message}");
                             System.Diagnostics.Debug.WriteLine($"HRESULT: 0x{comEx.HResult:X8}");
                             System.Diagnostics.Debug.WriteLine($"Stack Trace: {comEx.StackTrace}");
@@ -208,52 +231,52 @@ namespace MagiDesk.Frontend
             
             try
             {
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnLaunched started\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnLaunched started");
                 Log.Info("OnLaunched started");
                 
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Creating Window\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Creating Window");
                 window ??= new Window();
                 window.Title = "MagiDesk";
                 MainWindow = window;
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window created and MainWindow set\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window created and MainWindow set");
                 
                 // Set minimum window size to ensure navigation pane is visible
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Resizing window\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Resizing window");
                 window.AppWindow.Resize(new Windows.Graphics.SizeInt32(1200, 800));
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window resized successfully\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window resized successfully");
                 
                 // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
                 // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
                 // We use App.MainWindow instead for thread-safe access
                 System.Diagnostics.Debug.WriteLine("MainWindow set successfully");
 
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Checking window content\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Checking window content");
                 if (window.Content is not Frame rootFrame)
                 {
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Creating new Frame\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Creating new Frame");
                     Log.Info("Creating new Frame");
                     rootFrame = new Frame();
                     rootFrame.NavigationFailed += OnNavigationFailed;
                     window.Content = rootFrame;
-                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Frame created and set as window content\n");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Frame created and set as window content");
                 }
                 
                 // Always start at LoginPage; under isolation builds navigate to MainPage
 #if XAML_ONLY_MAIN
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigating to MainPage (XAML_ONLY_MAIN)\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigating to MainPage (XAML_ONLY_MAIN)");
                 Log.Info("Navigating to MainPage (XAML_ONLY_MAIN)");
                 rootFrame.Navigate(typeof(MagiDesk.Frontend.Views.MainPage), e.Arguments);
 #else
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigating to LoginPage\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigating to LoginPage");
                 Log.Info("Navigating to LoginPage");
                 rootFrame.Navigate(typeof(Views.LoginPage), e.Arguments);
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigation to LoginPage completed\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Navigation to LoginPage completed");
 #endif
                 
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Activating window\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Activating window");
                 Log.Info("Activating window");
                 window.Activate();
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window activated successfully\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window activated successfully");
 
                 // Add window closing cleanup
                 window.Closed += async (sender, e) =>
@@ -273,13 +296,13 @@ namespace MagiDesk.Frontend
                 // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
                 // Window activation is handled automatically by the system
                 System.Diagnostics.Debug.WriteLine("Window launched successfully");
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnLaunched completed successfully\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnLaunched completed successfully");
                 Log.Info("OnLaunched completed successfully");
             }
             catch (Exception ex)
             {
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] CRITICAL ERROR in OnLaunched: {ex.GetType().Name}: {ex.Message}\n");
-                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {ex.StackTrace}\n");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] CRITICAL ERROR in OnLaunched: {ex.GetType().Name}: {ex.Message}");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {ex.StackTrace}");
                 Log.Error("Critical error in OnLaunched", ex);
                 throw; // Re-throw to prevent silent failure
             }
@@ -335,7 +358,7 @@ namespace MagiDesk.Frontend
                 var logging = new Services.HttpLoggingHandler(inner);
                 var http = new HttpClient(logging) { BaseAddress = new Uri(usersBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
-                System.Diagnostics.Debug.WriteLine($"UsersApi created successfully");
+                System.Diagnostics.Debug.WriteLine($"UsersApi created successfully with BaseAddress: {http.BaseAddress}");
 
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;

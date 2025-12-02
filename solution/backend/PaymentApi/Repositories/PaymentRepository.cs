@@ -106,21 +106,67 @@ public sealed class PaymentRepository : IPaymentRepository
 
     public async Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(Guid billingId, CancellationToken ct)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
-                             FROM pay.payments WHERE billing_id = @bid ORDER BY created_at";
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@bid", billingId);
-        var list = new List<PaymentDto>();
-        await using var rdr = await cmd.ExecuteReaderAsync(ct);
-        while (await rdr.ReadAsync(ct))
+        try
         {
-            list.Add(new PaymentDto(
-                rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
-                rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
-                rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
+            await using var conn = await _dataSource.OpenConnectionAsync(ct);
+            const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
+                                 FROM pay.payments WHERE billing_id = @bid ORDER BY created_at";
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@bid", billingId);
+            var list = new List<PaymentDto>();
+            await using var rdr = await cmd.ExecuteReaderAsync(ct);
+            while (await rdr.ReadAsync(ct))
+            {
+                try
+                {
+                    // Try to read payment_id as UUID first, fallback to other types if needed
+                    Guid paymentId;
+                    if (rdr.GetFieldType(0) == typeof(Guid))
+                    {
+                        paymentId = rdr.GetFieldValue<Guid>(0);
+                    }
+                    else if (rdr.GetFieldType(0) == typeof(long) || rdr.GetFieldType(0) == typeof(int))
+                    {
+                        // Legacy support: if payment_id is stored as bigint/int, convert to Guid
+                        var longId = rdr.GetInt64(0);
+                        var bytes = BitConverter.GetBytes(longId);
+                        var guidBytes = new byte[16];
+                        Array.Copy(bytes, 0, guidBytes, 0, Math.Min(bytes.Length, 8));
+                        paymentId = new Guid(guidBytes);
+                    }
+                    else
+                    {
+                        var strId = rdr.GetString(0);
+                        paymentId = Guid.Parse(strId);
+                    }
+                    
+                    list.Add(new PaymentDto(
+                        paymentId,
+                        rdr.GetFieldValue<Guid>(1), 
+                        rdr.GetFieldValue<Guid>(2), 
+                        rdr.GetDecimal(3), 
+                        rdr.GetString(4), 
+                        rdr.GetDecimal(5),
+                        rdr.IsDBNull(6) ? null : rdr.GetString(6), 
+                        rdr.GetDecimal(7), 
+                        rdr.IsDBNull(8) ? null : rdr.GetString(8),
+                        rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), 
+                        rdr.IsDBNull(10) ? null : rdr.GetString(10), 
+                        rdr.GetFieldValue<DateTimeOffset>(11)));
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.ListPaymentsAsync: Error reading payment row: {ex.Message}");
+                    continue;
+                }
+            }
+            return list;
         }
-        return list;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentRepository.ListPaymentsAsync: Exception: {ex.Message}");
+            throw;
+        }
     }
 
     public async Task<BillLedgerDto?> GetLedgerAsync(Guid billingId, CancellationToken ct)
@@ -177,20 +223,105 @@ public sealed class PaymentRepository : IPaymentRepository
 
     public async Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
-                             FROM pay.payments ORDER BY created_at DESC LIMIT @l";
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@l", Math.Clamp(limit, 1, 1000));
-        var list = new List<PaymentDto>();
-        await using var rdr = await cmd.ExecuteReaderAsync(ct);
-        while (await rdr.ReadAsync(ct))
+        try
         {
-            list.Add(new PaymentDto(
-                rdr.GetInt64(0), rdr.GetFieldValue<Guid>(1), rdr.GetFieldValue<Guid>(2), rdr.GetDecimal(3), rdr.GetString(4), rdr.GetDecimal(5),
-                rdr.IsDBNull(6) ? null : rdr.GetString(6), rdr.GetDecimal(7), rdr.IsDBNull(8) ? null : rdr.GetString(8),
-                rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), rdr.IsDBNull(10) ? null : rdr.GetString(10), rdr.GetFieldValue<DateTimeOffset>(11)));
+            await using var conn = await _dataSource.OpenConnectionAsync(ct);
+            const string sql = @"SELECT payment_id, session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by, created_at
+                                 FROM pay.payments ORDER BY created_at DESC LIMIT @l";
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            // Increased max limit to 10000 to show more payments
+            cmd.Parameters.AddWithValue("@l", Math.Clamp(limit, 1, 10000));
+            var list = new List<PaymentDto>();
+            await using var rdr = await cmd.ExecuteReaderAsync(ct);
+            while (await rdr.ReadAsync(ct))
+            {
+                try
+                {
+                    // Try to read payment_id - handle both UUID and bigint types
+                    Guid paymentId;
+                    var fieldType = rdr.GetFieldType(0);
+                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: payment_id field type = {fieldType?.FullName}");
+                    
+                    if (fieldType == typeof(Guid))
+                    {
+                        paymentId = rdr.GetFieldValue<Guid>(0);
+                    }
+                    else if (fieldType == typeof(long) || fieldType == typeof(int) || fieldType == typeof(short))
+                    {
+                        // Legacy support: if payment_id is stored as bigint/int, we need to handle this differently
+                        // For now, throw a more descriptive error
+                        var longId = rdr.GetInt64(0);
+                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Found payment_id as long: {longId}");
+                        // Create a deterministic Guid from the long value
+                        var bytes = new byte[16];
+                        var longBytes = BitConverter.GetBytes(longId);
+                        Array.Copy(longBytes, 0, bytes, 0, Math.Min(longBytes.Length, 8));
+                        // Fill remaining bytes with zeros for consistency
+                        paymentId = new Guid(bytes);
+                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Converted long {longId} to Guid {paymentId}");
+                    }
+                    else if (fieldType == typeof(string))
+                    {
+                        var strId = rdr.GetString(0);
+                        paymentId = Guid.Parse(strId);
+                    }
+                    else
+                    {
+                        // Try to get as object and convert
+                        var obj = rdr.GetValue(0);
+                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: payment_id as object: {obj?.GetType().FullName} = {obj}");
+                        if (obj is Guid guid)
+                        {
+                            paymentId = guid;
+                        }
+                        else if (obj is long l)
+                        {
+                            var bytes = new byte[16];
+                            var longBytes = BitConverter.GetBytes(l);
+                            Array.Copy(longBytes, 0, bytes, 0, Math.Min(longBytes.Length, 8));
+                            paymentId = new Guid(bytes);
+                        }
+                        else
+                        {
+                            paymentId = Guid.Parse(obj?.ToString() ?? throw new InvalidOperationException($"Cannot convert payment_id from type {fieldType}"));
+                        }
+                    }
+                    
+                    list.Add(new PaymentDto(
+                        paymentId, 
+                        rdr.GetFieldValue<Guid>(1), 
+                        rdr.GetFieldValue<Guid>(2), 
+                        rdr.GetDecimal(3), 
+                        rdr.GetString(4), 
+                        rdr.GetDecimal(5),
+                        rdr.IsDBNull(6) ? null : rdr.GetString(6), 
+                        rdr.GetDecimal(7), 
+                        rdr.IsDBNull(8) ? null : rdr.GetString(8),
+                        rdr.IsDBNull(9) ? null : rdr.GetFieldValue<object>(9), 
+                        rdr.IsDBNull(10) ? null : rdr.GetString(10), 
+                        rdr.GetFieldValue<DateTimeOffset>(11)));
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Error reading payment row: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Exception type: {ex.GetType().FullName}");
+                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Stack trace: {ex.StackTrace}");
+                    if (ex.InnerException != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Inner exception: {ex.InnerException.Message}");
+                    }
+                    // Skip this row and continue
+                    continue;
+                }
+            }
+            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Successfully loaded {list.Count} payments");
+            return list;
         }
-        return list;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Exception: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Stack trace: {ex.StackTrace}");
+            throw;
+        }
     }
 }

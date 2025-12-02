@@ -50,7 +50,7 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [HttpGet("all")]
-    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> GetAllPaymentsAsync([FromQuery] int limit = 100, CancellationToken ct = default)
+    public async Task<ActionResult<IReadOnlyList<PaymentDto>>> GetAllPaymentsAsync([FromQuery] int limit = 1000, CancellationToken ct = default)
     {
         try
         {

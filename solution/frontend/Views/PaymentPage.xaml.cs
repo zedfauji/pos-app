@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using MagiDesk.Frontend.ViewModels;
 using MagiDesk.Frontend.Services;
 using MagiDesk.Frontend.Dialogs;
@@ -23,10 +24,22 @@ public sealed partial class PaymentPage : Page
         Loaded += PaymentPage_Loaded;
     }
 
-    private async void PaymentPage_Loaded(object sender, RoutedEventArgs e)
+    protected override void OnNavigatedTo(NavigationEventArgs e)
+    {
+        base.OnNavigatedTo(e);
+        // Refresh bills list when returning to this page (e.g., after payment processing)
+        _ = RefreshBillsAsync();
+    }
+
+    private async Task RefreshBillsAsync()
     {
         await ViewModel.LoadUnsettledBillsAsync();
         PopulateFilterOptions();
+    }
+
+    private async void PaymentPage_Loaded(object sender, RoutedEventArgs e)
+    {
+        await RefreshBillsAsync();
     }
 
     private async void RefreshButton_Click(object sender, RoutedEventArgs e)
@@ -219,6 +232,7 @@ public sealed partial class PaymentPage : Page
             }
         }
     }
+
 
     private void PopulateFilterOptions()
     {

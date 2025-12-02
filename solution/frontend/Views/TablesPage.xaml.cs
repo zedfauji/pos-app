@@ -325,7 +325,7 @@ public class AddItemRow : INotifyPropertyChanged
         var rows = await _repo.GetAllAsync();
         foreach (var r in rows)
         {
-            var item = new TableItem(r.Label) { Occupied = r.Occupied };
+            var item = new TableItem(r.Label, r.Type) { Occupied = r.Occupied };
             item.OrderId = r.OrderId; item.StartTime = r.StartTime; item.Server = r.Server;
             if (r.Type == "billiard") BilliardTables.Add(item);
             else BarTables.Add(item);
@@ -340,7 +340,7 @@ public class AddItemRow : INotifyPropertyChanged
             // Populate UI immediately
             foreach (var rec in toInsert)
             {
-                var item = new TableItem(rec.Label) { Occupied = rec.Occupied };
+                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
                 if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
             }
         }
@@ -352,7 +352,7 @@ public class AddItemRow : INotifyPropertyChanged
             for (int i = 1; i <= 10; i++) toInsert.Add(new TableStatusDto { Label = $"Bar {i}", Type = "bar", Occupied = false });
             foreach (var rec in toInsert)
             {
-                var item = new TableItem(rec.Label) { Occupied = rec.Occupied };
+                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
                 if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
             }
             try { await _repo.UpsertManyAsync(toInsert); } catch { }
@@ -434,6 +434,7 @@ public class AddItemRow : INotifyPropertyChanged
                 {
                     item.Occupied = rec.Occupied;
                     item.OrderId = rec.OrderId; item.StartTime = rec.StartTime; item.Server = rec.Server;
+                    item.Type = rec.Type; // Update table type
                     // If occupied but start time missing, try local cache
                     if (item.Occupied && !item.StartTime.HasValue && timers.TryGetValue(item.Label, out var cached))
                     {
@@ -1251,6 +1252,424 @@ public class AddItemRow : INotifyPropertyChanged
         }
     }
 
+    // Bar table specific handlers
+    private void OpenTableMenu_Click(object sender, RoutedEventArgs e)
+    {
+        // Same as StartMenu_Click but for bar tables
+        StartMenu_Click(sender, e);
+    }
+
+    private void CloseTableMenu_Click(object sender, RoutedEventArgs e)
+    {
+        // Same as StopMenu_Click but for bar tables
+        StopMenu_Click(sender, e);
+    }
+
+    private async void CheckSummaryMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        
+        if (!item.Occupied)
+        {
+            await new ContentDialog
+            {
+                Title = "Table Not Occupied",
+                Content = $"Table {item.Label} is not currently occupied.",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+            return;
+        }
+
+        try
+        {
+            // Get session info
+            var (sessionId, billingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
+            
+            // Get items from session (legacy items stored in table_sessions)
+            var sessionItems = new List<MagiDesk.Shared.DTOs.Tables.ItemLine>();
+            if (!string.IsNullOrWhiteSpace(item.Label))
+            {
+                sessionItems = await _repo.GetSessionItemsAsync(item.Label);
+            }
+
+            // Get orders with their items if session exists
+            var orders = new List<Services.OrderApiService.OrderDto>();
+            var allOrderItems = new List<(long OrderId, Services.OrderApiService.OrderItemDto Item)>();
+            
+            if (sessionId.HasValue)
+            {
+                var ordersSvc = App.OrdersApi;
+                if (ordersSvc != null)
+                {
+                    var orderList = await ordersSvc.GetOrdersBySessionAsync(sessionId.Value, includeHistory: true);
+                    orders = orderList.ToList();
+                    
+                    // Collect all items from all orders
+                    foreach (var order in orders)
+                    {
+                        if (order.Items != null)
+                        {
+                            foreach (var orderItem in order.Items)
+                            {
+                                allOrderItems.Add((order.Id, orderItem));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Build summary content
+            var summaryContent = new StackPanel { Spacing = 16 };
+            
+            // Table Info Section
+            var tableInfoBorder = new Border
+            {
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+                CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
+                Padding = new Microsoft.UI.Xaml.Thickness(12)
+            };
+            var tableInfoPanel = new StackPanel { Spacing = 4 };
+            tableInfoPanel.Children.Add(new TextBlock
+            {
+                Text = "Table Information",
+                FontSize = 16,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold
+            });
+            tableInfoPanel.Children.Add(new TextBlock
+            {
+                Text = $"Table: {item.Label}",
+                FontSize = 14
+            });
+            tableInfoPanel.Children.Add(new TextBlock
+            {
+                Text = $"Server: {item.Server ?? "N/A"}",
+                FontSize = 14
+            });
+            tableInfoPanel.Children.Add(new TextBlock
+            {
+                Text = $"Start Time: {item.StartTime?.ToLocalTime().ToString("g") ?? "N/A"}",
+                FontSize = 14
+            });
+            if (sessionId.HasValue)
+            {
+                tableInfoPanel.Children.Add(new TextBlock
+                {
+                    Text = $"Session ID: {sessionId.Value:D}",
+                    FontSize = 12,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 4, 0, 0)
+                });
+            }
+            tableInfoBorder.Child = tableInfoPanel;
+            summaryContent.Children.Add(tableInfoBorder);
+
+            // Orders Section
+            if (orders.Count > 0)
+            {
+                var ordersHeader = new TextBlock
+                {
+                    Text = $"Orders ({orders.Count})",
+                    FontSize = 16,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 8)
+                };
+                summaryContent.Children.Add(ordersHeader);
+
+                foreach (var order in orders)
+                {
+                    var orderBorder = new Border
+                    {
+                        Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                        BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                        BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+                        CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
+                        Padding = new Microsoft.UI.Xaml.Thickness(12),
+                        Margin = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 8)
+                    };
+                    var orderPanel = new StackPanel { Spacing = 8 };
+                    
+                    // Order Header
+                    var orderHeader = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+                    orderHeader.Children.Add(new TextBlock
+                    {
+                        Text = $"Order #{order.Id}",
+                        FontSize = 14,
+                        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+                    });
+                    orderHeader.Children.Add(new TextBlock
+                    {
+                        Text = $"Status: {order.Status}",
+                        FontSize = 12,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray)
+                    });
+                    orderPanel.Children.Add(orderHeader);
+
+                    // Order Items
+                    if (order.Items != null && order.Items.Count > 0)
+                    {
+                        var itemsHeader = new TextBlock
+                        {
+                            Text = "Items:",
+                            FontSize = 12,
+                            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                            Margin = new Microsoft.UI.Xaml.Thickness(0, 4, 0, 4)
+                        };
+                        orderPanel.Children.Add(itemsHeader);
+
+                        var itemsList = new StackPanel { Spacing = 4, Margin = new Microsoft.UI.Xaml.Thickness(8, 0, 0, 0) };
+                        decimal orderTotal = 0;
+                        foreach (var orderItem in order.Items)
+                        {
+                            var itemPrice = orderItem.BasePrice + orderItem.PriceDelta;
+                            var itemTotal = itemPrice * orderItem.Quantity;
+                            orderTotal += itemTotal;
+                            
+                            var itemText = new TextBlock
+                            {
+                                Text = $"  • Item #{orderItem.MenuItemId?.ToString() ?? orderItem.ComboId?.ToString() ?? "Unknown"} x{orderItem.Quantity} @ {itemPrice:C2} = {itemTotal:C2}",
+                                FontSize = 12,
+                                TextWrapping = TextWrapping.Wrap
+                            };
+                            itemsList.Children.Add(itemText);
+                        }
+                        orderPanel.Children.Add(itemsList);
+
+                        var orderTotalText = new TextBlock
+                        {
+                            Text = $"Order Total: {orderTotal:C2}",
+                            FontSize = 13,
+                            FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                            Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0)
+                        };
+                        orderPanel.Children.Add(orderTotalText);
+                    }
+                    else
+                    {
+                        orderPanel.Children.Add(new TextBlock
+                        {
+                            Text = "No items in this order.",
+                            FontSize = 12,
+                            Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                            Margin = new Microsoft.UI.Xaml.Thickness(8, 4, 0, 0)
+                        });
+                    }
+
+                    orderBorder.Child = orderPanel;
+                    summaryContent.Children.Add(orderBorder);
+                }
+            }
+
+            // Session Items Section (legacy items not in orders)
+            if (sessionItems.Count > 0)
+            {
+                var sessionItemsHeader = new TextBlock
+                {
+                    Text = "Session Items (Legacy)",
+                    FontSize = 16,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 8)
+                };
+                summaryContent.Children.Add(sessionItemsHeader);
+
+                var sessionItemsBorder = new Border
+                {
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                    BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                    BorderThickness = new Microsoft.UI.Xaml.Thickness(1),
+                    CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
+                    Padding = new Microsoft.UI.Xaml.Thickness(12)
+                };
+                var sessionItemsList = new StackPanel { Spacing = 4 };
+                decimal sessionTotal = 0;
+                foreach (var itemLine in sessionItems)
+                {
+                    var itemTotal = itemLine.price * itemLine.quantity;
+                    sessionTotal += itemTotal;
+                    var itemText = new TextBlock
+                    {
+                        Text = $"  • {itemLine.name} x{itemLine.quantity} @ {itemLine.price:C2} = {itemTotal:C2}",
+                        FontSize = 12,
+                        TextWrapping = TextWrapping.Wrap
+                    };
+                    sessionItemsList.Children.Add(itemText);
+                }
+                sessionItemsList.Children.Add(new TextBlock
+                {
+                    Text = $"Session Items Total: {sessionTotal:C2}",
+                    FontSize = 13,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0)
+                });
+                sessionItemsBorder.Child = sessionItemsList;
+                summaryContent.Children.Add(sessionItemsBorder);
+            }
+
+            // Grand Total
+            if (orders.Count > 0 || sessionItems.Count > 0)
+            {
+                decimal grandTotal = orders.Sum(o => o.Items?.Sum(i => (i.BasePrice + i.PriceDelta) * i.Quantity) ?? 0m) +
+                                    sessionItems.Sum(i => i.price * i.quantity);
+                
+                var grandTotalBorder = new Border
+                {
+                    Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.DarkBlue),
+                    CornerRadius = new Microsoft.UI.Xaml.CornerRadius(8),
+                    Padding = new Microsoft.UI.Xaml.Thickness(12),
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 8, 0, 0)
+                };
+                var grandTotalText = new TextBlock
+                {
+                    Text = $"Grand Total: {grandTotal:C2}",
+                    FontSize = 16,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White)
+                };
+                grandTotalBorder.Child = grandTotalText;
+                summaryContent.Children.Add(grandTotalBorder);
+            }
+
+            // Empty State
+            if (orders.Count == 0 && sessionItems.Count == 0)
+            {
+                var emptyState = new TextBlock
+                {
+                    Text = "No orders or items found for this table.",
+                    FontSize = 14,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Center,
+                    Margin = new Microsoft.UI.Xaml.Thickness(0, 20, 0, 0)
+                };
+                summaryContent.Children.Add(emptyState);
+            }
+
+            var scrollViewer = new ScrollViewer
+            {
+                Content = summaryContent,
+                MaxHeight = 600,
+                VerticalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto
+            };
+
+            await new ContentDialog
+            {
+                Title = $"Table Summary - {item.Label}",
+                Content = scrollViewer,
+                CloseButtonText = "Close",
+                XamlRoot = this.XamlRoot,
+                DefaultButton = ContentDialogButton.Close
+            }.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            await new ContentDialog
+            {
+                Title = "Error",
+                Content = $"Failed to load table summary: {ex.Message}",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+        }
+    }
+
+    private async void AssignToBilliardMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
+        
+        if (!item.Occupied)
+        {
+            await new ContentDialog
+            {
+                Title = "Table Not Occupied",
+                Content = $"Table {item.Label} is not currently occupied.",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+            return;
+        }
+
+        // Get free billiard tables
+        var allTables = await _repo.GetAllAsync();
+        var freeBilliardTables = allTables
+            .Where(t => t.Type?.ToLower() == "billiard" && !t.Occupied)
+            .Select(t => t.Label)
+            .OrderBy(l => l)
+            .ToList();
+
+        if (freeBilliardTables.Count == 0)
+        {
+            await new ContentDialog
+            {
+                Title = "No Free Billiard Tables",
+                Content = "There are no available billiard tables to assign to.",
+                CloseButtonText = "OK",
+                XamlRoot = this.XamlRoot
+            }.ShowAsync();
+            return;
+        }
+
+        var combo = new ComboBox 
+        { 
+            ItemsSource = freeBilliardTables, 
+            SelectedIndex = 0, 
+            Width = 280,
+            Header = "Select Billiard Table:"
+        };
+        
+        var dlg = new ContentDialog
+        {
+            Title = $"Assign {item.Label} to Billiard Table",
+            Content = combo,
+            PrimaryButtonText = "Assign",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+        
+        var res = await dlg.ShowAsync();
+        if (res == ContentDialogResult.Primary && combo.SelectedItem is string targetBilliardTable)
+        {
+            try
+            {
+                // Move table (this will move the session and items)
+                var moveResult = await _repo.MoveSessionAsync(item.Label, targetBilliardTable);
+                
+                if (moveResult.ok)
+                {
+                    await RefreshFromStoreAsync();
+                    await new ContentDialog
+                    {
+                        Title = "Success",
+                        Content = $"Table {item.Label} has been assigned to {targetBilliardTable}.\n\nAll items and session data have been moved.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    }.ShowAsync();
+                }
+                else
+                {
+                    await new ContentDialog
+                    {
+                        Title = "Assignment Failed",
+                        Content = moveResult.message ?? "Failed to assign table to billiard table.",
+                        CloseButtonText = "OK",
+                        XamlRoot = this.XamlRoot
+                    }.ShowAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await new ContentDialog
+                {
+                    Title = "Error",
+                    Content = $"Failed to assign table: {ex.Message}",
+                    CloseButtonText = "OK",
+                    XamlRoot = this.XamlRoot
+                }.ShowAsync();
+            }
+        }
+    }
+
     private async void AddItemsMenu_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
@@ -1392,9 +1811,10 @@ public class TableItem : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public TableItem(string label)
+    public TableItem(string label, string type = "billiard")
     {
         _label = label;
+        _type = type;
         UpdateBrush();
     }
 
@@ -1404,6 +1824,23 @@ public class TableItem : INotifyPropertyChanged
         get => _label;
         set { _label = value; OnPropertyChanged(); }
     }
+
+    private string _type = "billiard";
+    public string Type
+    {
+        get => _type;
+        set 
+        { 
+            _type = value; 
+            OnPropertyChanged(); 
+            OnPropertyChanged(nameof(HasTimer));
+            OnPropertyChanged(nameof(IsBarTable));
+            OnPropertyChanged(nameof(IsBilliardTable));
+        }
+    }
+
+    public bool IsBarTable => Type.ToLower() == "bar";
+    public bool IsBilliardTable => Type.ToLower() == "billiard";
 
     private bool _occupied;
     public bool Occupied
@@ -1442,7 +1879,7 @@ public class TableItem : INotifyPropertyChanged
     }
 
     // Shows only for billiard tables when a session is running
-    public bool HasTimer => Occupied && StartTime.HasValue;
+    public bool HasTimer => Type.ToLower() == "billiard" && Occupied && StartTime.HasValue;
 
     public string ElapsedMinutesText
     {

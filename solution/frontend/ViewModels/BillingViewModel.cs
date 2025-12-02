@@ -40,9 +40,9 @@ namespace MagiDesk.Frontend.ViewModels
             ExportCommand = new Services.RelayCommand(async _ => await ExportDataAsync());
             ClearFiltersCommand = new Services.RelayCommand(_ => ClearFilters());
             
-            // Initialize date ranges
+            // Initialize date ranges - set ToDate to end of tomorrow to include all bills including today and future bills
             FromDate = DateTimeOffset.Now.AddDays(-30);
-            ToDate = DateTimeOffset.Now;
+            ToDate = DateTimeOffset.Now.Date.AddDays(2).AddTicks(-1); // End of tomorrow to include all bills
             
             // Load initial data
             _ = LoadBillsAsync();
@@ -71,6 +71,8 @@ namespace MagiDesk.Frontend.ViewModels
                 _filteredBills = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(FilteredBillsCount));
+                OnPropertyChanged(nameof(HasBills));
+                OnPropertyChanged(nameof(HasEmptyState));
             }
         }
 
@@ -140,6 +142,8 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 _isLoading = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(HasBills));
+                OnPropertyChanged(nameof(HasEmptyState));
             }
         }
 
@@ -152,10 +156,16 @@ namespace MagiDesk.Frontend.ViewModels
                 _errorMessage = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(HasError));
+                OnPropertyChanged(nameof(HasBills));
+                OnPropertyChanged(nameof(HasEmptyState));
             }
         }
 
         public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+        
+        public bool HasBills => !IsLoading && !HasError && FilteredBills.Count > 0;
+        
+        public bool HasEmptyState => !IsLoading && !HasError && FilteredBills.Count == 0;
 
         #endregion
 
@@ -321,6 +331,8 @@ namespace MagiDesk.Frontend.ViewModels
                     
                     CalculateAnalytics();
                     ApplyFiltersInternal();
+                    OnPropertyChanged(nameof(HasBills));
+                    OnPropertyChanged(nameof(HasEmptyState));
                     _logger?.LogInformation("UI updated with {BillCount} bills", Bills.Count);
                 });
             }
@@ -393,6 +405,9 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 FilteredBills.Add(bill);
             }
+            
+            OnPropertyChanged(nameof(HasBills));
+            OnPropertyChanged(nameof(HasEmptyState));
         }
 
         public void ClearFilters()
@@ -599,8 +614,18 @@ namespace MagiDesk.Frontend.ViewModels
             SessionId = bill.SessionId;
             Items = bill.Items ?? new List<ItemLine>();
             
-            // Calculate total from actual items instead of using pre-calculated amount
-            Amount = CalculateTotal();
+            // Use TotalAmount from API response as primary source
+            // Only calculate from items if TotalAmount is 0 or missing and we have items
+            if (bill.TotalAmount > 0)
+            {
+                Amount = bill.TotalAmount;
+            }
+            else
+            {
+                // Fall back to calculating from items if TotalAmount is not available
+                var calculatedTotal = CalculateTotal();
+                Amount = calculatedTotal > 0 ? calculatedTotal : bill.TotalAmount;
+            }
             
             // For now, assume bills are closed if they have an EndTime
             IsClosed = bill.EndTime != default(DateTime);
