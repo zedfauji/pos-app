@@ -43,8 +43,16 @@ public sealed partial class TablesPage : Page
         get => _selectedFloor;
         set
         {
-            _selectedFloor = value;
-            _ = LoadFromDatabaseAsync();
+            if (_selectedFloor?.FloorId != value?.FloorId)
+            {
+                _selectedFloor = value;
+                // Only auto-load if we're not in the initial load sequence
+                // TablesPage_Loaded will handle the initial load explicitly
+                if (this.IsLoaded)
+                {
+                    _ = LoadFromDatabaseAsync();
+                }
+            }
         }
     }
 
@@ -352,10 +360,19 @@ public class AddItemRow : INotifyPropertyChanged
         BilliardTables.Clear();
         BarTables.Clear();
         
+        // Don't load tables if no floor is selected - prevents loading all tables from all floors
+        if (SelectedFloor == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: No floor selected, skipping table load");
+            ApplyFilter();
+            UpdateStatus();
+            return;
+        }
+        
         try
         {
-            // Try loading from new multi-floor API first
-            var tables = await _floorsService.GetAllTablesAsync(SelectedFloor?.FloorId);
+            // Try loading from new multi-floor API first - MUST pass floorId to filter correctly
+            var tables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
             
             if (tables != null && tables.Count > 0)
             {
@@ -386,10 +403,80 @@ public class AddItemRow : INotifyPropertyChanged
         }
         
         // Fallback to old API for backward compatibility
+        // NOTE: Old API doesn't support floor filtering, so we need to filter manually
+        // This fallback should only be used if the new API completely fails
+        System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: New API failed or returned no results, using fallback");
         await _repo.EnsureSchemaAsync();
         var rows = await _repo.GetAllAsync();
+        
+        // If we have a selected floor, try to filter by getting tables from the new API again
+        // This ensures we don't show tables from wrong floors
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                // Try one more time to get floor-specific tables
+                var floorTables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                if (floorTables != null && floorTables.Count > 0)
+                {
+                    // Use the floor-specific tables instead of all tables
+                    foreach (var table in floorTables.Where(t => t.IsActive))
+                    {
+                        var item = new TableItem(table.TableName, table.TableType)
+                        {
+                            Occupied = table.Status == "occupied",
+                            OrderId = table.OrderId,
+                            StartTime = table.StartTime,
+                            Server = table.Server
+                        };
+                        
+                        if (table.TableType == "billiard")
+                            BilliardTables.Add(item);
+                        else if (table.TableType == "bar")
+                            BarTables.Add(item);
+                    }
+                    ApplyFilter();
+                    UpdateStatus();
+                    return;
+                }
+            }
+            catch (Exception ex2)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Second attempt also failed: {ex2.Message}");
+            }
+        }
+        
+        // Last resort: use old API but try to filter by floor if possible
+        System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: WARNING - Using old API, attempting floor-based filtering");
+        
+        // Get list of table names that belong to the selected floor for filtering
+        HashSet<string>? validTableNames = null;
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                var floorTables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                if (floorTables != null && floorTables.Count > 0)
+                {
+                    validTableNames = new HashSet<string>(floorTables.Select(t => t.TableName), StringComparer.OrdinalIgnoreCase);
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Filtering old API results to {validTableNames.Count} tables from selected floor");
+                }
+            }
+            catch (Exception ex3)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Could not get floor table list for filtering: {ex3.Message}");
+            }
+        }
+        
         foreach (var r in rows)
         {
+            // Filter out tables that don't belong to the selected floor
+            if (validTableNames != null && !validTableNames.Contains(r.Label))
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Filtering out table '{r.Label}' (not in selected floor)");
+                continue;
+            }
+            
             var item = new TableItem(r.Label, r.Type) { Occupied = r.Occupied };
             item.OrderId = r.OrderId; item.StartTime = r.StartTime; item.Server = r.Server;
             if (r.Type == "billiard") BilliardTables.Add(item);
@@ -411,10 +498,16 @@ public class AddItemRow : INotifyPropertyChanged
                 Floors.Add(floor);
             }
             
-            // Select default floor if available
+            // Select default floor if available - but don't trigger LoadFromDatabaseAsync yet
+            // We'll do that explicitly in TablesPage_Loaded after floors are loaded
             if (SelectedFloor == null)
             {
-                SelectedFloor = Floors.FirstOrDefault(f => f.IsDefault) ?? Floors.FirstOrDefault();
+                var defaultFloor = Floors.FirstOrDefault(f => f.IsDefault) ?? Floors.FirstOrDefault();
+                if (defaultFloor != null)
+                {
+                    // Set without triggering LoadFromDatabaseAsync
+                    _selectedFloor = defaultFloor;
+                }
             }
             
             // Update ListView selection
@@ -1077,11 +1170,51 @@ public class AddItemRow : INotifyPropertyChanged
 
     private async Task RefreshFromStoreAsync(bool skipLayoutReload = false)
     {
-        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Starting, skipLayoutReload={skipLayoutReload}, StackTrace={Environment.StackTrace}");
-        // Load latest tables
-        var rows = await _repo.GetAllAsync();
-        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Loaded {rows.Count} tables from API");
-        var dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Starting, skipLayoutReload={skipLayoutReload}, SelectedFloor={SelectedFloor?.FloorName ?? "null"}");
+        
+        // Use the new floor-aware API if we have a selected floor, otherwise use old API for status updates only
+        Dictionary<string, TableStatusDto> dict;
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                // Get tables from the correct floor using the new API
+                var tables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Loaded {tables?.Count ?? 0} tables from floor-aware API");
+                
+                // Convert TableLayoutDto to TableStatusDto for compatibility
+                dict = new Dictionary<string, TableStatusDto>(StringComparer.OrdinalIgnoreCase);
+                if (tables != null)
+                {
+                    foreach (var table in tables)
+                    {
+                        dict[table.TableName] = new TableStatusDto
+                        {
+                            Label = table.TableName,
+                            Type = table.TableType,
+                            Occupied = table.Status == "occupied",
+                            OrderId = table.OrderId,
+                            StartTime = table.StartTime,
+                            Server = table.Server
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Error loading from floor-aware API: {ex.Message}, falling back to old API");
+                // Fallback to old API
+                var rows = await _repo.GetAllAsync();
+                dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        else
+        {
+            // No floor selected - use old API (but this shouldn't happen in normal flow)
+            var rows = await _repo.GetAllAsync();
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Loaded {rows.Count} tables from old API (no floor selected)");
+            dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        }
         // Load local timers cache for offline resiliency
         var timers = LoadTimersCache();
         var thresholds = LoadThresholdsCache();
