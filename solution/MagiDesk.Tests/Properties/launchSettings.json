@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "MagiDesk.Tests": {
-      "commandName": "Project",
-      "commandLineArgs": "--filter \"RealUI_DiscoverAndInteractWithRealElements\" --logger \"console;verbosity=detailed\""
-    }
-  }
-}
