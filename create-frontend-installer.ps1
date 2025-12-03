@@ -9,7 +9,7 @@ param(
 Write-Host "Creating MagiDesk Frontend Standalone Installer..." -ForegroundColor Green
 
 # Set paths
-$PublishPath = "frontend/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish"
+$PublishPath = "solution/frontend/bin/Release/net8.0-windows10.0.19041.0/win-x64/publish"
 $InstallerPath = $OutputPath
 
 # Check if publish directory exists

@@ -612,6 +612,18 @@ app.MapPost("/tables/{label}/start", async (string label, StartSessionRequest re
         upd.Parameters.AddWithValue("@srv", (object?)req.ServerName ?? DBNull.Value);
         await upd.ExecuteNonQueryAsync();
     }
+    
+    // CRITICAL: Also update public.tables.status to keep in sync
+    const string updateTablesStatus = @"UPDATE public.tables 
+                                       SET status = 'occupied', start_time = @st, server = @srv, updated_at = now()
+                                       WHERE table_name = @label";
+    await using (var updTables = new NpgsqlCommand(updateTablesStatus, conn))
+    {
+        updTables.Parameters.AddWithValue("@label", label);
+        updTables.Parameters.AddWithValue("@st", now);
+        updTables.Parameters.AddWithValue("@srv", (object?)req.ServerName ?? DBNull.Value);
+        await updTables.ExecuteNonQueryAsync();
+    }
 
     return Results.Ok(new { session_id = sessionId, billing_id = billingId, start_time = now });
 });
@@ -769,12 +781,22 @@ app.MapPost("/tables/{label}/stop", async (string label) =>
         await bill.ExecuteNonQueryAsync();
     }
 
-    // Mark table available
+    // Mark table available in table_status
     const string freeSql = @"UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL, updated_at = now() WHERE label = @l";
     await using (var free = new NpgsqlCommand(freeSql, conn))
     {
         free.Parameters.AddWithValue("@l", label);
         await free.ExecuteNonQueryAsync();
+    }
+    
+    // CRITICAL: Also update public.tables.status to keep in sync
+    const string updateTablesStatus = @"UPDATE public.tables 
+                                       SET status = 'available', start_time = NULL, server = NULL, updated_at = now()
+                                       WHERE table_name = @label";
+    await using (var updTables = new NpgsqlCommand(updateTablesStatus, conn))
+    {
+        updTables.Parameters.AddWithValue("@label", label);
+        await updTables.ExecuteNonQueryAsync();
     }
 
     return Results.Ok(new BillResult
@@ -2127,6 +2149,10 @@ app.MapPost("/floors/{floorId:guid}/tables", async (Guid floorId, CreateTableLay
     await using var rdr = await cmd.ExecuteReaderAsync();
     if (await rdr.ReadAsync())
     {
+        var tableName = rdr.GetString(2);
+        var tableType = rdr.GetString(4);
+        var status = rdr.GetString(11);
+        
         var groupingTags = new List<string>();
         if (!rdr.IsDBNull(15))
         {
@@ -2134,20 +2160,33 @@ app.MapPost("/floors/{floorId:guid}/tables", async (Guid floorId, CreateTableLay
             groupingTags.AddRange(tagsArray);
         }
         
+        // CRITICAL: Also create/update entry in table_status for session management
+        const string syncStatusSql = @"INSERT INTO public.table_status(label, type, occupied, order_id, start_time, server)
+                                      VALUES(@label, @type, @occupied, NULL, NULL, NULL)
+                                      ON CONFLICT (label) DO UPDATE SET 
+                                          type = EXCLUDED.type,
+                                          occupied = EXCLUDED.occupied,
+                                          updated_at = now()";
+        await using var syncCmd = new NpgsqlCommand(syncStatusSql, conn);
+        syncCmd.Parameters.AddWithValue("@label", tableName);
+        syncCmd.Parameters.AddWithValue("@type", tableType);
+        syncCmd.Parameters.AddWithValue("@occupied", status == "occupied");
+        await syncCmd.ExecuteNonQueryAsync();
+        
         return Results.Ok(new TableLayoutDto
         {
             TableId = rdr.GetGuid(0),
             FloorId = rdr.GetGuid(1),
-            TableName = rdr.GetString(2),
+            TableName = tableName,
             TableNumber = rdr.IsDBNull(3) ? null : rdr.GetString(3),
-            TableType = rdr.GetString(4),
+            TableType = tableType,
             XPosition = (double)rdr.GetDecimal(5),
             YPosition = (double)rdr.GetDecimal(6),
             Rotation = (double)rdr.GetDecimal(7),
             Size = rdr.GetString(8),
             Width = rdr.IsDBNull(9) ? null : (double)rdr.GetDecimal(9),
             Height = rdr.IsDBNull(10) ? null : (double)rdr.GetDecimal(10),
-            Status = rdr.GetString(11),
+            Status = status,
             BillingRate = rdr.GetDecimal(12),
             AutoStartTimer = rdr.GetBoolean(13),
             IconStyle = rdr.IsDBNull(14) ? null : rdr.GetString(14),
@@ -2205,7 +2244,38 @@ app.MapPut("/floors/{floorId:guid}/tables/{tableId:guid}", async (Guid floorId, 
     foreach (var p in parameters) cmd.Parameters.Add(p);
     var affected = await cmd.ExecuteNonQueryAsync();
     
-    return affected > 0 ? Results.Ok() : Results.NotFound();
+    if (affected > 0)
+    {
+        // CRITICAL: Sync to table_status when table is updated
+        // Get the updated table info to sync
+        const string getTableSql = "SELECT table_name, table_type, status FROM public.tables WHERE table_id = @tableId";
+        await using var getCmd = new NpgsqlCommand(getTableSql, conn);
+        getCmd.Parameters.AddWithValue("@tableId", tableId);
+        await using var getRdr = await getCmd.ExecuteReaderAsync();
+        
+        if (await getRdr.ReadAsync())
+        {
+            var tableName = getRdr.GetString(0);
+            var tableType = getRdr.GetString(1);
+            var status = getRdr.GetString(2);
+            
+            const string syncStatusSql = @"INSERT INTO public.table_status(label, type, occupied, order_id, start_time, server)
+                                          VALUES(@label, @type, @occupied, NULL, NULL, NULL)
+                                          ON CONFLICT (label) DO UPDATE SET 
+                                              type = EXCLUDED.type,
+                                              occupied = EXCLUDED.occupied,
+                                              updated_at = now()";
+            await using var syncCmd = new NpgsqlCommand(syncStatusSql, conn);
+            syncCmd.Parameters.AddWithValue("@label", tableName);
+            syncCmd.Parameters.AddWithValue("@type", tableType);
+            syncCmd.Parameters.AddWithValue("@occupied", status == "occupied");
+            await syncCmd.ExecuteNonQueryAsync();
+        }
+        
+        return Results.Ok();
+    }
+    
+    return Results.NotFound();
 });
 
 app.MapDelete("/floors/{floorId:guid}/tables/{tableId:guid}", async (Guid floorId, Guid tableId) =>
@@ -2215,11 +2285,31 @@ app.MapDelete("/floors/{floorId:guid}/tables/{tableId:guid}", async (Guid floorI
     await EnsureSchemaAsync(conn);
     await EnsureFloorsSchemaAsync(conn);
     
+    // Get table name before deleting for table_status cleanup
+    const string getTableNameSql = "SELECT table_name FROM public.tables WHERE table_id = @tableId AND floor_id = @floorId";
+    string? tableName = null;
+    await using (var getCmd = new NpgsqlCommand(getTableNameSql, conn))
+    {
+        getCmd.Parameters.AddWithValue("@tableId", tableId);
+        getCmd.Parameters.AddWithValue("@floorId", floorId);
+        var result = await getCmd.ExecuteScalarAsync();
+        if (result is string name) tableName = name;
+    }
+    
     const string sql = "DELETE FROM public.tables WHERE table_id = @tableId AND floor_id = @floorId";
     await using var cmd = new NpgsqlCommand(sql, conn);
     cmd.Parameters.AddWithValue("@tableId", tableId);
     cmd.Parameters.AddWithValue("@floorId", floorId);
     var deleted = await cmd.ExecuteNonQueryAsync();
+    
+    if (deleted > 0 && !string.IsNullOrEmpty(tableName))
+    {
+        // CRITICAL: Also delete from table_status to keep in sync
+        const string deleteStatusSql = "DELETE FROM public.table_status WHERE label = @label";
+        await using var deleteStatusCmd = new NpgsqlCommand(deleteStatusSql, conn);
+        deleteStatusCmd.Parameters.AddWithValue("@label", tableName);
+        await deleteStatusCmd.ExecuteNonQueryAsync();
+    }
     
     return deleted > 0 ? Results.Ok() : Results.NotFound();
 });
