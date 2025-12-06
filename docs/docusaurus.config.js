@@ -11,15 +11,15 @@ const config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://your-username.github.io',
+  url: 'https://zedfauji.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/Order-Tracking-By-GPT/',
+  baseUrl: '/pos-app/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'your-username', // Usually your GitHub org/user name.
-  projectName: 'Order-Tracking-By-GPT', // Usually your repo name.
+  organizationName: 'zedfauji', // Usually your GitHub org/user name.
+  projectName: 'pos-app', // Usually your repo name.
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -41,7 +41,7 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/your-username/Order-Tracking-By-GPT/tree/main/docs/',
+          editUrl: 'https://github.com/zedfauji/pos-app/tree/implement-rbac-api-cursor/docs/',
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
         },
@@ -72,7 +72,7 @@ const config = {
             label: 'Documentation',
           },
           {
-            href: 'https://github.com/your-username/Order-Tracking-By-GPT',
+            href: 'https://github.com/zedfauji/pos-app',
             label: 'GitHub',
             position: 'right',
           },
@@ -103,11 +103,11 @@ const config = {
             items: [
               {
                 label: 'GitHub',
-                href: 'https://github.com/your-username/Order-Tracking-By-GPT',
+                href: 'https://github.com/zedfauji/pos-app',
               },
               {
                 label: 'Issues',
-                href: 'https://github.com/your-username/Order-Tracking-By-GPT/issues',
+                href: 'https://github.com/zedfauji/pos-app/issues',
               },
             ],
           },
