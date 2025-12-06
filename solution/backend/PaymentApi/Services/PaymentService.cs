@@ -226,4 +226,117 @@ public sealed class PaymentService : IPaymentService
 
     public Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct)
         => _repo.GetAllPaymentsAsync(limit, ct);
+
+    public async Task<RefundDto> ProcessRefundAsync(Guid paymentId, ProcessRefundRequestDto request, string? serverId, CancellationToken ct)
+    {
+        // Validation
+        if (request.RefundAmount <= 0)
+            throw new InvalidOperationException("INVALID_REFUND_AMOUNT: Refund amount must be greater than zero");
+
+        if (string.IsNullOrWhiteSpace(request.RefundMethod))
+            throw new InvalidOperationException("INVALID_REFUND_METHOD: Refund method is required");
+
+        if (string.IsNullOrWhiteSpace(request.RefundReason))
+            throw new InvalidOperationException("INVALID_REFUND_REASON: Refund reason is required and cannot be empty");
+
+        RefundDto? refund = null;
+        await _repo.ExecuteInTransactionAsync(async (conn, tx, token) =>
+        {
+            // Get the payment to validate
+            var payment = await _repo.GetPaymentByIdAsync(paymentId, token);
+            if (payment == null)
+                throw new InvalidOperationException("PAYMENT_NOT_FOUND");
+
+            // Get total already refunded for this payment
+            var totalRefunded = await _repo.GetTotalRefundedAmountAsync(conn, tx, paymentId, token);
+            var remainingAmount = payment.AmountPaid - totalRefunded;
+
+            // Validate refund amount doesn't exceed remaining amount
+            if (request.RefundAmount > remainingAmount)
+                throw new InvalidOperationException($"INVALID_REFUND_AMOUNT: Refund amount ({request.RefundAmount:C}) exceeds remaining refundable amount ({remainingAmount:C})");
+
+            // Get old ledger state for logging
+            var oldLedger = await _repo.GetLedgerAsync(payment.BillingId, token);
+
+            // Insert refund record
+            refund = await _repo.InsertRefundAsync(
+                conn, tx,
+                paymentId,
+                payment.BillingId,
+                payment.SessionId,
+                request.RefundAmount,
+                request.RefundReason,
+                request.RefundMethod,
+                request.ExternalRef,
+                request.Meta,
+                serverId,
+                token
+            );
+
+            // Update ledger with negative delta (refund reduces total_paid)
+            var (due, disc, paid, tip, status) = await _repo.UpsertLedgerAsync(
+                conn, tx,
+                payment.SessionId,
+                payment.BillingId,
+                null, // Don't change total_due
+                (-request.RefundAmount, 0m, 0m), // Negative delta for refund
+                token
+            );
+
+            var newLedger = new BillLedgerDto(payment.BillingId, payment.SessionId, due, disc, paid, tip, status);
+
+            // Log refund action
+            await _repo.AppendLogAsync(
+                conn, tx,
+                payment.BillingId,
+                payment.SessionId,
+                "process_refund",
+                oldLedger,
+                new { refund, ledger = newLedger },
+                serverId,
+                token
+            );
+
+            // Notify TablesApi to update bill payment_state (best-effort)
+            try
+            {
+                var tablesBase = Environment.GetEnvironmentVariable("TABLESAPI_BASEURL")
+                    ?? _config["TablesApi:BaseUrl"];
+
+                if (!string.IsNullOrWhiteSpace(tablesBase))
+                {
+                    using var http = new HttpClient(new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator })
+                    { BaseAddress = new Uri(tablesBase.TrimEnd('/') + "/") };
+
+                    // Update bill payment_state based on refund status
+                    var updateUrl = $"bills/by-billing/{Uri.EscapeDataString(payment.BillingId.ToString())}/payment-state";
+                    var stateUpdate = new { PaymentState = status };
+                    using var res = await http.PutAsJsonAsync(updateUrl, stateUpdate, token);
+                    
+                    if (res.IsSuccessStatusCode)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: Successfully updated TablesApi bill payment_state to {status}");
+                    }
+                    else
+                    {
+                        var errorContent = await res.Content.ReadAsStringAsync(token);
+                        System.Diagnostics.Debug.WriteLine($"PaymentService: TablesApi payment_state update failed: {errorContent}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PaymentService: Exception while updating TablesApi payment_state: {ex.Message}");
+                // Don't fail the refund if TablesApi update fails
+            }
+        }, ct);
+
+        return refund!;
+    }
+
+    public Task<IReadOnlyList<RefundDto>> GetRefundsByPaymentIdAsync(Guid paymentId, CancellationToken ct)
+        => _repo.GetRefundsByPaymentIdAsync(paymentId, ct);
+
+    public Task<IReadOnlyList<RefundDto>> GetRefundsByBillingIdAsync(Guid billingId, CancellationToken ct)
+        => _repo.GetRefundsByBillingIdAsync(billingId, ct);
 }

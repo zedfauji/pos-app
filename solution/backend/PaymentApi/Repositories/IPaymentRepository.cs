@@ -18,4 +18,12 @@ public interface IPaymentRepository
     Task<(IReadOnlyList<PaymentLogDto> Items, int Total)> ListLogsAsync(Guid billingId, int page, int pageSize, CancellationToken ct);
 
     Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct);
+
+    // Refund methods
+    Task<RefundDto> InsertRefundAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid paymentId, Guid billingId, Guid sessionId, decimal refundAmount, string? refundReason, string refundMethod, string? externalRef, object? meta, string? createdBy, CancellationToken ct);
+    Task<IReadOnlyList<RefundDto>> GetRefundsByPaymentIdAsync(Guid paymentId, CancellationToken ct);
+    Task<IReadOnlyList<RefundDto>> GetRefundsByBillingIdAsync(Guid billingId, CancellationToken ct);
+    Task<decimal> GetTotalRefundedAmountAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid paymentId, CancellationToken ct);
+    Task<decimal> GetTotalRefundedAmountByBillingIdAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid billingId, CancellationToken ct);
+    Task<PaymentDto?> GetPaymentByIdAsync(Guid paymentId, CancellationToken ct);
 }

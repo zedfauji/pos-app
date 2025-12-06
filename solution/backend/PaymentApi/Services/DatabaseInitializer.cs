@@ -135,6 +135,62 @@ create table if not exists pay.payment_logs (
 );
 create index if not exists ix_payment_logs_billing on pay.payment_logs(billing_id);
 
+-- Refunds table
+create table if not exists pay.refunds (
+  refund_id         uuid primary key default gen_random_uuid(),
+  payment_id        uuid not null,
+  billing_id        uuid not null,
+  session_id        uuid not null,
+  refund_amount     numeric(12,2) not null check (refund_amount > 0),
+  refund_reason     text null,
+  refund_method     text not null default 'original', -- 'original', 'cash', 'wallet', 'card', 'upi'
+  external_ref      text null, -- For external payment processor refund reference
+  meta              jsonb null,
+  created_by        text null,
+  created_at        timestamptz not null default now(),
+  -- Constraints
+  CONSTRAINT refunds_immutable_refund_id CHECK (refund_id IS NOT NULL),
+  CONSTRAINT refunds_immutable_billing_id CHECK (billing_id IS NOT NULL AND billing_id != '00000000-0000-0000-0000-000000000000'::uuid),
+  CONSTRAINT refunds_immutable_created_at CHECK (created_at IS NOT NULL)
+);
+create index if not exists ix_refunds_payment on pay.refunds(payment_id);
+create index if not exists ix_refunds_billing on pay.refunds(billing_id);
+create index if not exists ix_refunds_created_at on pay.refunds(created_at);
+
+-- Create trigger to prevent updates to immutable fields in refunds
+CREATE OR REPLACE FUNCTION pay.prevent_refund_updates()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Prevent updates to refund_id
+  IF OLD.refund_id != NEW.refund_id THEN
+    RAISE EXCEPTION 'Refund ID is immutable and cannot be changed. Refund ID: %', OLD.refund_id;
+  END IF;
+  
+  -- Prevent updates to billing_id
+  IF OLD.billing_id != NEW.billing_id THEN
+    RAISE EXCEPTION 'Billing ID is immutable and cannot be changed. Billing ID: %', OLD.billing_id;
+  END IF;
+  
+  -- Prevent updates to payment_id
+  IF OLD.payment_id != NEW.payment_id THEN
+    RAISE EXCEPTION 'Payment ID is immutable and cannot be changed. Payment ID: %', OLD.payment_id;
+  END IF;
+  
+  -- Prevent updates to created_at
+  IF OLD.created_at != NEW.created_at THEN
+    RAISE EXCEPTION 'Created timestamp is immutable and cannot be changed. Created at: %', OLD.created_at;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_prevent_refund_updates ON pay.refunds;
+CREATE TRIGGER trg_prevent_refund_updates
+  BEFORE UPDATE ON pay.refunds
+  FOR EACH ROW
+  EXECUTE FUNCTION pay.prevent_refund_updates();
+
 -- Create trigger to prevent updates to immutable fields in payment_logs
 CREATE OR REPLACE FUNCTION pay.prevent_payment_logs_updates()
 RETURNS TRIGGER AS $$

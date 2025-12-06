@@ -15,4 +15,9 @@ public interface IPaymentService
 
     // Get all payments across all bills
     Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct);
+
+    // Refund methods
+    Task<RefundDto> ProcessRefundAsync(Guid paymentId, ProcessRefundRequestDto request, string? serverId, CancellationToken ct);
+    Task<IReadOnlyList<RefundDto>> GetRefundsByPaymentIdAsync(Guid paymentId, CancellationToken ct);
+    Task<IReadOnlyList<RefundDto>> GetRefundsByBillingIdAsync(Guid billingId, CancellationToken ct);
 }
