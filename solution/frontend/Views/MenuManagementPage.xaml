@@ -13,17 +13,20 @@
             <Grid Width="200" Height="160">
                 <Border CornerRadius="8" 
                         Padding="8" 
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        Background="{ThemeResource SolidBackgroundFillColorSecondary}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CanDrag="True"
                         DragStarting="MenuItem_DragStarting">
                     <StackPanel Spacing="4">
                         <Border Height="80" 
                                 Background="{ThemeResource ControlFillColorDefaultBrush}"
                                 CornerRadius="4">
-                            <TextBlock Text="📷" 
-                                       FontSize="24"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
+                            <FontIcon Glyph="&#xE8B9;" 
+                                     FontSize="24"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </Border>
                         <TextBlock Text="{Binding Name}" 
                                    TextWrapping="Wrap" 
@@ -56,9 +59,9 @@
             </Grid.RowDefinitions>
             
             <!-- Title -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="Menu Management" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
-                <TextBlock Text="Organize and manage menu items by categories with advanced filtering" FontSize="14" Opacity="0.7"/>
+            <StackPanel Grid.Row="0" Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Menu Management" Style="{StaticResource DisplayTextStyle}"/>
+                <TextBlock Text="Organize and manage menu items by categories with advanced filtering" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Search and Filter Controls -->

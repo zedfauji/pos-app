@@ -11,52 +11,7 @@
 
     <Page.Resources>
         <!-- Professional Styles -->
-        <Style x:Key="PageTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="32"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="PageSubtitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,24"/>
-        </Style>
-
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-        </Style>
-
-        <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="0,0,16,0"/>
-            <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="MinWidth" Value="200"/>
-        </Style>
-
-        <Style x:Key="MetricTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <Style x:Key="MetricValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
-        </Style>
-
+        <!-- Using Fluent styles from DesignSystem.xaml -->
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
             <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
@@ -85,7 +40,7 @@
         </Style>
 
         <Style x:Key="StatusCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefault}"/>
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="0,0,0,12"/>
@@ -113,6 +68,23 @@
             <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        
+        <Style x:Key="MetricCardStyle" TargetType="Border" BasedOn="{StaticResource FluentMetricCardStyle}">
+            <Setter Property="Margin" Value="0,0,16,0"/>
+        </Style>
+        
+        <Style x:Key="MetricTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource SubtitleTextStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        
+        <Style x:Key="MetricValueStyle" TargetType="TextBlock" BasedOn="{StaticResource DisplayTextStyle}">
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+        
+        <Style x:Key="CardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
     </Page.Resources>
 
     <ScrollViewer Padding="24">
@@ -128,9 +100,9 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <FontIcon Glyph="&#xE8F5;" FontSize="32" Foreground="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center"/>
-                    <TextBlock Text="Orders Analytics &amp; Management" Style="{StaticResource PageTitleStyle}"/>
+                    <TextBlock Text="Orders Analytics &amp; Management" Style="{StaticResource TitleTextStyle}"/>
                 </StackPanel>
-                <TextBlock Text="Comprehensive reporting, analytics, and real-time status monitoring for management oversight" Style="{StaticResource PageSubtitleStyle}"/>
+                <TextBlock Text="Comprehensive reporting, analytics, and real-time status monitoring for management oversight" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Critical Alerts -->

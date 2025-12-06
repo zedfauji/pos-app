@@ -16,12 +16,11 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="24,20,24,0">
+        <StackPanel Grid.Row="0" Margin="24,20,24,0" Style="{StaticResource FluentPageHeaderStyle}">
             <TextBlock Text="Customer Management" 
-                       Style="{StaticResource TitleTextBlockStyle}"
-                       Margin="0,0,0,8"/>
+                       Style="{StaticResource DisplayTextStyle}"/>
             <TextBlock Text="Manage customers, memberships, and wallet balances"
-                       Style="{StaticResource BodyTextBlockStyle}"
+                       Style="{StaticResource CaptionTextStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
         </StackPanel>
 
@@ -45,7 +44,7 @@
             <Button x:Name="AddCustomerButton"
                     Grid.Column="1"
                     Content="Add Customer"
-                    Style="{StaticResource AccentButtonStyle}"
+                    Style="{StaticResource FluentPrimaryButtonStyle}"
                     Click="AddCustomer_Click"
                     Margin="0,0,12,0">
                 <Button.KeyboardAccelerators>
@@ -56,6 +55,7 @@
             <Button x:Name="RefreshButton"
                     Grid.Column="2"
                     Content="Refresh"
+                    Style="{StaticResource FluentSecondaryButtonStyle}"
                     Click="Refresh_Click">
                 <Button.KeyboardAccelerators>
                     <KeyboardAccelerator Key="F5"/>

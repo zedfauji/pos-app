@@ -23,11 +23,27 @@
                         DoubleTapped="MenuItem_DoubleTapped">
                     <Border.ContextFlyout>
                         <MenuFlyout>
-                            <MenuFlyoutItem Text="✏️ Edit Item" Click="EditMenuItem_Click" Tag="{Binding}"/>
-                            <MenuFlyoutItem Text="🔄 Toggle Availability" Click="ToggleAvailability_Click" Tag="{Binding}"/>
-                            <MenuFlyoutItem Text="🗑️ Delete Item" Click="DeleteMenuItem_Click" Tag="{Binding}"/>
+                            <MenuFlyoutItem Text="Edit Item" Click="EditMenuItem_Click" Tag="{Binding}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE70F;"/>
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Toggle Availability" Click="ToggleAvailability_Click" Tag="{Binding}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE72C;"/>
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="Delete Item" Click="DeleteMenuItem_Click" Tag="{Binding}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE74D;"/>
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                             <MenuFlyoutSeparator/>
-                            <MenuFlyoutItem Text="📋 Copy Details" Click="CopyMenuItemDetails_Click" Tag="{Binding}"/>
+                            <MenuFlyoutItem Text="Copy Details" Click="CopyMenuItemDetails_Click" Tag="{Binding}">
+                                <MenuFlyoutItem.Icon>
+                                    <FontIcon Glyph="&#xE8C8;"/>
+                                </MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
                         </MenuFlyout>
                     </Border.ContextFlyout>
                     <StackPanel Spacing="4">
@@ -90,7 +106,7 @@
                 <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                         CornerRadius="8" Padding="16" Margin="0,0,8,0">
                     <StackPanel>
-                        <TextBlock Text="📊" FontSize="24" HorizontalAlignment="Center"/>
+                        <FontIcon Glyph="&#xE9D2;" FontSize="24" HorizontalAlignment="Center" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
                         <TextBlock Text="Total Items" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding AnalyticsItems.Count}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -99,7 +115,7 @@
                 <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                         CornerRadius="8" Padding="16" Margin="4,0">
                     <StackPanel>
-                        <TextBlock Text="💰" FontSize="24" HorizontalAlignment="Center"/>
+                        <FontIcon Glyph="&#xE8B9;" FontSize="24" HorizontalAlignment="Center" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                         <TextBlock Text="Total Revenue" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding TotalRevenue}" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -108,7 +124,7 @@
                 <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                         CornerRadius="8" Padding="16" Margin="4,0">
                     <StackPanel>
-                        <TextBlock Text="📈" FontSize="24" HorizontalAlignment="Center"/>
+                        <FontIcon Glyph="&#xE9D2;" FontSize="24" HorizontalAlignment="Center" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                         <TextBlock Text="Top Seller" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding TopSeller}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
@@ -191,7 +207,7 @@
 
                 <!-- Add Menu Item -->
                 <Button Grid.Column="5" 
-                        Content="➕ Add Item" 
+                        Content="Add Item" 
                         Click="AddMenuItem_Click"
                         Style="{StaticResource AccentButtonStyle}"
                         Margin="0,0,8,0"/>
@@ -213,7 +229,10 @@
         <TabView Grid.Row="1" x:Name="MainTabView">
             
             <!-- Analytics Tab -->
-            <TabViewItem Header="📊 Analytics">
+            <TabViewItem Header="Analytics">
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xE9D2;"/>
+                </TabViewItem.IconSource>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2*"/>
@@ -229,7 +248,7 @@
                                     Background="{ThemeResource ControlFillColorDefaultBrush}"
                                     CornerRadius="8" Padding="16">
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock Text="📈" FontSize="48" HorizontalAlignment="Center"/>
+                                    <FontIcon Glyph="&#xE9D2;" FontSize="48" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     <TextBlock Text="Performance Chart" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                                     <TextBlock Text="Revenue and order trends over time" FontSize="12" Opacity="0.7" HorizontalAlignment="Center"/>
                                 </StackPanel>
@@ -276,7 +295,7 @@
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="2">
-                                                <TextBlock Text="📊" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                <FontIcon Glyph="&#xE9D2;" FontSize="20" HorizontalAlignment="Center" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
                                                 <TextBlock Text="Analytics" FontSize="10" Opacity="0.7" HorizontalAlignment="Center"/>
                                             </StackPanel>
                                         </Grid>
@@ -353,7 +372,7 @@
                                     Margin="0,0,20,20"
                                     Spacing="12">
                             <Button x:Name="QuickEditButton" 
-                                    Content="✏️" 
+                                    Content="Edit" 
                                     Click="EditMenuItem_Click"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Width="56" Height="56"
@@ -362,7 +381,7 @@
                                     ToolTipService.ToolTip="Edit Selected Item"
                                     IsEnabled="False"/>
                             <Button x:Name="QuickToggleButton" 
-                                    Content="🔄" 
+                                    Content="Refresh" 
                                     Click="ToggleAvailability_Click"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Width="56" Height="56"
@@ -371,7 +390,7 @@
                                     ToolTipService.ToolTip="Toggle Availability"
                                     IsEnabled="False"/>
                             <Button x:Name="QuickDeleteButton" 
-                                    Content="🗑️" 
+                                    Content="Delete" 
                                     Click="DeleteMenuItem_Click"
                                     Background="{ThemeResource SystemFillColorCriticalBrush}"
                                     Width="56" Height="56"
@@ -398,9 +417,9 @@
                                 
                                 <!-- Quick Actions -->
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="✏️ Edit" Click="EditMenuItem_Click" x:Name="EditButton" Style="{StaticResource AccentButtonStyle}"/>
-                                    <Button Content="🗑️ Delete" Click="DeleteMenuItem_Click" x:Name="DeleteButton"/>
-                                    <Button Content="🔄 Toggle" Click="ToggleAvailability_Click" x:Name="ToggleAvailabilityButton"/>
+                                    <Button Content="Edit" Click="EditMenuItem_Click" x:Name="EditButton" Style="{StaticResource AccentButtonStyle}"/>
+                                    <Button Content="Delete" Click="DeleteMenuItem_Click" x:Name="DeleteButton"/>
+                                    <Button Content="Toggle" Click="ToggleAvailability_Click" x:Name="ToggleAvailabilityButton"/>
                                 </StackPanel>
 
                                 <!-- Item Image -->
@@ -460,7 +479,10 @@
             </TabViewItem>
 
             <!-- Bulk Operations Tab -->
-            <TabViewItem Header="⚡ Bulk Operations">
+            <TabViewItem Header="Bulk Operations">
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xE8F1;"/>
+                </TabViewItem.IconSource>
                 <Grid Padding="20">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -488,7 +510,10 @@
                         <Border Grid.Row="0" Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                 CornerRadius="8" Padding="20" Margin="0,0,10,10">
                             <StackPanel Spacing="12">
-                                <TextBlock Text="💰 Price Operations" FontSize="18" FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8B9;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                    <TextBlock Text="Price Operations" FontSize="18" FontWeight="SemiBold"/>
+                                </StackPanel>
                                 
                                 <StackPanel Spacing="8">
                                     <TextBox x:Name="PriceChangeTextBox" PlaceholderText="Price change amount" Header="Amount"/>
@@ -520,7 +545,10 @@
                         <Border Grid.Row="1" Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                 CornerRadius="8" Padding="20" Margin="0,10,10,0">
                             <StackPanel Spacing="12">
-                                <TextBlock Text="🔄 Availability Operations" FontSize="18" FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="18" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                    <TextBlock Text="Availability Operations" FontSize="18" FontWeight="SemiBold"/>
+                                </StackPanel>
                                 
                                 <StackPanel Spacing="8">
                                     <ComboBox x:Name="AvailabilityComboBox" Header="Availability">
@@ -549,7 +577,10 @@
             </TabViewItem>
 
             <!-- Trends Tab -->
-            <TabViewItem Header="📈 Trends">
+            <TabViewItem Header="Trends">
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xE9D2;"/>
+                </TabViewItem.IconSource>
                 <ScrollViewer>
                     <StackPanel Spacing="16" Padding="20">
                         <TextBlock Text="Menu Trends &amp; Insights" FontSize="24" FontWeight="Bold" Margin="0,0,0,16"/>

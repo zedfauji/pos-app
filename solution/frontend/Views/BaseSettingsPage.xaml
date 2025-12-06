@@ -9,17 +9,16 @@
     <ScrollViewer Padding="24">
         <StackPanel Spacing="24">
             <!-- Header -->
-            <StackPanel Spacing="8">
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
                 <TextBlock x:Name="CategoryTitle" Text="Settings Category" 
-                           FontSize="24" FontWeight="SemiBold"/>
+                           Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock x:Name="CategoryDescription" Text="Configure settings for this category" 
-                           Opacity="0.7" TextWrapping="Wrap"/>
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Content Area -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="24">
+            <Border Style="{StaticResource FluentCardStyle}">
                 <StackPanel x:Name="ContentPanel" Spacing="16">
                     <!-- Dynamic content will be added here -->
                     <TextBlock Text="Settings for this category are being loaded..." 

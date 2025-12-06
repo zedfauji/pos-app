@@ -6,157 +6,57 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:MagiDesk.Frontend.ViewModels"
     xmlns:controls="using:Microsoft.UI.Xaml.Controls"
-    mc:Ignorable="d">
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    mc:Ignorable="d"
+    Background="Transparent">
 
     <Page.Resources>
-        <!-- Modern Color Palette -->
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
-        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
-        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
-
-        <!-- Modern Card Style -->
-        <Style x:Key="ModernCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="8"/>
-        </Style>
-
-        <!-- Metric Card Style -->
-        <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="24"/>
-            <Setter Property="Margin" Value="8"/>
-            <Setter Property="MinHeight" Value="140"/>
-        </Style>
-
-        <!-- Chart Card Style -->
-        <Style x:Key="ChartCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="16"/>
-            <Setter Property="Padding" Value="20"/>
-            <Setter Property="Margin" Value="8"/>
-            <Setter Property="MinHeight" Value="300"/>
-        </Style>
-
-        <!-- Status Indicator Style -->
-        <Style x:Key="StatusIndicatorStyle" TargetType="Ellipse">
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="Margin" Value="8,0,0,0"/>
-        </Style>
-
-        <!-- Animation Styles -->
-        <Style x:Key="FadeInAnimation" TargetType="FrameworkElement">
-            <Setter Property="Opacity" Value="0"/>
-        </Style>
-
-        <Style x:Key="SlideInAnimation" TargetType="FrameworkElement">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <TranslateTransform X="-50"/>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Opacity" Value="0"/>
-        </Style>
-
-        <!-- Pulse Animation for Live Data -->
-        <Style x:Key="PulseAnimation" TargetType="FrameworkElement">
-        </Style>
-
-        <!-- Chart Animation Styles -->
-        <Style x:Key="ChartBarAnimation" TargetType="Border">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleY="0" ScaleX="1"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="MetricCardHoverAnimation" TargetType="Border">
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <CompositeTransform ScaleX="1" ScaleY="1"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Converters -->
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
+        <converters:BoolToStatusConverter x:Key="BoolToStatusConverter" />
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converters:OccupiedToColorConverter x:Key="OccupiedToColorConverter" />
+        <converters:RevenueToHeightConverter x:Key="RevenueToHeightConverter" />
+        <converters:OccupancyToHeightConverter x:Key="OccupancyToHeightConverter" />
+        <converters:CurrencyConverter x:Key="CurrencyConverter" />
+        <converters:PercentageConverter x:Key="PercentageConverter" />
+        <converters:TimeAgoConverter x:Key="TimeAgoConverter" />
+        <converters:PriorityToColorConverter x:Key="PriorityToColorConverter" />
+        <converters:NotificationTypeToIconConverter x:Key="NotificationTypeToIconConverter" />
     </Page.Resources>
 
-    <Grid Background="{StaticResource SurfaceBrush}">
+    <Grid Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header with Status -->
-        <Border Grid.Row="0" Background="{StaticResource CardBrush}" Padding="24,16" Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="16">
-                    <TextBlock Text="📊" FontSize="32" VerticalAlignment="Center"/>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="MagiDesk Dashboard" FontSize="24" FontWeight="SemiBold" 
-                                 Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding LastUpdated}" 
-                                 FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                </StackPanel>
+        <!-- Page Header (Fluent 2 Style) -->
+        <StackPanel Grid.Row="0" Style="{StaticResource FluentPageHeaderStyle}">
+            <TextBlock Text="Dashboard" 
+                       Style="{StaticResource DisplayTextStyle}"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="{Binding LastUpdated}" 
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
 
-                <!-- Connection Status -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Ellipse Width="8" Height="8" Fill="{Binding IsConnected, Converter={StaticResource BoolToColorConverter}}"/>
-                    <TextBlock Text="{Binding IsConnected, Converter={StaticResource BoolToStatusConverter}}" 
-                             Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
-                </StackPanel>
+        <!-- Connection Status InfoBar -->
+        <InfoBar Grid.Row="1"
+                 x:Name="ConnectionInfoBar"
+                 Visibility="{Binding IsConnected, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverted}"
+                 Severity="Warning"
+                 Style="{StaticResource FluentInfoBarStyle}"
+                 Message="Backend is unavailable. Features may be limited until connectivity is restored."
+                 Margin="24,0,24,16"/>
 
-                <!-- Refresh Button -->
-                <Button Grid.Column="2" Content="🔄" FontSize="16" Padding="12" 
-                        CornerRadius="8" Background="{StaticResource PrimaryBrush}"
-                        Click="RefreshButton_Click" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
-
-        <!-- Notifications Bar -->
-        <Border Grid.Row="1" Background="{StaticResource WarningBrush}" Padding="16,8" Margin="0,0,0,8"
-                Visibility="{Binding Notifications.Count, Converter={StaticResource CountToVisibilityConverter}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <TextBlock Grid.Column="0" Text="🔔" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Grid.Column="1" Text="{Binding UnreadNotifications}" 
-                         Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Content="View All" Background="Transparent" Foreground="White"
-                        Click="ViewNotifications_Click" Padding="8,4"/>
-            </Grid>
-        </Border>
-
-        <!-- Main Content -->
-        <ScrollViewer Grid.Row="2" Padding="16" ZoomMode="Disabled">
-            <Grid>
+        <!-- Main Content Area -->
+        <ScrollViewer Grid.Row="2" 
+                      ZoomMode="Disabled"
+                      Padding="24">
+            <Grid Style="{StaticResource FluentContentGridStyle}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -164,127 +64,112 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Executive Summary Cards -->
-                <Grid x:Name="ExecutiveSummaryGrid" Grid.Row="0" Margin="0,0,0,16">
+                <!-- Executive Summary Cards (Metric Cards) -->
+                <Grid Grid.Row="0" Style="{StaticResource FluentCardGridStyle}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Responsive Breakpoints -->
-                    <VisualStateManager.VisualStateGroups>
-                        <VisualStateGroup>
-                            <VisualState x:Name="Narrow">
-                                <VisualState.StateTriggers>
-                                    <AdaptiveTrigger MinWindowWidth="0"/>
-                                </VisualState.StateTriggers>
-                            </VisualState>
-                            <VisualState x:Name="Medium">
-                                <VisualState.StateTriggers>
-                                    <AdaptiveTrigger MinWindowWidth="800"/>
-                                </VisualState.StateTriggers>
-                            </VisualState>
-                            <VisualState x:Name="Wide">
-                                <VisualState.StateTriggers>
-                                    <AdaptiveTrigger MinWindowWidth="1200"/>
-                                </VisualState.StateTriggers>
-                            </VisualState>
-                        </VisualStateGroup>
-                    </VisualStateManager.VisualStateGroups>
 
                     <!-- Revenue Card -->
-                    <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}">
-                        <Border.Resources>
-                            <Storyboard x:Name="RevenueCardAnimation">
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                               From="0" To="1" Duration="0:0:0.8">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleX"
-                                               From="0.8" To="1" Duration="0:0:0.8">
-                                    <DoubleAnimation.EasingFunction>
-                                        <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                                <DoubleAnimation Storyboard.TargetProperty="RenderTransform.ScaleY"
-                                               From="0.8" To="1" Duration="0:0:0.8">
-                                    <DoubleAnimation.EasingFunction>
-                                        <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                            </Storyboard>
-                        </Border.Resources>
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                                <TextBlock Text="💰" FontSize="24"/>
-                                <TextBlock Text="Revenue Today" FontSize="16" FontWeight="SemiBold" 
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Border Grid.Column="0" Style="{StaticResource FluentMetricCardStyle}" Margin="0,0,8,0">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B9;" FontSize="24" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                <TextBlock Text="Revenue Today" 
+                                         Style="{StaticResource SubtitleTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding TodayRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="32" FontWeight="Bold" 
-                                     Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding SettledRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
-                                     Foreground="{StaticResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding PendingRevenue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
-                                     Foreground="{StaticResource WarningBrush}"/>
+                            <TextBlock Text="{Binding TodayRevenue, Converter={StaticResource CurrencyConverter}}" 
+                                     FontSize="32" 
+                                     FontWeight="Bold"
+                                     FontFamily="Segoe UI Variable"
+                                     Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding SettledRevenue, Converter={StaticResource CurrencyConverter}}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{Binding PendingRevenue, Converter={StaticResource CurrencyConverter}}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Tables Card -->
-                    <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                                <TextBlock Text="🏓" FontSize="24"/>
-                                <TextBlock Text="Table Occupancy" FontSize="16" FontWeight="SemiBold" 
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Border Grid.Column="1" Style="{StaticResource FluentMetricCardStyle}" Margin="8,0,8,0">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B9;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                <TextBlock Text="Table Occupancy" 
+                                         Style="{StaticResource SubtitleTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding OccupancyPercentage, Converter={StaticResource PercentageConverter}}" FontSize="32" FontWeight="Bold" 
-                                     Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding OccupiedTables}" FontSize="12" 
-                                     Foreground="{StaticResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding AvailableTables}" FontSize="12" 
-                                     Foreground="{StaticResource SuccessBrush}"/>
+                            <TextBlock Text="{Binding OccupancyPercentage, Converter={StaticResource PercentageConverter}}" 
+                                     FontSize="32" 
+                                     FontWeight="Bold"
+                                     FontFamily="Segoe UI Variable"
+                                     Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding OccupiedTables}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{Binding AvailableTables}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Orders Card -->
-                    <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                                <TextBlock Text="📋" FontSize="24"/>
-                                <TextBlock Text="Orders Today" FontSize="16" FontWeight="SemiBold" 
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Border Grid.Column="2" Style="{StaticResource FluentMetricCardStyle}" Margin="8,0,8,0">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8A5;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                                <TextBlock Text="Orders Today" 
+                                         Style="{StaticResource SubtitleTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding TotalOrdersToday}" FontSize="32" FontWeight="Bold" 
-                                     Foreground="{StaticResource PrimaryBrush}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding TotalOrderValue, Converter={StaticResource CurrencyConverter}}" FontSize="12" 
-                                     Foreground="{StaticResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding PendingDelivery}" FontSize="12" 
-                                     Foreground="{StaticResource WarningBrush}"/>
+                            <TextBlock Text="{Binding TotalOrdersToday}" 
+                                     FontSize="32" 
+                                     FontWeight="Bold"
+                                     FontFamily="Segoe UI Variable"
+                                     Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding TotalOrderValue, Converter={StaticResource CurrencyConverter}}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{Binding PendingDelivery}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- Sessions Card -->
-                    <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-                                <TextBlock Text="⏱️" FontSize="24"/>
-                                <TextBlock Text="Active Sessions" FontSize="16" FontWeight="SemiBold" 
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                    <Border Grid.Column="3" Style="{StaticResource FluentMetricCardStyle}" Margin="8,0,0,0">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B9;" FontSize="24" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                <TextBlock Text="Active Sessions" 
+                                         Style="{StaticResource SubtitleTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
-                            <TextBlock Text="{Binding ActiveSessions}" FontSize="32" FontWeight="Bold" 
-                                     Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding SessionsToday}" FontSize="12" 
-                                     Foreground="{StaticResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding AverageSessionMinutes}" FontSize="12" 
-                                     Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock Text="{Binding ActiveSessions}" 
+                                     FontSize="32" 
+                                     FontWeight="Bold"
+                                     FontFamily="Segoe UI Variable"
+                                     Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding SessionsToday}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{Binding AverageSessionMinutes}" 
+                                         Style="{StaticResource CaptionTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -296,14 +181,15 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Revenue Chart -->
-                    <Border Grid.Column="0" Style="{StaticResource ChartCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="📈 Revenue Trend (7 Days)" FontSize="18" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                    <!-- Revenue Chart Card -->
+                    <Border Grid.Column="0" Style="{StaticResource FluentElevatedCardStyle}" Margin="0,0,8,0">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="Revenue Trend (7 Days)" 
+                                     Style="{StaticResource TitleTextStyle}"
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             
                             <!-- Simple Bar Chart -->
-                            <Grid Height="200" Margin="0,0,0,16">
+                            <Grid Height="200">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
@@ -322,96 +208,109 @@
                                     </Grid.ColumnDefinitions>
                                     
                                     <!-- Chart Bars -->
-                                    <Border Grid.Column="0" Background="{StaticResource PrimaryBrush}" 
+                                    <Border Grid.Column="0" 
+                                          Background="{ThemeResource AccentFillColorDefaultBrush}" 
                                           Height="{Binding RevenueChartData[0].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
-                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="1" Background="{StaticResource PrimaryBrush}" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="1" 
+                                          Background="{ThemeResource AccentFillColorDefaultBrush}" 
                                           Height="{Binding RevenueChartData[1].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
-                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="2" Background="{StaticResource PrimaryBrush}" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="2" 
+                                          Background="{ThemeResource AccentFillColorDefaultBrush}" 
                                           Height="{Binding RevenueChartData[2].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
-                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="3" Background="{StaticResource SuccessBrush}" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="3" 
+                                          Background="{ThemeResource SystemFillColorSuccessBrush}" 
                                           Height="{Binding RevenueChartData[3].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
-                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="4" Background="{StaticResource PrimaryBrush}" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="4" 
+                                          Background="{ThemeResource AccentFillColorDefaultBrush}" 
                                           Height="{Binding RevenueChartData[4].Revenue, Converter={StaticResource RevenueToHeightConverter}}"
-                                          VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="5" Background="{StaticResource BorderBrush}" 
-                                          Height="20" VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
-                                    <Border Grid.Column="6" Background="{StaticResource BorderBrush}" 
-                                          Height="20" VerticalAlignment="Bottom" CornerRadius="4,4,0,0" Margin="2"
-                                          Style="{StaticResource ChartBarAnimation}">
-                                    </Border>
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="5" 
+                                          Background="{ThemeResource ControlFillColorDefaultBrush}" 
+                                          Height="20" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
+                                    <Border Grid.Column="6" 
+                                          Background="{ThemeResource ControlFillColorDefaultBrush}" 
+                                          Height="20" 
+                                          VerticalAlignment="Bottom" 
+                                          CornerRadius="4,4,0,0"/>
                                 </Grid>
                                 
                                 <!-- Chart Labels -->
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="0">
-                                    <TextBlock Text="M" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="T" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="W" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="T" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="F" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="S" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
-                                    <TextBlock Text="S" Width="40" TextAlignment="Center" FontSize="10" 
-                                             Foreground="{StaticResource TextSecondaryBrush}"/>
+                                <StackPanel Grid.Row="1" 
+                                          Orientation="Horizontal" 
+                                          HorizontalAlignment="Center" 
+                                          Spacing="0">
+                                    <TextBlock Text="M" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="T" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="W" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="T" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="F" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="S" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="S" Width="40" TextAlignment="Center" 
+                                             Style="{StaticResource CaptionTextStyle}"
+                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
 
-                    <!-- Server Performance -->
-                    <Border Grid.Column="1" Style="{StaticResource ChartCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="👥 Server Performance" FontSize="18" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                    <!-- Server Performance Card -->
+                    <Border Grid.Column="1" Style="{StaticResource FluentElevatedCardStyle}" Margin="8,0,0,0">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="Server Performance" 
+                                     Style="{StaticResource TitleTextStyle}"
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             
-                            <ListView ItemsSource="{Binding ServerPerformance}" SelectionMode="None">
+                            <ListView ItemsSource="{Binding ServerPerformance}" 
+                                    SelectionMode="None"
+                                    Style="{StaticResource FluentListViewStyle}">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,0,0,12">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            
-                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                                                <TextBlock Text="{Binding ServerName}" FontWeight="SemiBold" 
-                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <StackPanel Spacing="{StaticResource Spacing8}">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding ServerName}" 
+                                                         Style="{StaticResource SubtitleTextStyle}"
+                                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                                 <TextBlock Text="{Binding RevenueGenerated, Converter={StaticResource CurrencyConverter}}"
-                                                         Foreground="{StaticResource SuccessBrush}"/>
+                                                         Style="{StaticResource CaptionTextStyle}"
+                                                         Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
                                             </StackPanel>
                                             
-                                            <ProgressBar Grid.Row="1" Value="{Binding PerformancePercentage}" 
-                                                       Maximum="100" Height="8" Margin="0,0,0,8"
-                                                       Background="{StaticResource BorderBrush}"/>
+                                            <ProgressBar Value="{Binding PerformancePercentage}" 
+                                                       Maximum="100" 
+                                                       Style="{StaticResource FluentProgressBarStyle}"/>
                                             
-                                            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="16">
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Spacing16}">
                                                 <TextBlock Text="{Binding SessionsToday}" 
-                                                         FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                         Style="{StaticResource CaptionTextStyle}"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                                 <TextBlock Text="{Binding AverageSessionMinutes}" 
-                                                         FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                         Style="{StaticResource CaptionTextStyle}"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             </StackPanel>
-                                        </Grid>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
@@ -426,143 +325,125 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Live Table Status -->
-                    <Border Grid.Column="0" Style="{StaticResource ModernCardStyle}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-                                <TextBlock Text="🏓" FontSize="20"/>
-                                <TextBlock Text="Live Table Status" FontSize="16" FontWeight="SemiBold" 
-                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                <Ellipse Style="{StaticResource StatusIndicatorStyle}" Fill="{StaticResource SuccessBrush}">
-                                </Ellipse>
+                    <!-- Live Table Status Card -->
+                    <Border Grid.Column="0" Style="{StaticResource FluentCardStyle}" Margin="0,0,8,0">
+                        <StackPanel Spacing="16">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE8B9;" FontSize="20" Foreground="{ThemeResource SystemFillColorSuccessBrush}"/>
+                                <TextBlock Text="Live Table Status" 
+                                         Style="{StaticResource SubtitleTextStyle}"
+                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <Ellipse Width="8" Height="8" Fill="{ThemeResource SystemFillColorSuccessBrush}"/>
                             </StackPanel>
                             
                             <!-- Tables Grid -->
-                            <TextBlock Text="Table Status" FontSize="14" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                            <Grid Margin="0,0,0,16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <!-- First row of tables -->
-                                <Border Grid.Row="0" Grid.Column="0" Background="{Binding Tables[0].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[0].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White"/>
-                                </Border>
-                                <Border Grid.Row="0" Grid.Column="1" Background="{Binding Tables[1].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[1].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White"/>
-                                </Border>
-                                <Border Grid.Row="0" Grid.Column="2" Background="{Binding Tables[2].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[2].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White"/>
-                                </Border>
-                                <Border Grid.Row="0" Grid.Column="3" Background="{Binding Tables[3].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[3].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White"/>
-                                </Border>
-                                <Border Grid.Row="0" Grid.Column="4" Background="{Binding Tables[4].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[4].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White"/>
-                                </Border>
-                                
-                                <!-- Second row of tables -->
-                                <Border Grid.Row="1" Grid.Column="0" Background="{Binding Tables[5].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[5].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White" FontSize="10"/>
-                                </Border>
-                                <Border Grid.Row="1" Grid.Column="1" Background="{Binding Tables[6].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[6].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White" FontSize="10"/>
-                                </Border>
-                                <Border Grid.Row="1" Grid.Column="2" Background="{Binding Tables[7].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[7].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White" FontSize="10"/>
-                                </Border>
-                                <Border Grid.Row="1" Grid.Column="3" Background="{Binding Tables[8].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[8].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White" FontSize="10"/>
-                                </Border>
-                                <Border Grid.Row="1" Grid.Column="4" Background="{Binding Tables[9].Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
-                                      CornerRadius="8" Padding="8" Margin="2">
-                                    <TextBlock Text="{Binding Tables[9].Label}" FontWeight="SemiBold" HorizontalAlignment="Center" 
-                                             Foreground="White" FontSize="10"/>
-                                </Border>
-                            </Grid>
+                            <ItemsControl ItemsSource="{Binding Tables}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapGrid Orientation="Horizontal" MaximumRowsOrColumns="5"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}" 
+                                              CornerRadius="6" 
+                                              Padding="8,6" 
+                                              Margin="2"
+                                              Width="100"
+                                              Height="50">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Label}" 
+                                                         FontWeight="SemiBold" 
+                                                         FontSize="12"
+                                                         HorizontalAlignment="Center" 
+                                                         Foreground="White"
+                                                         TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Type}" 
+                                                         FontSize="9"
+                                                         HorizontalAlignment="Center" 
+                                                         Foreground="White"
+                                                         Opacity="0.85"
+                                                         TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
 
-                    <!-- Active Sessions &amp; Reminders -->
-                    <Border Grid.Column="1" Style="{StaticResource ModernCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="📋 Active Sessions &amp; Reminders" FontSize="16" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                    <!-- Active Sessions Card -->
+                    <Border Grid.Column="1" Style="{StaticResource FluentCardStyle}" Margin="8,0,0,0">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="Active Sessions &amp; Reminders" 
+                                     Style="{StaticResource SubtitleTextStyle}"
+                                     Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                             
                             <!-- Active Sessions -->
-                            <TextBlock Text="Active Sessions" FontSize="14" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
-                            <ListView ItemsSource="{Binding ActiveSessionsList}" SelectionMode="None" Height="120">
+                            <TextBlock Text="Active Sessions" 
+                                     Style="{StaticResource BodyTextStyle}"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <ListView ItemsSource="{Binding ActiveSessionsList}" 
+                                    SelectionMode="None" 
+                                    Height="120"
+                                    Style="{StaticResource FluentListViewStyle}">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,0,0,4">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding TableId}" FontWeight="SemiBold" 
-                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding ServerName}" FontSize="10" 
-                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <StackPanel Grid.Column="0" Spacing="{StaticResource Spacing4}">
+                                                <TextBlock Text="{Binding TableId}" 
+                                                         Style="{StaticResource BodyTextStyle}"
+                                                         FontWeight="SemiBold"
+                                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding ServerName}" 
+                                                         Style="{StaticResource CaptionTextStyle}"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             </StackPanel>
                                             
-                                            <TextBlock Grid.Column="1" Text="{Binding StartTime, Converter={StaticResource TimeAgoConverter}}" 
-                                                     FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="1" 
+                                                     Text="{Binding StartTime, Converter={StaticResource TimeAgoConverter}}" 
+                                                     Style="{StaticResource CaptionTextStyle}"
+                                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
                             
                             <!-- Reminders -->
-                            <TextBlock Text="Reminders" FontSize="14" FontWeight="SemiBold" 
-                                     Foreground="{StaticResource TextSecondaryBrush}" Margin="0,16,0,8"/>
-                            <ListView ItemsSource="{Binding Reminders}" SelectionMode="None" Height="100">
+                            <TextBlock Text="Reminders" 
+                                     Style="{StaticResource BodyTextStyle}"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <ListView ItemsSource="{Binding Reminders}" 
+                                    SelectionMode="None" 
+                                    Height="100"
+                                    Style="{StaticResource FluentListViewStyle}">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid Margin="0,0,0,4">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <StackPanel Grid.Column="0">
-                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" 
-                                                         Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding Description}" FontSize="10" 
-                                                         Foreground="{StaticResource TextSecondaryBrush}"/>
+                                            <StackPanel Grid.Column="0" Spacing="{StaticResource Spacing4}">
+                                                <TextBlock Text="{Binding Title}" 
+                                                         Style="{StaticResource BodyTextStyle}"
+                                                         FontWeight="SemiBold"
+                                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding Description}" 
+                                                         Style="{StaticResource CaptionTextStyle}"
+                                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                             </StackPanel>
                                             
-                                            <TextBlock Grid.Column="1" Text="{Binding DueTime, Converter={StaticResource TimeAgoConverter}}"
-                                                     FontSize="10" Foreground="{StaticResource WarningBrush}"/>
+                                            <TextBlock Grid.Column="1" 
+                                                     Text="{Binding DueTime, Converter={StaticResource TimeAgoConverter}}"
+                                                     Style="{StaticResource CaptionTextStyle}"
+                                                     Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
@@ -571,31 +452,40 @@
                     </Border>
                 </Grid>
 
-                <!-- Quick Actions -->
-                <Border Grid.Row="3" Style="{StaticResource ModernCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="⚡ Quick Actions" FontSize="16" FontWeight="SemiBold" 
-                                 Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                <!-- Quick Actions Card -->
+                <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}">
+                    <StackPanel Spacing="{StaticResource Spacing16}">
+                        <TextBlock Text="Quick Actions" 
+                                 Style="{StaticResource SubtitleTextStyle}"
+                                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                         
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
                             
-                            <Button Grid.Column="0" Content="🏓 Start Session" Background="{StaticResource PrimaryBrush}" 
-                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                            <Button Grid.Column="0" 
+                                  Content="Start Session" 
+                                  Style="{StaticResource FluentPrimaryButtonStyle}"
+                                  Margin="0,0,4,0"
                                   Click="StartSession_Click"/>
-                            <Button Grid.Column="1" Content="📋 View Orders" Background="{StaticResource SuccessBrush}" 
-                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                            <Button Grid.Column="1" 
+                                  Content="View Orders" 
+                                  Style="{StaticResource FluentPrimaryButtonStyle}"
+                                  Margin="4,0,4,0"
                                   Click="ViewOrders_Click"/>
-                            <Button Grid.Column="2" Content="📊 Generate Report" Background="{StaticResource WarningBrush}" 
-                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                            <Button Grid.Column="2" 
+                                  Content="Generate Report" 
+                                  Style="{StaticResource FluentSecondaryButtonStyle}"
+                                  Margin="4,0,4,0"
                                   Click="GenerateReport_Click"/>
-                            <Button Grid.Column="3" Content="⚙️ Settings" Background="{StaticResource BorderBrush}" 
-                                  Foreground="White" Padding="16,12" CornerRadius="8" Margin="4"
+                            <Button Grid.Column="3" 
+                                  Content="Settings" 
+                                  Style="{StaticResource FluentSecondaryButtonStyle}"
+                                  Margin="4,0,0,0"
                                   Click="OpenSettings_Click"/>
                         </Grid>
                     </StackPanel>
@@ -604,10 +494,18 @@
         </ScrollViewer>
 
         <!-- Loading Overlay -->
-        <Grid Grid.RowSpan="4" Background="#80000000" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <ProgressRing IsActive="True" Width="40" Height="40" Foreground="{StaticResource PrimaryBrush}"/>
-                <TextBlock Text="Loading dashboard data..." Foreground="White" Margin="0,16,0,0"/>
+        <Grid Grid.RowSpan="3" 
+              Background="{ThemeResource SystemFillColorAttentionBackground}" 
+              Opacity="0.8"
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+                <ProgressRing IsActive="True" 
+                            Width="40" 
+                            Height="40" 
+                            Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                <TextBlock Text="Loading dashboard data..." 
+                         Style="{StaticResource BodyTextStyle}"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
             </StackPanel>
         </Grid>
     </Grid>

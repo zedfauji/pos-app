@@ -14,8 +14,12 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Modifier Management" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
-            <TextBlock Text="Manage item modifiers like flavors, sizes, and salsa options" FontSize="14" Opacity="0.7"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Modifier Management" Style="{StaticResource DisplayTextStyle}" Margin="0,0,0,8"/>
+                <TextBlock Text="Manage item modifiers like flavors, sizes, and salsa options" 
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
         </StackPanel>
 
         <!-- Main Content -->
@@ -28,7 +32,7 @@
             <!-- Modifiers List -->
             <StackPanel Grid.Column="0" Margin="0,0,20,0">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                    <TextBlock Text="Modifiers" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <TextBlock Text="Modifiers" Style="{StaticResource SubtitleTextStyle}" VerticalAlignment="Center"/>
                     <Button Content="Add Modifier" 
                             Click="AddModifier_Click" 
                             Margin="16,0,0,0"/>

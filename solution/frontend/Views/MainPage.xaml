@@ -5,38 +5,74 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d"
+    Background="Transparent">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Toolbar + Connectivity Info -->
-        <StackPanel Grid.Row="0" Spacing="6">
-            <CommandBar DefaultLabelPosition="Right">
-                <AppBarButton x:Name="AddBtn" Icon="Add" Label="Add" Click="Add_Click"/>
-                <AppBarButton x:Name="EditBtn" Icon="Edit" Label="Edit" Click="Edit_Click"/>
-                <AppBarButton x:Name="DeleteBtn" Icon="Delete" Label="Delete" Click="Delete_Click"/>
-                <AppBarButton x:Name="RefreshBtn" Icon="Refresh" Label="Refresh" Click="Refresh_Click"/>
-                <AppBarSeparator/>
-                <AppBarToggleButton x:Name="DarkToggle" Label="Dark Mode" Click="ThemeToggle_Click"/>
-                <AppBarButton x:Name="LogoutBtn" Label="Logout" Click="Logout_Click"/>
-            </CommandBar>
-            <InfoBar x:Name="BackendInfo"
-                     IsOpen="False"
-                     Severity="Warning"
-                     Message="Backend is unavailable. Features may be limited until connectivity is restored."/>
-        </StackPanel>
+        <!-- Fluent CommandBar with proper styling -->
+        <CommandBar Grid.Row="0" 
+                    x:Name="TopCommandBar"
+                    Style="{StaticResource FluentCommandBarStyle}"
+                    DefaultLabelPosition="Right">
+            <CommandBar.Content>
+                <AutoSuggestBox x:Name="SearchBox" 
+                               PlaceholderText="Search..."
+                               Width="300"
+                               Margin="8,0,0,0"/>
+            </CommandBar.Content>
+            
+            <AppBarButton x:Name="AddBtn" 
+                         Icon="Add" 
+                         Label="Add" 
+                         Click="Add_Click"/>
+            <AppBarButton x:Name="EditBtn" 
+                         Icon="Edit" 
+                         Label="Edit" 
+                         Click="Edit_Click"/>
+            <AppBarButton x:Name="DeleteBtn" 
+                         Icon="Delete" 
+                         Label="Delete" 
+                         Click="Delete_Click"/>
+            <AppBarButton x:Name="RefreshBtn" 
+                         Icon="Refresh" 
+                         Label="Refresh" 
+                         Click="Refresh_Click"/>
+            <AppBarSeparator/>
+            <AppBarToggleButton x:Name="DarkToggle" 
+                               Label="Theme" 
+                               Click="ThemeToggle_Click">
+                <AppBarToggleButton.Icon>
+                    <SymbolIcon Symbol="Setting"/>
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarButton x:Name="SettingsBtn" 
+                         Icon="Setting" 
+                         Label="Settings"/>
+            <AppBarButton x:Name="LogoutBtn" 
+                         Icon="LeaveChat" 
+                         Label="Logout" 
+                         Click="Logout_Click"/>
+        </CommandBar>
 
-        <NavigationView Grid.Row="1" x:Name="NavView"
-                        ItemInvoked="NavView_ItemInvoked"
-                        IsSettingsVisible="False"
-                        IsBackButtonVisible="Auto"
-                        PaneDisplayMode="Left"
-                        IsPaneOpen="True"
-                        OpenPaneLength="280"
-                        CompactPaneLength="48">
+        <!-- Backend connectivity InfoBar -->
+        <InfoBar x:Name="BackendInfo"
+                 Grid.Row="0"
+                 IsOpen="False"
+                 Severity="Warning"
+                 Style="{StaticResource FluentInfoBarStyle}"
+                 Message="Backend is unavailable. Features may be limited until connectivity is restored."
+                 Margin="16,0,16,8"/>
+
+        <!-- Fluent NavigationView -->
+        <NavigationView Grid.Row="1" 
+                       x:Name="NavView"
+                       Style="{StaticResource FluentNavigationViewStyle}"
+                       ItemInvoked="NavView_ItemInvoked">
             <NavigationView.MenuItems>
                 <!-- Always on top -->
                 <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
@@ -100,7 +136,9 @@
                 <NavigationViewItemHeader Content="Development"/>
                 <!-- PaymentPaneTestPage removed - no longer using panes -->
             </NavigationView.MenuItems>
-            <Frame x:Name="ContentFrame"/>
+            <!-- Content Frame with proper Fluent styling -->
+            <Frame x:Name="ContentFrame" 
+                   Background="Transparent"/>
         </NavigationView>
 
         <!-- Invisible printing panel for CommunityToolkit PrintHelper -->

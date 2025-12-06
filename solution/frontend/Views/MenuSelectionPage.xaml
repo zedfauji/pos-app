@@ -11,17 +11,7 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:CustomizeButtonTextConverter x:Key="CustomizeButtonTextConverter"/>
         
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-        
-        <Style x:Key="ButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="CornerRadius" Value="4"/>
-        </Style>
+        <!-- Using Fluent styles from DesignSystem.xaml -->
     </Page.Resources>
 
     <Grid Margin="20">
@@ -33,12 +23,14 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="Add Items to Order" FontSize="28" FontWeight="Bold" Margin="0,0,0,8"/>
-            <TextBlock x:Name="TableInfoText" FontSize="14" Opacity="0.7"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Add Items to Order" Style="{StaticResource DisplayTextStyle}" Margin="0,0,0,8"/>
+                <TextBlock x:Name="TableInfoText" Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
             
             <!-- Server Selection -->
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                <TextBlock Text="Server:" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="Server:" Style="{StaticResource SubtitleTextStyle}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <ComboBox x:Name="ServerComboBox" 
                           Width="200" 
                           ItemsSource="{Binding AvailableServers}"

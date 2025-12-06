@@ -9,18 +9,17 @@
     <ScrollViewer Padding="24">
         <StackPanel Spacing="24">
             <!-- Header -->
-            <StackPanel Spacing="8">
-                <TextBlock Text="Integration Settings" FontSize="24" FontWeight="SemiBold"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Integration Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure payment gateways, webhooks, CRM sync, and API endpoints" 
-                           Opacity="0.7" TextWrapping="Wrap"/>
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
             </StackPanel>
 
             <!-- Payment Gateway Settings -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="24">
+            <Border Style="{StaticResource FluentCardStyle}">
                 <StackPanel Spacing="16">
-                    <TextBlock Text="Payment Gateways" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="Payment Gateways" Style="{StaticResource SubtitleTextStyle}"/>
                     
                     <Grid>
                         <Grid.ColumnDefinitions>

@@ -12,7 +12,7 @@
         <StackPanel Spacing="16" Padding="4">
             <!-- Basic Information -->
             <StackPanel Spacing="8">
-                <TextBlock Text="Voucher Information" FontWeight="SemiBold" FontSize="16"/>
+                <TextBlock Text="Voucher Information" Style="{StaticResource SubtitleTextStyle}"/>
                 
                 <TextBox x:Name="NameTextBox" 
                          Header="Voucher Name*" 

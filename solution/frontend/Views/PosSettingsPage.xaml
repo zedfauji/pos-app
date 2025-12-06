@@ -10,7 +10,7 @@
         <StackPanel Spacing="24">
             <!-- Header -->
             <StackPanel Spacing="8">
-                <TextBlock Text="Point of Sale Settings" FontSize="24" FontWeight="SemiBold"/>
+                <TextBlock Text="Point of Sale Settings" Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="Configure cash drawer, table layout, shifts, and tax settings" 
                            Opacity="0.7" TextWrapping="Wrap"/>
             </StackPanel>

@@ -32,8 +32,8 @@
 
                 <!-- Header -->
                 <StackPanel Grid.Row="0" Padding="16" Spacing="8">
-                    <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold"/>
-                    <TextBlock x:Name="HostKeyText" Text="Host: Loading..." FontSize="12" Opacity="0.7"/>
+                    <TextBlock Text="Settings" Style="{StaticResource TitleTextStyle}"/>
+                    <TextBlock x:Name="HostKeyText" Text="Host: Loading..." Style="{StaticResource CaptionTextStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     
                     <!-- Search Box -->
                     <AutoSuggestBox x:Name="SearchBox" 

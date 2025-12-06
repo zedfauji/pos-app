@@ -12,11 +12,11 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Column="0" Spacing="8">
-            <TextBlock Text="Categories" FontWeight="SemiBold"/>
+            <TextBlock Text="Categories" Style="{StaticResource SubtitleTextStyle}"/>
             <ListView ItemsSource="{Binding Categories}"
                       SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"/>
 
-            <TextBlock Text="Groups" FontWeight="SemiBold" Margin="0,12,0,0"/>
+            <TextBlock Text="Groups" Style="{StaticResource SubtitleTextStyle}" Margin="0,12,0,0"/>
             <ListView ItemsSource="{Binding Groups}"
                       SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"/>
         </StackPanel>

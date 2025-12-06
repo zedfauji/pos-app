@@ -14,7 +14,9 @@
 
     <ScrollViewer>
         <StackPanel Padding="24" Spacing="16">
-            <TextBlock Text="Receipt Settings" FontSize="28" FontWeight="SemiBold"/>
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Receipt Settings" Style="{StaticResource DisplayTextStyle}"/>
+            </StackPanel>
             
             <!-- Business Information -->
             <Expander Header="Business Information" IsExpanded="True">

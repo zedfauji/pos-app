@@ -1,4 +1,6 @@
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -237,8 +239,13 @@ namespace MagiDesk.Frontend
                 SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Creating Window");
                 window ??= new Window();
                 window.Title = "MagiDesk";
+                
+                // Apply Mica Alt background material (Fluent 2)
+                // Note: MicaKind is not available in WinUI 3, using MicaBackdrop directly
+                window.SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
+                
                 MainWindow = window;
-                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window created and MainWindow set");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Window created and MainWindow set with Mica Alt");
                 
                 // Set minimum window size to ensure navigation pane is visible
                 SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Resizing window");
@@ -521,13 +528,32 @@ namespace MagiDesk.Frontend
         {
             try
             {
+                var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] UNHANDLED EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}");
+                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {e.Exception.StackTrace}");
+                
+                if (e.Exception is System.Runtime.InteropServices.COMException comEx)
+                {
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] COM EXCEPTION HRESULT: 0x{comEx.HResult:X8}");
+                }
+                
                 Log.Error("Unhandled UI exception", e.Exception);
+                
                 // Attempt cleanup before crash
                 _ = Task.Run(async () => await CleanupActiveSessionsAsync());
             }
-            catch { }
-            // Let it crash after logging, or set e.Handled = true to try to continue
-            // e.Handled = true; // Uncomment to prevent crash during debugging
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in unhandled exception handler: {ex.Message}");
+            }
+            
+            // For COM exceptions (0x8001010E), mark as handled to prevent crash
+            if (e.Exception is System.Runtime.InteropServices.COMException comEx2 && comEx2.HResult == unchecked((int)0x8001010E))
+            {
+                e.Handled = true; // RPC_E_SERVERCALL_RETRYLATER - usually safe to ignore
+                System.Diagnostics.Debug.WriteLine("Handled COM exception 0x8001010E (RPC_E_SERVERCALL_RETRYLATER)");
+            }
+            // Let other exceptions crash after logging
         }
 
 

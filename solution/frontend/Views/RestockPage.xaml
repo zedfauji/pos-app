@@ -18,7 +18,7 @@
 
         <!-- Header with Actions -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Restock Management" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Restock Management" Style="{StaticResource TitleTextStyle}"/>
             <Button Content="Create Restock Request" Click="CreateRestockRequest_Click" Background="{ThemeResource AccentFillColorDefaultBrush}" Foreground="White"/>
             <Button Content="Auto-Restock Low Stock" Click="AutoRestock_Click" Background="{ThemeResource SystemAccentColor}"/>
             <Button Content="Refresh" Click="Refresh_Click"/>

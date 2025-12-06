@@ -22,19 +22,18 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
+            <StackPanel Grid.Column="0" Style="{StaticResource FluentPageHeaderStyle}">
                 <TextBlock Text="Customer Segments" 
-                          Style="{ThemeResource TitleTextBlockStyle}" 
-                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                          Style="{StaticResource TitleTextStyle}"/>
                 <TextBlock Text="View and manage customer segments for targeted marketing" 
-                          Style="{ThemeResource BodyTextBlockStyle}" 
+                          Style="{StaticResource CaptionTextStyle}"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
                           Margin="0,4,0,0"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
                 <Button x:Name="RefreshButton" 
-                        Style="{ThemeResource DefaultButtonStyle}"
+                        Style="{StaticResource FluentSecondaryButtonStyle}"
                         Click="RefreshButton_Click">
                     <Button.Content>
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -44,7 +43,7 @@
                     </Button.Content>
                 </Button>
                 <Button x:Name="CreateSegmentButton" 
-                        Style="{ThemeResource AccentButtonStyle}"
+                        Style="{StaticResource FluentPrimaryButtonStyle}"
                         Click="CreateSegmentButton_Click">
                     <Button.Content>
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -168,7 +167,7 @@
                              Margin="0,0,12,0"
                              TextChanged="SearchBox_TextChanged">
                         <TextBox.Resources>
-                            <Style TargetType="TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">
+                            <Style TargetType="TextBox" BasedOn="{StaticResource FluentTextBoxStyle}">
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="TextBox">
