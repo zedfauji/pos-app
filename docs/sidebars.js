@@ -45,6 +45,13 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'DevOps',
+      items: [
+        'devops/ci-cd',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Frontend',
       items: [
         'frontend/overview',

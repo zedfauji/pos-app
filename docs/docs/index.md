@@ -1,47 +1,144 @@
 # MagiDesk POS Developer Portal
 
-Welcome to the **MagiDesk POS Developer Portal** - your comprehensive guide to building, deploying, and extending the MagiDesk Point of Sale system.
+Welcome to the **MagiDesk POS Developer Portal** - your comprehensive guide to understanding, developing, and deploying the MagiDesk Point of Sale system.
 
-## What is MagiDesk POS?
+## 🚀 Quick Start
 
-MagiDesk POS is a modern, enterprise-grade Point of Sale system built with:
+New to MagiDesk POS? Start here:
 
-- **Frontend:** WinUI 3 (.NET 8) desktop application
-- **Backend:** 9 ASP.NET Core 8 microservices
-- **Database:** PostgreSQL (Cloud SQL)
-- **Deployment:** Google Cloud Run
-- **Architecture:** Microservices with Role-Based Access Control (RBAC)
+1. **[Overview](./getting-started/overview)** - Learn what MagiDesk POS is and its key features
+2. **[Prerequisites](./getting-started/prerequisites)** - Check system requirements
+3. **[Installation](./getting-started/installation)** - Set up your development environment
+4. **[Quick Start Guide](./getting-started/quick-start)** - Get up and running in minutes
 
-## Quick Links
-
-### 🚀 Getting Started
-- [Overview](./getting-started/overview.md) - System overview and key concepts
-- [Installation](./getting-started/installation.md) - Setup instructions
-- [Quick Start](./getting-started/quick-start.md) - Get up and running in minutes
+## 📚 Documentation Structure
 
 ### 🏗️ Architecture
-- [System Architecture](./architecture/system-architecture.md) - High-level system design
-- [Frontend Architecture](./architecture/frontend-architecture.md) - WinUI 3 and MVVM patterns
-- [Backend Architecture](./architecture/backend-architecture.md) - Microservices overview
-- [RBAC Architecture](./architecture/rbac-architecture.md) - Security and permissions
 
-### 📚 Documentation
-- [Frontend Guide](./frontend/overview.md) - WinUI 3 development
-- [Backend APIs](./backend/overview.md) - All 9 microservices
-- [API Reference](./api/overview.md) - Complete API documentation
-- [Database Schema](./database/overview.md) - PostgreSQL schemas
+- **[System Architecture](./architecture/overview)** - High-level system design
+- **[Frontend Architecture](./architecture/frontend-architecture)** - WinUI 3 desktop app structure
+- **[Backend Architecture](./architecture/backend-architecture)** - Microservices architecture
+- **[Database Architecture](./architecture/database-architecture)** - PostgreSQL schema design
+- **[Deployment Architecture](./architecture/deployment-architecture)** - Cloud Run deployment
+- **[RBAC Architecture](./architecture/rbac-architecture)** - Role-Based Access Control
 
-### 🔧 Development
-- [Developer Guide](./dev-guide/coding-standards.md) - Coding standards and best practices
-- [Configuration](./configuration/appsettings.md) - App settings and environment variables
-- [Deployment](./deployment/overview.md) - Deployment guides
+### 💻 Frontend Development
 
-### 🛡️ Security
-- [RBAC System](./security/rbac.md) - Role-Based Access Control
-- [Authentication](./security/authentication.md) - Auth flows and tokens
-- [Best Practices](./security/best-practices.md) - Security guidelines
+- **[Frontend Overview](./frontend/overview)** - WinUI 3 application structure
+- **[ViewModels](./frontend/viewmodels/overview)** - MVVM pattern implementation
+- **[Views & Pages](./frontend/views/overview)** - UI components and pages
+- **[Services](./frontend/services/overview)** - API clients and business services
 
-## System Overview
+### 🔧 Backend Development
+
+- **[Backend Overview](./backend/overview)** - Microservices architecture
+- **[UsersApi](./backend/users-api)** - User management and RBAC
+- **[MenuApi](./backend/menu-api)** - Menu item management
+- **[OrderApi](./backend/order-api)** - Order processing
+- **[PaymentApi](./backend/payment-api)** - Payment processing
+- **[InventoryApi](./backend/inventory-api)** - Inventory management
+- **[SettingsApi](./backend/settings-api)** - System settings
+- **[CustomerApi](./backend/customer-api)** - Customer management
+- **[DiscountApi](./backend/discount-api)** - Discount management
+- **[TablesApi](./backend/tables-api)** - Table/session management
+
+### 📡 API Reference
+
+- **[API Overview](./api/overview)** - API versioning and conventions
+- **[Authentication](./api/authentication)** - Authentication flows
+- **[API v1](./api/v1/overview)** - Legacy endpoints (backward compatible)
+- **[API v2](./api/v2/overview)** - RBAC-enabled endpoints
+
+### 🗄️ Database
+
+- **[Database Overview](./database/overview)** - PostgreSQL structure
+- **[Schemas](./database/schemas)** - Schema definitions
+- **[Relationships](./database/relationships)** - Entity relationships
+- **[Migrations](./database/migrations)** - Database migration guide
+
+### 🔐 Security
+
+- **[Security Overview](./security/overview)** - Security architecture
+- **[RBAC](./security/rbac)** - Role-Based Access Control
+- **[Authentication](./security/authentication)** - Auth flows
+- **[Best Practices](./security/best-practices)** - Security guidelines
+
+### 🚢 Deployment
+
+- **[Deployment Overview](./deployment/overview)** - Deployment strategies
+- **[Local Development](./deployment/local-development)** - Local setup
+- **[Cloud Run](./deployment/cloud-run)** - Google Cloud Run deployment
+- **[Production](./deployment/production)** - Production deployment
+
+### 🛠️ Developer Guide
+
+- **[Coding Standards](./dev-guide/coding-standards)** - Code style and conventions
+- **[WinUI 3 Guidelines](./dev-guide/winui3-guidelines)** - WinUI 3 best practices
+- **[API Development](./dev-guide/api-development)** - API development guide
+- **[Testing](./dev-guide/testing)** - Testing strategies
+
+### 🐛 Troubleshooting
+
+- **[Common Issues](./troubleshooting/common-issues)** - Frequently encountered problems
+- **[Debugging](./troubleshooting/debugging)** - Debugging techniques
+- **[Logs](./troubleshooting/logs)** - Log locations and analysis
+
+## 🎯 Key Features
+
+### 🔐 Role-Based Access Control (RBAC)
+
+- **47 granular permissions** across 11 categories
+- **6 system roles** (Owner, Admin, Manager, Server, Cashier, Host)
+- **Backend-enforced** authorization
+- **Frontend permission caching** for UX
+
+### 💳 Payment Processing
+
+- Multiple payment methods
+- Split payments
+- Refunds and voids
+- Payment history and audit
+
+### 📦 Order Management
+
+- Real-time order processing
+- Kitchen integration
+- Order tracking and logs
+- Bill management
+
+### 📊 Inventory Management
+
+- Vendor management
+- Stock tracking
+- Restock requests
+- Inventory analytics
+
+### 👥 Customer Intelligence
+
+- Customer segmentation
+- Loyalty programs
+- Marketing campaigns
+- Behavioral triggers
+
+### ⚙️ Hierarchical Settings
+
+- Category-based settings
+- Environment-specific configs
+- Settings versioning
+
+## 🏛️ Technology Stack
+
+| Component | Technology | Version |
+|-----------|-----------|---------|
+| **Frontend Framework** | WinUI 3 | Latest |
+| **.NET Runtime** | .NET 8 | 8.0+ |
+| **Backend Framework** | ASP.NET Core | 8.0 |
+| **Database** | PostgreSQL | 17 |
+| **Deployment** | Google Cloud Run | Latest |
+| **Architecture** | Microservices | - |
+| **Pattern** | MVVM (Frontend) | - |
+
+## 📊 System Overview
 
 ```mermaid
 graph TB
@@ -89,86 +186,21 @@ graph TB
     M --> N
 ```
 
-## Key Features
+## 🤝 Contributing
 
-### 🔐 Role-Based Access Control (RBAC)
-- 47 granular permissions
-- 6 system roles (Owner, Admin, Manager, Server, Cashier, Host)
-- Backend-enforced authorization
-- Frontend permission caching
+We welcome contributions! Please read our [Contribution Guide](./dev-guide/coding-standards) before submitting pull requests.
 
-### 💳 Payment Processing
-- Multiple payment methods
-- Split payments
-- Refunds and voids
-- Payment history and audit
+## 📝 License
 
-### 📦 Order Management
-- Real-time order processing
-- Kitchen integration
-- Order tracking and logs
-- Bill management
+This project is licensed under the terms specified in the [LICENSE](../LICENSE) file.
 
-### 📊 Inventory Management
-- Vendor management
-- Stock tracking
-- Restock requests
-- Inventory analytics
+## 📞 Support
 
-### 👥 Customer Intelligence
-- Customer segmentation
-- Loyalty programs
-- Marketing campaigns
-- Behavioral triggers
-
-### ⚙️ Hierarchical Settings
-- Category-based settings
-- Environment-specific configs
-- Settings versioning
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|-----------|
-| **Frontend Framework** | WinUI 3 (.NET 8) |
-| **Backend Framework** | ASP.NET Core 8 |
-| **Database** | PostgreSQL 17 |
-| **Deployment** | Google Cloud Run |
-| **Architecture** | Microservices |
-| **Pattern** | MVVM (Frontend) |
-
-## Documentation Structure
-
-This portal is organized into the following sections:
-
-1. **Getting Started** - Installation, setup, and quick start guides
-2. **Architecture** - System design and architectural decisions
-3. **Frontend** - WinUI 3 development, ViewModels, Views, Services
-4. **Backend** - All 9 microservices documented
-5. **Database** - Schemas, relationships, migrations
-6. **Features** - Feature-specific documentation
-7. **API Reference** - Complete API documentation (v1 and v2)
-8. **Configuration** - App settings and environment variables
-9. **Deployment** - Local, Cloud Run, and production deployment
-10. **Security** - RBAC, authentication, best practices
-11. **Developer Guide** - Coding standards and guidelines
-12. **Troubleshooting** - Common issues and solutions
-
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](https://github.com/your-username/Order-Tracking-By-GPT/blob/main/CONTRIBUTING.md) for details.
-
-## Support
-
-- **GitHub Issues:** [Report Issues](https://github.com/your-username/Order-Tracking-By-GPT/issues)
-- **Documentation:** This portal
-- **Questions:** Open a GitHub Discussion
-
-## License
-
-[Add your license information here]
+- **Documentation Issues**: Open an issue on GitHub
+- **Feature Requests**: Use GitHub Discussions
+- **Bug Reports**: Use GitHub Issues
 
 ---
 
-**Last Updated:** 2025-01-27  
-**Version:** 1.0.0
+**Last Updated**: 2025-01-02  
+**Documentation Version**: 1.0.0
