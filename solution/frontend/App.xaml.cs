@@ -370,17 +370,20 @@ namespace MagiDesk.Frontend
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logMenu = new Services.HttpLoggingHandler(innerMenu);
-                Menu = new Services.MenuApiService(new HttpClient(logMenu) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") });
+                var userIdMenu = new Services.UserIdHeaderHandler(logMenu);
+                Menu = new Services.MenuApiService(new HttpClient(userIdMenu) { BaseAddress = new Uri(menuBase.TrimEnd('/') + "/") });
 
                 var innerPay = new HttpClientHandler();
                 innerPay.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logPay = new Services.HttpLoggingHandler(innerPay);
-                Payments = new Services.PaymentApiService(new HttpClient(logPay) { BaseAddress = new Uri(paymentBase.TrimEnd('/') + "/") });
+                var userIdPay = new Services.UserIdHeaderHandler(logPay);
+                Payments = new Services.PaymentApiService(new HttpClient(userIdPay) { BaseAddress = new Uri(paymentBase.TrimEnd('/') + "/") });
 
                 var innerOrders = new HttpClientHandler();
                 innerOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logOrders = new Services.HttpLoggingHandler(innerOrders);
-                OrdersApi = new Services.OrderApiService(new HttpClient(logOrders) { BaseAddress = new Uri(ordersBase.TrimEnd('/') + "/") });
+                var userIdOrders = new Services.UserIdHeaderHandler(logOrders);
+                OrdersApi = new Services.OrderApiService(new HttpClient(userIdOrders) { BaseAddress = new Uri(ordersBase.TrimEnd('/') + "/") });
 
                 var innerVendorOrders = new HttpClientHandler();
                 innerVendorOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
@@ -392,7 +395,16 @@ namespace MagiDesk.Frontend
                 var innerSettings = new HttpClientHandler();
                 innerSettings.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logSettings = new Services.HttpLoggingHandler(innerSettings);
-                SettingsApi = new Services.SettingsApiService(new HttpClient(logSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
+                var userIdSettings = new Services.UserIdHeaderHandler(logSettings);
+                SettingsApi = new Services.SettingsApiService(new HttpClient(userIdSettings) { BaseAddress = new Uri(settingsBase.TrimEnd('/') + "/") }, null);
+                
+                // Initialize InventoryApi with UserIdHeaderHandler
+                var innerInventory = new HttpClientHandler();
+                innerInventory.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                var logInventory = new Services.HttpLoggingHandler(innerInventory);
+                var userIdInventory = new Services.UserIdHeaderHandler(logInventory);
+                var inventoryHttp = new HttpClient(userIdInventory) { BaseAddress = new Uri(inventoryBase.TrimEnd('/') + "/") };
+                // Note: InventoryApi service initialization may be elsewhere
                 
                 // Initialize HeartbeatService
                 HeartbeatService = new Services.HeartbeatService();
@@ -418,7 +430,8 @@ namespace MagiDesk.Frontend
                 var innerCustomer = new HttpClientHandler();
                 innerCustomer.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logCustomer = new Services.HttpLoggingHandler(innerCustomer);
-                CustomerApi = new Services.CustomerApiService(new HttpClient(logCustomer) { BaseAddress = new Uri(customerBase.TrimEnd('/') + "/") }, new Services.SimpleLogger<Services.CustomerApiService>());
+                var userIdCustomer = new Services.UserIdHeaderHandler(logCustomer);
+                CustomerApi = new Services.CustomerApiService(new HttpClient(userIdCustomer) { BaseAddress = new Uri(customerBase.TrimEnd('/') + "/") }, new Services.SimpleLogger<Services.CustomerApiService>());
                 
                 // Create service collection for dependency injection
                 var serviceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();

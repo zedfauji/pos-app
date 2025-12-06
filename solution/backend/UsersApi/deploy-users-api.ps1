@@ -53,7 +53,12 @@ Write-Info "Submitting build to Cloud Build..."
 if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Build failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
 
 Write-Info "Deploying to Cloud Run service '$ServiceName' in region '$Region'..."
-$envPairs = @("ASPNETCORE_URLS=http://0.0.0.0:8080","ASPNETCORE_ENVIRONMENT=Production")
+$connString = "Host=/cloudsql/$CloudSqlInstance;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Disable"
+$envPairs = @(
+    "ASPNETCORE_URLS=http://0.0.0.0:8080",
+    "ASPNETCORE_ENVIRONMENT=Production",
+    "Postgres:CloudRunSocketConnectionString=$connString"
+)
 $EnvVars = ($envPairs -join ",")
 $deployArgs = @(
     'run','deploy',$ServiceName,

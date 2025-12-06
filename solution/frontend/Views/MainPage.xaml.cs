@@ -331,6 +331,12 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(HierarchicalSettingsPage));
 #endif
                             break;
+                        case "RbacTestPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(RbacTestPage));
+#endif
+                            break;
                     }
                     // Update back button after navigation
                     NavView.IsBackEnabled = ContentFrame.CanGoBack;

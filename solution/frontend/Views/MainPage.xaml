@@ -92,6 +92,7 @@
 
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
+                <NavigationViewItem Content="RBAC Test" Tag="RbacTestPage" Icon="Security"/>
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Enhanced Menu" Tag="EnhancedMenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
