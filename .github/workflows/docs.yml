@@ -27,24 +27,12 @@ jobs:
         with:
           submodules: false
 
-      - name: Check docs lockfile
-        id: check_lockfile
-        run: |
-          if (Test-Path "docs/package-lock.json") {
-            Write-Host "lockfile=true"
-            echo "lockfile=true" >> $env:GITHUB_OUTPUT
-          } else {
-            Write-Host "lockfile=false"
-            echo "lockfile=false" >> $env:GITHUB_OUTPUT
-          }
-        shell: pwsh
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: ${{ steps.check_lockfile.outputs.lockfile == 'true' && 'npm' || '' }}
-          cache-dependency-path: ${{ steps.check_lockfile.outputs.lockfile == 'true' && 'docs/package-lock.json' || '' }}
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
 
       - name: Install dependencies
         working-directory: docs
