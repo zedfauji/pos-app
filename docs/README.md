@@ -1,29 +1,45 @@
-# MagiDesk POS Developer Portal
+# Developer Portal Documentation
 
-This directory contains the Docusaurus-based Developer Portal documentation for MagiDesk POS.
+This directory contains the complete developer portal documentation for MagiDesk POS, built with Docusaurus.
 
-## Quick Start
+## Structure
+
+```
+docs/
+├── docs/              # Documentation content (Markdown files)
+│   ├── getting-started/
+│   ├── architecture/
+│   ├── operations/
+│   ├── backend/
+│   ├── frontend/
+│   ├── api/
+│   ├── security/
+│   ├── testing/
+│   ├── contributing/
+│   └── faq/
+├── src/               # Custom React components and CSS
+├── static/            # Static assets (images, etc.)
+├── docusaurus.config.js  # Docusaurus configuration
+├── sidebars.js        # Sidebar navigation configuration
+└── package.json       # Node.js dependencies
+```
+
+## Local Development
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
-- Git
+- Node.js 18+
+- npm or yarn
 
-### Installation
+### Setup
 
-```bash
+```powershell
 # Install dependencies
 npm install
 
 # Start development server
 npm start
-```
 
-The documentation will be available at `http://localhost:3000`.
-
-### Build
-
-```bash
 # Build for production
 npm run build
 
@@ -31,58 +47,117 @@ npm run build
 npm run serve
 ```
 
-## Project Structure
+## Documentation Sections
 
-```
-docs/
-├── docs/              # Documentation markdown files
-├── src/               # React components and pages
-├── static/            # Static assets (images, etc.)
-├── docusaurus.config.js  # Docusaurus configuration
-├── sidebars.js        # Sidebar navigation
-└── package.json       # Dependencies
-```
+### Getting Started
+- Overview
+- Prerequisites
+- Installation
+- Quick Start
 
-## Documentation Structure
+### Architecture
+- System Architecture
+- Frontend Architecture
+- Backend Architecture
+- Database Architecture
+- Deployment Architecture
+- RBAC Architecture
 
-- **Getting Started** - Installation and setup guides
-- **Architecture** - System design and architecture
-- **Frontend** - WinUI 3 development documentation
-- **Backend** - Microservices API documentation
-- **Database** - Schema and migration guides
-- **Features** - Feature-specific documentation
-- **API Reference** - Complete API documentation
-- **Configuration** - App settings and environment variables
-- **Deployment** - Deployment guides
-- **Security** - Security and RBAC documentation
-- **Developer Guide** - Coding standards and best practices
-- **Troubleshooting** - Common issues and solutions
+### Operations & Support
+- Logging
+- Monitoring
+- Alerting
+- Service Management
+- Backup & Restore
+- Disaster Recovery
+- Performance Tuning
 
-## Contributing
+### Backend APIs
+- UsersApi
+- MenuApi
+- OrderApi
+- PaymentApi
+- InventoryApi
+- SettingsApi
+- CustomerApi
+- DiscountApi
+- TablesApi
 
-1. Edit markdown files in `docs/`
-2. Test locally: `npm start`
-3. Submit a pull request
+### Frontend
+- Overview
+- ViewModels
+- Views & Pages
+- Services
+- Navigation
+- Data Binding
+
+### API Reference
+- API Overview
+- Authentication
+- OpenAPI Specification
+- API v1 (Legacy)
+- API v2 (RBAC-enabled)
+
+### Security
+- Security Overview
+- RBAC Documentation
+- Authentication
+- Best Practices
+
+### Testing
+- Testing Overview
+- Unit Tests
+- Integration Tests
+- E2E Tests
+
+### Contributing
+- Contributing Guide
+- Development Workflow
+- Coding Standards
+- Commit Guidelines
+- Pull Request Process
+
+### FAQ
+- General Questions
+- Development Questions
+- API Questions
+- Troubleshooting
 
 ## Deployment
 
-The documentation is automatically deployed to GitHub Pages via GitHub Actions when changes are pushed to the `main` branch.
+Documentation is automatically deployed to GitHub Pages when changes are pushed to the repository.
 
 ### Manual Deployment
 
-```bash
+```powershell
+# Build documentation
 npm run build
+
+# Deploy (if configured)
 npm run deploy
 ```
 
-## Customization
+## Adding New Documentation
 
-- **Branding:** Edit `docusaurus.config.js`
-- **Navigation:** Edit `sidebars.js`
-- **Styling:** Edit `src/css/custom.css`
-- **Homepage:** Edit `src/pages/index.js`
+1. Create Markdown file in appropriate directory under `docs/docs/`
+2. Add entry to `sidebars.js` for navigation
+3. Follow existing documentation style
+4. Include Mermaid diagrams where helpful
+5. Test locally before committing
 
-## Resources
+## Documentation Standards
 
-- [Docusaurus Documentation](https://docusaurus.io/docs)
-- [MagiDesk POS Repository](https://github.com/your-username/Order-Tracking-By-GPT)
+- Use clear, concise language
+- Include code examples
+- Add diagrams (Mermaid) for complex concepts
+- Keep documentation up to date with code
+- Link related sections
+- Include troubleshooting information
+
+## Maintenance
+
+- Review documentation quarterly
+- Update with each major release
+- Keep examples current
+- Remove outdated information
+- Add new sections as needed

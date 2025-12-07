@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - '*'
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs.yml'
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even if no docs changed'
+        required: false
+        default: 'false'
+        type: boolean
+  schedule:
+    # Run daily at 2 AM UTC to catch any missed updates
+    - cron: '0 2 * * *'
 
 permissions:
   contents: read
@@ -20,12 +26,13 @@ concurrency:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: false
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,15 +41,38 @@ jobs:
           cache: 'npm'
           cache-dependency-path: docs/package-lock.json
 
+      - name: Verify docs directory
+        shell: pwsh
+        run: |
+          Write-Host "Current directory: $(Get-Location)"
+          Write-Host "Docs directory exists: $(Test-Path docs)"
+          if (Test-Path docs) {
+            Write-Host "Docs contents:"
+            Get-ChildItem docs -Recurse -File | Select-Object -First 10 FullName
+          }
+
       - name: Install dependencies
         working-directory: docs
         shell: pwsh
-        run: npm ci
+        run: |
+          Write-Host "Installing dependencies..."
+          npm ci
+          Write-Host "Dependencies installed successfully"
 
       - name: Build documentation
         working-directory: docs
         shell: pwsh
-        run: npm run build
+        run: |
+          Write-Host "Building documentation..."
+          npm run build
+          Write-Host "Build completed"
+          if (Test-Path build) {
+            Write-Host "Build output exists"
+            Get-ChildItem build -Recurse | Select-Object -First 10 FullName
+          } else {
+            Write-Host "ERROR: Build output not found!"
+            exit 1
+          }
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -56,7 +86,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Deploy to GitHub Pages

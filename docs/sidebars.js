@@ -45,9 +45,37 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: 'Operations & Support',
+      items: [
+        'operations/overview',
+        'operations/logging',
+        'operations/monitoring',
+        'operations/alerting',
+        'operations/service-management',
+        'operations/backup-restore',
+        'operations/disaster-recovery',
+        'operations/performance-tuning',
+      ],
+    },
+    {
+      type: 'category',
       label: 'DevOps',
       items: [
         'devops/ci-cd',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Testing',
+      items: [
+        'testing/overview',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Contributing',
+      items: [
+        'contributing/overview',
       ],
     },
     {
@@ -136,6 +164,7 @@ const sidebars = {
       items: [
         'api/overview',
         'api/authentication',
+        'api/openapi',
         {
           type: 'category',
           label: 'API v1',
@@ -217,9 +246,12 @@ const sidebars = {
       ],
     },
     {
-      type: 'doc',
-      id: 'changelog/releases',
+      type: 'category',
       label: 'Changelog',
+      items: [
+        'changelog/releases',
+        'changelog/template',
+      ],
     },
     {
       type: 'doc',
