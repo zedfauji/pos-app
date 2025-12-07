@@ -38,10 +38,10 @@ The MenuApi handles menu items, modifiers, combos, and menu analytics.
 **GET `/api/menu/items/{id}`**
 - **Description:** Get menu item by ID
 
-**GET /api/menu/items/sku/{sku}**
+**GET `/api/menu/items/sku/{sku}`**
 - **Description:** Get menu item by SKU
 
-**GET /api/menu/items/check-duplicate-sku/{sku}**
+**GET `/api/menu/items/check-duplicate-sku/{sku}`**
 - **Description:** Check if SKU already exists
 - **Query Parameters:**
   - `excludeId` (long?, optional) - Exclude this ID from check
