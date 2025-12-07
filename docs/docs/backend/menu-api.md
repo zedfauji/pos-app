@@ -26,7 +26,7 @@ The MenuApi handles menu items, modifiers, combos, and menu analytics.
 
 #### Endpoints
 
-**GET** `GET /api/menu/items`
+**GET** `/api/menu/items`
 - **Description:** List menu items with pagination and filtering
 - **Query Parameters:**
   - `SearchTerm` (string, optional)
@@ -35,38 +35,38 @@ The MenuApi handles menu items, modifiers, combos, and menu analytics.
   - `Page` (int, default: 1)
   - `PageSize` (int, default: 20)
 
-**GET** `GET /api/menu/items/{id}`
+**GET** `/api/menu/items/&#123;id&#125;`
 - **Description:** Get menu item by ID
 
-**GET** `GET /api/menu/items/sku/{sku}`
+**GET** `/api/menu/items/sku/&#123;sku&#125;`
 - **Description:** Get menu item by SKU
 
-**GET** `GET /api/menu/items/check-duplicate-sku/{sku}`
+**GET** `/api/menu/items/check-duplicate-sku/&#123;sku&#125;`
 - **Description:** Check if SKU already exists
 - **Query Parameters:**
   - `excludeId` (long?, optional) - Exclude this ID from check
 
-**PUT** `PUT /api/menu/items/{id}/availability`
+**PUT** `/api/menu/items/&#123;id&#125;/availability`
 - **Description:** Set item availability
 - **Request Body:** `AvailabilityUpdateDto`
 
-**POST** `POST /api/menu/items/{id}/rollback`
+**POST** `/api/menu/items/&#123;id&#125;/rollback`
 - **Description:** Rollback item to a previous version
 - **Query Parameters:**
   - `toVersion` (int) - Version number to rollback to
 
-**GET** `GET /api/menu/items/{id}/picture`
+**GET** `/api/menu/items/&#123;id&#125;/picture`
 - **Description:** Get item picture (redirects to URL)
 
-**POST** `POST /api/menu/items`
+**POST** `/api/menu/items`
 - **Description:** Create a new menu item
 - **Request Body:** `CreateMenuItemDto`
 
-**PUT** `PUT /api/menu/items/{id}`
+**PUT** `/api/menu/items/&#123;id&#125;`
 - **Description:** Update a menu item
 - **Request Body:** `UpdateMenuItemDto`
 
-**DELETE** `DELETE /api/menu/items/{id}`
+**DELETE** `/api/menu/items/&#123;id&#125;`
 - **Description:** Delete a menu item
 
 ### ModifiersController

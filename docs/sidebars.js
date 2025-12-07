@@ -89,6 +89,8 @@ const sidebars = {
             'frontend/viewmodels/orders-viewmodel',
           ],
         },
+        'frontend/printing',
+        'frontend/pane-management',
       ],
     },
     {
@@ -98,6 +100,13 @@ const sidebars = {
         'backend/overview',
         'backend/users-api',
         'backend/menu-api',
+        'backend/order-api',
+        'backend/payment-api',
+        'backend/inventory-api',
+        'backend/settings-api',
+        'backend/customer-api',
+        'backend/discount-api',
+        'backend/tables-api',
       ],
     },
     {
@@ -105,6 +114,11 @@ const sidebars = {
       label: 'Features',
       items: [
         'features/rbac',
+        'features/payments',
+        'features/split-payments',
+        'features/table-management',
+        'features/printing',
+        'features/vendor-management',
       ],
     },
     {
