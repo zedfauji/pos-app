@@ -45,6 +45,7 @@ const sidebars = {
       label: 'Operations & Support',
       items: [
         'operations/overview',
+        'operations/operational-handbook',
         'operations/logging',
         'operations/monitoring',
         'operations/alerting',
@@ -52,6 +53,24 @@ const sidebars = {
         'operations/backup-restore',
         'operations/disaster-recovery',
         'operations/performance-tuning',
+        {
+          type: 'category',
+          label: 'Runbooks',
+          items: [
+            'operations/runbooks/index',
+            'operations/runbooks/health-check',
+            'operations/runbooks/service-restart',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Playbooks',
+          items: [
+            'operations/playbooks/index',
+            'operations/playbooks/system-outage',
+            'operations/playbooks/refund-processing',
+          ],
+        },
       ],
     },
     {
@@ -113,6 +132,7 @@ const sidebars = {
       type: 'category',
       label: 'Features',
       items: [
+        'features/features-explained',
         'features/rbac',
         'features/payments',
         'features/split-payments',
