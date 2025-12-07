@@ -183,6 +183,35 @@ const sidebars = {
       id: 'faq/index',
       label: 'FAQ',
     },
+    {
+      type: 'category',
+      label: 'User Training Guides',
+      items: [
+        'user-guides/index',
+        'user-guides/server-quick-start',
+        'user-guides/server-training-manual',
+        'user-guides/server-daily-tasks',
+        'user-guides/manager-quick-start',
+        'user-guides/manager-training-manual',
+        'user-guides/manager-daily-tasks',
+        {
+          type: 'category',
+          label: 'Getting Started',
+          items: [
+            'user-guides/getting-started/logging-in',
+            'user-guides/getting-started/interface-overview',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Quick Reference',
+          items: [
+            'user-guides/quick-reference/cheat-sheet',
+            'user-guides/quick-reference/faq',
+          ],
+        },
+      ],
+    },
   ],
 };
 
