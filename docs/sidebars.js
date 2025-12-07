@@ -200,6 +200,38 @@ const sidebars = {
           items: [
             'user-guides/getting-started/logging-in',
             'user-guides/getting-started/interface-overview',
+            'user-guides/getting-started/navigation',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Table Management',
+          items: [
+            'user-guides/table-management/starting-session',
+            'user-guides/table-management/managing-tables',
+            'user-guides/table-management/stopping-session',
+            'user-guides/table-management/moving-tables',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Orders',
+          items: [
+            'user-guides/orders/creating-order',
+            'user-guides/orders/adding-items',
+            'user-guides/orders/modifying-orders',
+            'user-guides/orders/viewing-status',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Payments',
+          items: [
+            'user-guides/payments/processing-payment',
+            'user-guides/payments/split-payments',
+            'user-guides/payments/applying-discounts',
+            'user-guides/payments/processing-refunds',
+            'user-guides/payments/printing-receipts',
           ],
         },
         {
@@ -208,6 +240,8 @@ const sidebars = {
           items: [
             'user-guides/quick-reference/cheat-sheet',
             'user-guides/quick-reference/faq',
+            'user-guides/quick-reference/shortcuts',
+            'user-guides/quick-reference/troubleshooting',
           ],
         },
       ],
