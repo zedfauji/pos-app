@@ -23,9 +23,6 @@ const config = {
 
   markdown: {
     mermaid: true,
-    hooks: {
-      onBrokenMarkdownLinks: 'ignore',
-    },
   },
 
   // Even if you don't use internalization, you can use this field to set useful
@@ -48,6 +45,8 @@ const config = {
           editUrl: 'https://github.com/zedfauji/pos-app/tree/implement-rbac-api-cursor/docs/',
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
+          onBrokenLinks: 'ignore',
+          onBrokenMarkdownLinks: 'ignore',
         },
         blog: false,
         theme: {
