@@ -49,7 +49,7 @@ The UsersApi handles user management, authentication, and Role-Based Access Cont
   - `Page` (int, default: 1)
   - `PageSize` (int, default: 20)
 
-**GET /api/v2/users/{userId}**
+**GET `/api/v2/users/{userId}`**
 - **Permission:** `user:view`
 - **Description:** Get user by ID
 
@@ -58,12 +58,12 @@ The UsersApi handles user management, authentication, and Role-Based Access Cont
 - **Description:** Create a new user
 - **Request Body:** `CreateUserRequest`
 
-**PUT /api/v2/users/{userId}**
+**PUT `/api/v2/users/{userId}`**
 - **Permission:** `user:update`
 - **Description:** Update an existing user
 - **Request Body:** `UpdateUserRequest`
 
-**DELETE /api/v2/users/{userId}**
+**DELETE `/api/v2/users/{userId}`**
 - **Permission:** `user:delete`
 - **Description:** Delete a user (soft delete)
 
@@ -89,7 +89,7 @@ The UsersApi handles user management, authentication, and Role-Based Access Cont
 
 #### Endpoints
 
-**GET /api/v2/rbac/users/{userId}/permissions**
+**GET `/api/v2/rbac/users/{userId}/permissions`**
 - **Permission:** `user:view`
 - **Description:** Get all permissions for a user
 - **Response:** `string[]` (array of permission strings)
