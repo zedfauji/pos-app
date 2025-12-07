@@ -51,6 +51,7 @@ namespace MagiDesk.Frontend
         public static Services.HeartbeatService? HeartbeatService { get; private set; }
         public static Services.InventorySettingsService? InventorySettingsService { get; private set; }
         public static Services.CustomerApiService? CustomerApi { get; private set; }
+        public static Services.CajaService? CajaService { get; private set; }
         public static IServiceProvider? Services { get; private set; }
         
         public IServiceProvider ServiceProvider => Services ?? throw new InvalidOperationException("Services not initialized");
@@ -378,6 +379,7 @@ namespace MagiDesk.Frontend
                 var logPay = new Services.HttpLoggingHandler(innerPay);
                 var userIdPay = new Services.UserIdHeaderHandler(logPay);
                 Payments = new Services.PaymentApiService(new HttpClient(userIdPay) { BaseAddress = new Uri(paymentBase.TrimEnd('/') + "/") });
+                CajaService = new Services.CajaService(new HttpClient(userIdPay) { BaseAddress = new Uri(paymentBase.TrimEnd('/') + "/") });
 
                 var innerOrders = new HttpClientHandler();
                 innerOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
@@ -467,6 +469,7 @@ namespace MagiDesk.Frontend
                 innerPay.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
                 var logPay = new Services.HttpLoggingHandler(innerPay);
                 Payments = new Services.PaymentApiService(new HttpClient(logPay) { BaseAddress = new Uri("https://localhost:7016/") });
+                CajaService = new Services.CajaService(new HttpClient(logPay) { BaseAddress = new Uri("https://localhost:7016/") });
 
                 var innerOrders = new HttpClientHandler();
                 innerOrders.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;

@@ -9,7 +9,7 @@
                        Foreground="{ThemeResource SystemColorGrayTextBrush}" />
 
             <!-- Current User Info -->
-            <Border Style="{StaticResource CardStyle}" Padding="16">
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
                 <StackPanel Spacing="12">
                     <TextBlock Text="Current User" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
@@ -26,7 +26,7 @@
             </Border>
 
             <!-- Permissions List -->
-            <Border Style="{StaticResource CardStyle}" Padding="16">
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
                 <StackPanel Spacing="12">
                     <TextBlock Text="User Permissions" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <ScrollViewer MaxHeight="300">
@@ -50,7 +50,7 @@
             </Border>
 
             <!-- API Test Section -->
-            <Border Style="{StaticResource CardStyle}" Padding="16">
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
                 <StackPanel Spacing="12">
                     <TextBlock Text="API Endpoint Tests" Style="{StaticResource SubtitleTextBlockStyle}" />
                     
@@ -84,7 +84,7 @@
             </Border>
 
             <!-- Permission Check Section -->
-            <Border Style="{StaticResource CardStyle}" Padding="16">
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
                 <StackPanel Spacing="12">
                     <TextBlock Text="Permission Check" Style="{StaticResource SubtitleTextBlockStyle}" />
                     <TextBox x:Name="PermissionInput" 

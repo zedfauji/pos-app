@@ -47,6 +47,7 @@ builder.Services.AddHttpClient<MagiDesk.Shared.Authorization.Services.IRbacServi
 
 // Register permission requirement handler (from shared library)
 builder.Services.AddSingleton<IAuthorizationHandler, MagiDesk.Shared.Authorization.Handlers.PermissionRequirementHandler>();
+builder.Services.AddHttpClient(); // For caja validation calls to PaymentApi
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IKitchenService, KitchenService>();

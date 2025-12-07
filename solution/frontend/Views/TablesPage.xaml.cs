@@ -819,6 +819,39 @@ public class AddItemRow : INotifyPropertyChanged
     // Context menu handlers
     private async void StartMenu_Click(object sender, RoutedEventArgs e)
     {
+        // Validate caja session before starting table session
+        if (App.CajaService != null)
+        {
+            var activeSession = await App.CajaService.GetActiveSessionAsync();
+            if (activeSession == null)
+            {
+                var errorDialog = new ContentDialog
+                {
+                    Title = "Caja Cerrada",
+                    Content = "Debe abrir la caja antes de iniciar sesiones de mesa. ¿Desea abrir la caja ahora?",
+                    PrimaryButtonText = "Abrir Caja",
+                    CloseButtonText = "Cancelar",
+                    XamlRoot = this.XamlRoot
+                };
+                
+                var result = await errorDialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                {
+                    // Navigate to CajaPage
+                    if (App.MainWindow?.Content is Frame frame)
+                    {
+                        frame.Navigate(typeof(CajaPage));
+                    }
+                }
+                return;
+            }
+        }
+        
+        StartMenu_Click_Internal(sender, e);
+    }
+    
+    private async void StartMenu_Click_Internal(object sender, RoutedEventArgs e)
+    {
         if ((sender as FrameworkElement)?.DataContext is not TableItem item) return;
         
         // Step 1: Check if table is already occupied

@@ -277,6 +277,18 @@ namespace MagiDesk.Frontend.Views
                             ContentFrame.Navigate(typeof(BillingPage));
 #endif
                             break;
+                        case "CajaPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(CajaPage));
+#endif
+                            break;
+                        case "CajaReportsPage":
+#if XAML_ONLY_MAIN
+#else
+                            ContentFrame.Navigate(typeof(CajaReportsPage));
+#endif
+                            break;
                         case "PaymentPage":
 #if XAML_ONLY_MAIN
 #else

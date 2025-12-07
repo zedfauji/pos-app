@@ -63,6 +63,8 @@ builder.Services.AddHostedService<PaymentApi.Services.DatabaseInitializer>();
 builder.Services.AddScoped<PaymentApi.Repositories.IPaymentRepository, PaymentApi.Repositories.PaymentRepository>();
 builder.Services.AddScoped<PaymentApi.Services.IPaymentService, PaymentApi.Services.PaymentService>();
 builder.Services.AddScoped<PaymentApi.Services.ImmutableIdService>();
+builder.Services.AddScoped<PaymentApi.Repositories.ICajaRepository, PaymentApi.Repositories.CajaRepository>();
+builder.Services.AddScoped<PaymentApi.Services.ICajaService, PaymentApi.Services.CajaService>();
 
 var app = builder.Build();
 
