@@ -42,37 +42,37 @@ jobs:
           cache-dependency-path: docs/package-lock.json
 
       - name: Verify docs directory
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "Current directory: $(Get-Location)"
-          Write-Host "Docs directory exists: $(Test-Path docs)"
-          if (Test-Path docs) {
-            Write-Host "Docs contents:"
-            Get-ChildItem docs -Recurse -File | Select-Object -First 10 FullName
-          }
+          echo "Current directory: $(pwd)"
+          echo "Docs directory exists: $([ -d docs ] && echo 'yes' || echo 'no')"
+          if [ -d docs ]; then
+            echo "Docs contents:"
+            find docs -type f | head -10
+          fi
 
       - name: Install dependencies
         working-directory: docs
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "Installing dependencies..."
+          echo "Installing dependencies..."
           npm ci
-          Write-Host "Dependencies installed successfully"
+          echo "Dependencies installed successfully"
 
       - name: Build documentation
         working-directory: docs
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "Building documentation..."
+          echo "Building documentation..."
           npm run build
-          Write-Host "Build completed"
-          if (Test-Path build) {
-            Write-Host "Build output exists"
-            Get-ChildItem build -Recurse | Select-Object -First 10 FullName
-          } else {
-            Write-Host "ERROR: Build output not found!"
+          echo "Build completed"
+          if [ -d "build" ]; then
+            echo "Build output exists"
+            ls -la build/ | head -10
+          else
+            echo "ERROR: Build output not found!"
             exit 1
-          }
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
