@@ -21,6 +21,8 @@ const config = {
   organizationName: 'zedfauji', // Usually your GitHub org/user name.
   projectName: 'pos-app', // Usually your repo name.
 
+  onBrokenLinks: 'ignore',
+  onBrokenMarkdownLinks: 'ignore',
   markdown: {
     mermaid: true,
   },
@@ -45,8 +47,6 @@ const config = {
           editUrl: 'https://github.com/zedfauji/pos-app/tree/implement-rbac-api-cursor/docs/',
           showLastUpdateAuthor: true,
           showLastUpdateTime: true,
-          onBrokenLinks: 'ignore',
-          onBrokenMarkdownLinks: 'ignore',
         },
         blog: false,
         theme: {
