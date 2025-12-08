@@ -343,7 +343,7 @@
         </Border>
         
         <!-- Professional Payments List -->
-        <ListView Grid.Row="4" ItemsSource="{x:Bind ViewModel.FilteredPayments, Mode=OneWay}" SelectionMode="Single" Background="Transparent">
+        <ListView Grid.Row="4" x:Name="PaymentsListView" ItemsSource="{x:Bind ViewModel.FilteredPayments, Mode=OneWay}" SelectionMode="Single" Background="Transparent" ContainerContentChanging="PaymentsListView_ContainerContentChanging">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Border Style="{StaticResource PaymentCardStyle}">
@@ -361,7 +361,12 @@
                                         <FontIcon Glyph="&#xE8A5;" FontSize="16" Foreground="White"/>
                                     </Border>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding PaymentId}" FontWeight="SemiBold" FontSize="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding PaymentId}" FontWeight="SemiBold" FontSize="18" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <Border x:Name="RefundStatusBadge" Background="{ThemeResource SystemFillColorAttentionBrush}" CornerRadius="4" Padding="6,2" Visibility="Collapsed">
+                                                <TextBlock Text="Refunded" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
                                         <TextBlock Text="Payment ID" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                                     </StackPanel>
                                 </StackPanel>

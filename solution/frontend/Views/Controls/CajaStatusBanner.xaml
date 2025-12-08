@@ -1,0 +1,27 @@
+<UserControl
+    x:Class="MagiDesk.Frontend.Views.Controls.CajaStatusBanner"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Border Background="#FF107C10"
+            CornerRadius="4"
+            Padding="12,8"
+            Visibility="{x:Bind IsVisible, Mode=OneWay}">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+            <SymbolIcon Symbol="Accept" Foreground="White"/>
+            <StackPanel>
+                <TextBlock Text="Caja Abierta" 
+                           Foreground="White"
+                           FontWeight="SemiBold"
+                           FontSize="14"/>
+                <TextBlock x:Name="StatusDetailsText"
+                           Foreground="White"
+                           FontSize="12"
+                           Opacity="0.9"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

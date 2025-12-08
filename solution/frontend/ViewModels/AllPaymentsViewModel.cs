@@ -18,6 +18,8 @@ namespace MagiDesk.Frontend.ViewModels
 
         public ObservableCollection<PaymentApiService.PaymentDto> Payments { get; } = new();
         public ObservableCollection<PaymentApiService.PaymentDto> FilteredPayments { get; } = new();
+        private Dictionary<Guid, decimal> _refundedAmounts = new(); // PaymentId -> TotalRefundedAmount
+        private Dictionary<Guid, IReadOnlyList<PaymentApiService.RefundDto>> _refundsByPayment = new();
 
         private string _searchTerm = string.Empty;
         private string _paymentMethodFilter = string.Empty;
@@ -143,9 +145,14 @@ namespace MagiDesk.Frontend.ViewModels
                 DebugInfo = $"API returned {payments.Count} payments";
                 
                 Payments.Clear();
+                _refundedAmounts.Clear();
+                _refundsByPayment.Clear();
+                
                 foreach (var payment in payments)
                 {
                     Payments.Add(payment);
+                    // Load refunds for each payment (async, but don't await to avoid blocking)
+                    _ = LoadRefundsForPaymentAsync(payment.PaymentId);
                 }
                 
                 // Update debug info with payment details
@@ -290,21 +297,113 @@ namespace MagiDesk.Frontend.ViewModels
             }
         }
 
-        public async Task ProcessRefundAsync(Guid paymentId)
+        public async Task<PaymentApiService.RefundDto> ProcessRefundAsync(Guid paymentId, decimal refundAmount, string refundReason, string refundMethod = "original")
         {
             try
             {
-                // This would integrate with your payment service to process refunds
-                // For now, we'll just simulate the refund operation
-                await Task.Delay(1000); // Simulate refund delay
+                IsLoading = true;
+                HasError = false;
+                ErrorMessage = null;
+
+                // Validate refund amount
+                var payment = Payments.FirstOrDefault(p => p.PaymentId == paymentId);
+                if (payment == null)
+                    throw new Exception("Payment not found");
+
+                // Get existing refunds for this payment
+                var existingRefunds = await _paymentService.GetRefundsByPaymentIdAsync(paymentId);
+                var totalRefunded = existingRefunds.Sum(r => r.RefundAmount);
+                var remainingAmount = payment.AmountPaid - totalRefunded;
+
+                if (refundAmount <= 0)
+                    throw new Exception("Refund amount must be greater than zero");
+
+                if (refundAmount > remainingAmount)
+                    throw new Exception($"Refund amount ({refundAmount:C}) exceeds remaining refundable amount ({remainingAmount:C})");
+
+                // Validate refund reason is required
+                if (string.IsNullOrWhiteSpace(refundReason))
+                    throw new Exception("Refund reason is required. Please provide a reason for the refund.");
+
+                // Process refund
+                var request = new PaymentApiService.ProcessRefundRequestDto(
+                    refundAmount,
+                    refundReason,
+                    refundMethod
+                );
+
+                var refund = await _paymentService.ProcessRefundAsync(paymentId, request);
                 
-                // In a real implementation, you would call your payment service here
-                // await _paymentService.ProcessRefundAsync(paymentId);
+                if (refund == null)
+                    throw new Exception("Refund processing returned no result");
+
+                // Refresh payments list to get updated data
+                await LoadPaymentsAsync();
+
+                return refund;
             }
             catch (Exception ex)
             {
+                HasError = true;
+                ErrorMessage = $"Failed to process refund: {ex.Message}";
                 throw new Exception($"Failed to process refund: {ex.Message}", ex);
             }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        public async Task<IReadOnlyList<PaymentApiService.RefundDto>> GetRefundsForPaymentAsync(Guid paymentId)
+        {
+            try
+            {
+                if (_refundsByPayment.TryGetValue(paymentId, out var cached))
+                    return cached;
+                
+                var refunds = await _paymentService.GetRefundsByPaymentIdAsync(paymentId);
+                _refundsByPayment[paymentId] = refunds;
+                var totalRefunded = refunds.Sum(r => r.RefundAmount);
+                _refundedAmounts[paymentId] = totalRefunded;
+                return refunds;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get refunds: {ex.Message}", ex);
+            }
+        }
+
+        private async Task LoadRefundsForPaymentAsync(Guid paymentId)
+        {
+            try
+            {
+                var refunds = await _paymentService.GetRefundsByPaymentIdAsync(paymentId);
+                _refundsByPayment[paymentId] = refunds;
+                var totalRefunded = refunds.Sum(r => r.RefundAmount);
+                _refundedAmounts[paymentId] = totalRefunded;
+            }
+            catch
+            {
+                // Silently fail - refunds will be loaded on demand
+            }
+        }
+
+        public decimal GetRefundedAmount(Guid paymentId)
+        {
+            return _refundedAmounts.TryGetValue(paymentId, out var amount) ? amount : 0m;
+        }
+
+        public bool HasRefunds(Guid paymentId)
+        {
+            return _refundedAmounts.TryGetValue(paymentId, out var amount) && amount > 0;
+        }
+
+        public bool IsFullyRefunded(Guid paymentId)
+        {
+            var payment = Payments.FirstOrDefault(p => p.PaymentId == paymentId);
+            if (payment == null) return false;
+            var refunded = GetRefundedAmount(paymentId);
+            return refunded >= payment.AmountPaid;
         }
 
         public async Task PrintReceiptAsync(PaymentApiService.PaymentDto payment)

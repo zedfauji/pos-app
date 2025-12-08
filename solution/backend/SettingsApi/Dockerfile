@@ -3,14 +3,15 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Expect build context at solution/ so we can see backend/ and shared/
-COPY shared/*.csproj shared/
-COPY backend/SettingsApi/*.csproj SettingsApi/
-RUN dotnet restore "SettingsApi/SettingsApi.csproj"
+COPY ["shared/MagiDesk.Shared.csproj", "shared/"]
+COPY ["backend/SettingsApi/SettingsApi.csproj", "backend/SettingsApi/"]
+RUN dotnet restore "backend/SettingsApi/SettingsApi.csproj"
 
 # Copy source and publish
 COPY shared/ shared/
-COPY backend/SettingsApi/ SettingsApi/
-RUN dotnet publish "SettingsApi/SettingsApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+COPY backend/SettingsApi/ backend/SettingsApi/
+WORKDIR /src/backend/SettingsApi
+RUN dotnet publish "SettingsApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 ## Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final

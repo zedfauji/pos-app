@@ -1,0 +1,90 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.CloseCajaDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Cerrar la Caja"
+    PrimaryButtonText="Cerrar"
+    CloseButtonText="Cancelar"
+    DefaultButton="Primary"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick">
+
+    <StackPanel Spacing="16" MinWidth="500">
+        <TextBlock Text="Ingrese el monto final contado" 
+                   FontSize="16" 
+                   FontWeight="SemiBold" 
+                   Margin="0,0,0,8"/>
+        
+        <!-- System Calculated Total -->
+        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="12"
+                Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="Total Calculado por el Sistema" 
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                           Margin="0,0,0,4"/>
+                <TextBlock x:Name="SystemTotalText"
+                           Text="$0.00"
+                           FontSize="20"
+                           FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Opening Amount -->
+        <TextBlock x:Name="OpeningAmountText">
+            <Run Text="Monto inicial: $"/>
+            <Run x:Name="OpeningAmountRun" Text="0.00"/>
+        </TextBlock>
+
+        <!-- Closing Amount Input -->
+        <TextBox x:Name="ClosingAmountTextBox"
+                 Header="Monto Final Contado ($)"
+                 PlaceholderText="0.00"
+                 InputScope="Number"
+                 TextChanged="ClosingAmountTextBox_TextChanged"/>
+
+        <!-- Difference Display -->
+        <Border x:Name="DifferenceBorder"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8"
+                Padding="12"
+                Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="Diferencia" 
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemControlForegroundBaseMediumBrush}"
+                           Margin="0,0,0,4"/>
+                <TextBlock x:Name="DifferenceText"
+                           Text="$0.00"
+                           FontSize="18"
+                           FontWeight="SemiBold"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Notes -->
+        <TextBox x:Name="NotesTextBox"
+                 Header="Notas (Opcional)"
+                 PlaceholderText="Ingrese notas adicionales..."
+                 AcceptsReturn="True"
+                 TextWrapping="Wrap"
+                 MinHeight="80"/>
+
+        <!-- Manager Override -->
+        <CheckBox x:Name="ManagerOverrideCheckBox"
+                  Content="Autorización de Gerente (para diferencias significativas)"
+                  Margin="0,8,0,0"/>
+
+        <Border x:Name="ErrorMessageBorder" 
+                Background="#FFD13438" 
+                CornerRadius="8" 
+                Padding="12" 
+                Visibility="Collapsed"
+                Margin="0,8,0,0">
+            <TextBlock x:Name="ErrorMessageText" 
+                       Text="" 
+                       Foreground="White" 
+                       TextWrapping="Wrap"/>
+        </Border>
+    </StackPanel>
+</ContentDialog>

@@ -1281,6 +1281,32 @@ app.MapPost("/bills/by-billing/{billingId}/settle", async (Guid billingId) =>
     return Results.Ok(new { billingId, updated = rows });
 });
 
+// Update bill payment_state (used by PaymentApi for refunds)
+app.MapPut("/bills/by-billing/{billingId}/payment-state", async (Guid billingId, PaymentStateUpdateRequest request) =>
+{
+    await using var conn = new NpgsqlConnection(connString);
+    await conn.OpenAsync();
+    await EnsureSchemaAsync(conn);
+    
+    // Validate payment_state value
+    var validStates = new[] { "not-paid", "partial-paid", "paid", "partial-refunded", "refunded", "cancelled" };
+    if (!validStates.Contains(request.PaymentState))
+    {
+        return Results.BadRequest(new { error = "INVALID_PAYMENT_STATE", message = $"Payment state must be one of: {string.Join(", ", validStates)}" });
+    }
+    
+    const string upd = @"UPDATE public.bills SET payment_state = @state WHERE billing_id::text = @bid::text";
+    await using var cmd = new NpgsqlCommand(upd, conn);
+    cmd.Parameters.AddWithValue("@bid", billingId);
+    cmd.Parameters.AddWithValue("@state", request.PaymentState);
+    var rows = await cmd.ExecuteNonQueryAsync();
+    
+    if (rows == 0)
+        return Results.NotFound(new { error = "BILL_NOT_FOUND", message = $"Bill with billing_id {billingId} not found" });
+    
+    return Results.Ok(new { billingId, payment_state = request.PaymentState, updated = rows });
+});
+
 // Check if billing ID exists (used by PaymentApi for validation)
 app.MapGet("/bills/by-billing/{billingId}", async (Guid billingId) =>
 {

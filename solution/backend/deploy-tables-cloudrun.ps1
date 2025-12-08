@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$false)][string]$ProjectId,
-    [Parameter(Mandatory=$false)][string]$Region = "us-central1",
+    [Parameter(Mandatory=$false)][string]$Region = "northamerica-south1",
     [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-tables",
     [Parameter(Mandatory=$false)][string]$ConnString,
     [Parameter(Mandatory=$false)][string]$CloudSqlInstance
