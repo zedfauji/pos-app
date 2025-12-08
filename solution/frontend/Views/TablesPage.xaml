@@ -6,7 +6,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="using:MagiDesk.Frontend.Views"
     xmlns:conv="using:MagiDesk.Frontend.Converters"
-    xmlns:controls="using:MagiDesk.Frontend.Controls"
     mc:Ignorable="d">
     <Page.Resources>
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -18,294 +17,416 @@
     </Page.Resources>
     
     <Grid Background="Transparent">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240" MinWidth="200"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="280" MinWidth="240"/>
-        </Grid.ColumnDefinitions>
-        
-        <!-- Left: Floors Navigation -->
-        <Border Grid.Column="0" 
-                Background="{StaticResource AcrylicCardBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="0,0,1,0">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Floors Header -->
-                <StackPanel Grid.Row="0" 
-                             Padding="16"
-                             Background="{ThemeResource ControlFillColorDefaultBrush}">
-                    <TextBlock Text="Floors" 
-                               Style="{StaticResource TitleTextStyle}"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                    <TextBlock Text="Select a floor to view tables" 
-                               Style="{StaticResource CaptionTextStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
-                
-                <!-- Floors List -->
-                <ListView Grid.Row="1"
-                           x:Name="FloorsListView"
-                           ItemsSource="{Binding Floors}"
-                           SelectedItem="{Binding SelectedFloor, Mode=TwoWay}"
-                           SelectionMode="Single"
-                           SelectionChanged="FloorsListView_SelectionChanged"
-                           Style="{StaticResource FluentListViewStyle}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Padding="12,8" Margin="8,4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{Binding FloorName}" 
-                                               FontWeight="SemiBold"
-                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding Description}" 
-                                               Style="{StaticResource CaptionTextStyle}"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="2"/>
-                                </StackPanel>
-                                
-                                <StackPanel Grid.Column="1" 
-                                            Orientation="Horizontal" 
-                                            Spacing="4"
-                                            VerticalAlignment="Center">
-                                    <Border Background="{ThemeResource SystemFillColorAttentionBackground}"
-                                            CornerRadius="4"
-                                            Padding="4,2"
-                                            Visibility="{Binding IsDefault, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="Default" 
-                                                   FontSize="10"
-                                                   Foreground="White"
-                                                   FontWeight="SemiBold"/>
-                                    </Border>
-                                    <Border Background="{ThemeResource SystemFillColorSuccessBackground}"
-                                            CornerRadius="4"
-                                            Padding="4,2"
-                                            Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="Active" 
-                                                   FontSize="10"
-                                                   Foreground="White"
-                                                   FontWeight="SemiBold"/>
-                                    </Border>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </Grid>
-        </Border>
-        
-        <!-- Center: Layout Preview (Full Screen) -->
-        <Grid Grid.Column="1" Margin="16">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Compact Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Floor Layout Preview" 
-                               FontSize="20" FontWeight="SemiBold"
-                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                    <TextBlock Text="Visual representation of table positions" 
-                               FontSize="12"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Margin="0,4,0,0"/>
-                </StackPanel>
-                
-                <!-- Compact Controls -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <ComboBox x:Name="FilterCombo" 
-                              Width="160" 
-                              SelectionChanged="FilterCombo_SelectionChanged"
-                              Style="{StaticResource FluentComboBoxStyle}">
-                        <ComboBoxItem Content="All Tables"/>
-                        <ComboBoxItem Content="Available Only"/>
-                        <ComboBoxItem Content="Occupied Only"/>
-                    </ComboBox>
-                    <ToggleSwitch x:Name="LiveToggle" 
-                                  Toggled="LiveToggle_Toggled"
-                                  OnContent="Live"
-                                  OffContent="Paused"/>
-                </StackPanel>
-            </Grid>
-            
-            <!-- Layout Preview Control - Fills remaining space -->
-            <Border Grid.Row="1"
-                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Padding="8">
-                <controls:FloorLayoutPreviewControl x:Name="LayoutPreviewControl"
-                                                     TableClicked="LayoutPreviewControl_TableClicked"
-                                                     StartSessionRequested="LayoutPreviewControl_StartSessionRequested"
-                                                     StopSessionRequested="LayoutPreviewControl_StopSessionRequested"
-                                                     OpenTableRequested="LayoutPreviewControl_OpenTableRequested"
-                                                     CloseTableRequested="LayoutPreviewControl_CloseTableRequested"
-                                                     AddItemsRequested="LayoutPreviewControl_AddItemsRequested"
-                                                     CheckSummaryRequested="LayoutPreviewControl_CheckSummaryRequested"
-                                                     MoveTableRequested="LayoutPreviewControl_MoveTableRequested"
-                                                     AssignToBilliardRequested="LayoutPreviewControl_AssignToBilliardRequested"
-                                                     TableStatusRequested="LayoutPreviewControl_TableStatusRequested"
-                                                     SetThresholdRequested="LayoutPreviewControl_SetThresholdRequested"
-                                                     ClearThresholdRequested="LayoutPreviewControl_ClearThresholdRequested"
-                                                     DiagnosticsRequested="LayoutPreviewControl_DiagnosticsRequested"/>
-            </Border>
-        </Grid>
-        
-        <!-- Right: Settings Sidebar -->
-        <Border Grid.Column="2" 
-                Background="{StaticResource AcrylicCardBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1,0,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="16">
-                <StackPanel Spacing="20">
-                    <!-- Settings Header -->
-                    <StackPanel>
-                        <TextBlock Text="Layout Settings" 
-                                   FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                        <TextBlock Text="Customize layout display" 
-                                   FontSize="12"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                   Margin="0,4,0,0"/>
-                    </StackPanel>
+        <!-- Page Header -->
+        <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+            <TextBlock Text="Tables" 
+                       Style="{StaticResource DisplayTextStyle}"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="Manage and monitor table status" 
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                      VerticalScrollMode="Auto"
+                      Padding="24"
+                      Margin="0,16,0,0">
+            <StackPanel Spacing="32">
+                <!-- Fluent Top Bar -->
+                <Border Style="{StaticResource FluentCardStyle}">
                     
-                    <!-- Visibility Options -->
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Visibility" 
-                                   FontWeight="SemiBold"
-                                   FontSize="14"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
                         
-                        <ToggleSwitch x:Name="ShowFloorLayoutToggle"
-                                      Header="Show Floor Layout"
-                                      IsOn="True"
-                                      Toggled="ShowFloorLayoutToggle_Toggled"/>
-                        
-                        <ToggleSwitch x:Name="ShowTableLabelsToggle"
-                                      Header="Show Table Labels"
-                                      IsOn="True"
-                                      Toggled="ShowTableLabelsToggle_Toggled"/>
-                        
-                        <ToggleSwitch x:Name="ShowAvailabilityColorToggle"
-                                      Header="Show Availability Color"
-                                      IsOn="True"
-                                      Toggled="ShowAvailabilityColorToggle_Toggled"/>
-                        
-                        <ToggleSwitch x:Name="ShowShapesOnlyToggle"
-                                      Header="Shapes Only"
-                                      IsOn="False"
-                                      Toggled="ShowShapesOnlyToggle_Toggled"/>
-                    </StackPanel>
-                    
-                    <!-- Display Options -->
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Display" 
-                                   FontWeight="SemiBold"
-                                   FontSize="14"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                        
-                        <ToggleSwitch x:Name="ShowGridToggle"
-                                      Header="Show Grid Background"
-                                      IsOn="False"
-                                      Toggled="ShowGridToggle_Toggled"/>
-                        
-                        <StackPanel Spacing="8" Margin="0,8,0,0">
-                            <TextBlock Text="Zoom Level"
-                                       FontSize="12"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                            <Slider x:Name="ZoomSlider"
-                                    Minimum="0.25"
-                                    Maximum="2.0"
-                                    StepFrequency="0.05"
-                                    TickFrequency="0.25"
-                                    Value="1.0"
-                                    ValueChanged="ZoomSlider_ValueChanged"/>
-                            <TextBlock x:Name="ZoomValueText"
-                                       Text="100%"
-                                       FontSize="11"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       HorizontalAlignment="Right"/>
-                        </StackPanel>
-                    </StackPanel>
-                    
-                    <!-- Actions -->
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Actions" 
-                                   FontWeight="SemiBold"
-                                   FontSize="14"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                        
-                        <Button Content="Auto Fit Tables"
-                                Click="AutoFitTablesButton_Click"
-                                Style="{StaticResource FluentPrimaryButtonStyle}"/>
-                        
-                        <Button Content="Center Layout"
-                                Click="CenterLayoutButton_Click"
-                                Style="{StaticResource FluentSecondaryButtonStyle}"/>
-                        
-                        <Button Content="Reset Zoom"
-                                Click="ResetZoomButton_Click"
-                                Style="{StaticResource FluentSecondaryButtonStyle}"/>
-                    </StackPanel>
-                    
-                    <!-- Status Info -->
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Status" 
-                                   FontWeight="SemiBold"
-                                   FontSize="14"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                        <Border Style="{StaticResource FluentStatusBadgeStyle}">
-                            <TextBlock x:Name="SourceText" 
-                                       Foreground="White" 
-                                       FontSize="12" FontWeight="SemiBold"/>
-                        </Border>
-                        <Border Style="{StaticResource FluentStatusBadgeStyle}">
-                            <TextBlock x:Name="CountsText" 
-                                       Foreground="White" 
-                                       FontSize="12" FontWeight="SemiBold"/>
-                        </Border>
-                    </StackPanel>
-                    
-                    <!-- Legend -->
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Legend" 
-                                   FontWeight="SemiBold"
-                                   FontSize="14"
-                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                        <StackPanel Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Border Width="12" Height="12" CornerRadius="6"
-                                        Background="{ThemeResource SystemFillColorSuccessBrush}"/>
-                                <TextBlock Text="Available" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <!-- Left Side: Controls -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="32">
+                            <!-- Filter Control -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Filter Tables" 
+                                           Style="{StaticResource BodyTextStyle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <ComboBox x:Name="FilterCombo" 
+                                          Width="200" 
+                                          SelectionChanged="FilterCombo_SelectionChanged"
+                                          Style="{StaticResource FluentComboBoxStyle}">
+                                    <ComboBoxItem Content="All Tables"/>
+                                    <ComboBoxItem Content="Available Only"/>
+                                    <ComboBoxItem Content="Occupied Only"/>
+                                </ComboBox>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                <Border Width="12" Height="12" CornerRadius="6"
-                                        Background="{ThemeResource SystemFillColorCriticalBrush}"/>
-                                <TextBlock Text="Occupied" FontSize="12" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            
+                            <!-- Live Updates Toggle -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Live Updates" 
+                                           Style="{StaticResource BodyTextStyle}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <ToggleSwitch x:Name="LiveToggle" 
+                                              Toggled="LiveToggle_Toggled"
+                                              OnContent="Enabled"
+                                              OffContent="Disabled"/>
                             </StackPanel>
                         </StackPanel>
+                        
+                        <!-- Right Side: Status Info -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                            <!-- Source Badge -->
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}">
+                                <TextBlock x:Name="SourceText" 
+                                           Foreground="White" 
+                                           FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                            
+                            <!-- Counts Badge -->
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}">
+                                <TextBlock x:Name="CountsText" 
+                                           Foreground="White" 
+                                           FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                
+                <!-- Legend -->
+                <Border Background="{StaticResource AcrylicCardBrush}" 
+                        CornerRadius="8" 
+                        Padding="16" 
+                        HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="24">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Border Width="12" Height="12" CornerRadius="6"
+                                    Background="{ThemeResource SystemFillColorSuccessBrush}"/>
+                            <TextBlock Text="Available" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Border Width="12" Height="12" CornerRadius="6"
+                                    Background="{ThemeResource SystemFillColorCriticalBrush}"/>
+                            <TextBlock Text="Occupied" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
+                </Border>
+
+                <!-- Billiard Tables Section -->
+                <Border Background="{StaticResource AcrylicCardBrush}" 
+                        CornerRadius="16" 
+                        Padding="24">
+                    
+                    <StackPanel Spacing="20">
+                        <!-- Section Header -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7F7;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                            <TextBlock Text="Billiard Tables" 
+                                       FontSize="24" FontWeight="SemiBold" 
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}" Margin="12,0,0,0">
+                                <TextBlock Text="{Binding FilteredBilliardTables.Count}" 
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                        
+                        <!-- Tables Grid -->
+                        <GridView ItemsSource="{Binding FilteredBilliardTables}" 
+                                  IsItemClickEnabled="False" 
+                                  SelectionMode="None"
+                                  HorizontalAlignment="Stretch">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid Orientation="Horizontal" 
+                                                   ItemWidth="256" 
+                                                   ItemHeight="212"
+                                                   HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </GridView.ItemContainerStyle>
+                            <GridView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource FluentCardStyle}" 
+                                            Width="240" Height="180"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <CompositeTransform/>
+                                        </Border.RenderTransform>
+                                        <Border.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuFlyoutItem Text="Start Session" Click="StartMenu_Click" 
+                                                                Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Play"/>
+                                                <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Add"/>
+                                                <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Forward"/>
+                                                <MenuFlyoutItem Text="Stop Session" Click="StopMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Cancel"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Table Status" Click="TableStatusMenu_Click" 
+                                                                Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Help"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
+                                                                Icon="Repair"/>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Set Threshold" Click="SetThreshold_Click" Icon="Clock"/>
+                                                <MenuFlyoutItem Text="Clear Threshold" Click="ClearThreshold_Click" Icon="Clear"/>
+                                            </MenuFlyout>
+                                        </Border.ContextFlyout>
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StatusText}" Opacity="0.8"/>
+                                                    <TextBlock Text="{Binding ItemsSummary}" Opacity="0.8" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ToolTipService.ToolTip>
+                                        
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <!-- Header with Status -->
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,0,8,0"
+                                                        Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
+                                                    <TextBlock Text="{Binding Label}" 
+                                                               FontSize="16" FontWeight="SemiBold" 
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Table Visual -->
+                                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                                <Border Background="{Binding BackgroundBrush}" 
+                                                        CornerRadius="8" 
+                                                        BorderBrush="#0a2a16" 
+                                                        BorderThickness="3"
+                                                        Width="200" Height="110"
+                                                        HorizontalAlignment="Center">
+                                                    <!-- Billiard Table Pockets -->
+                                                    <Grid>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="2"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                                                        <Ellipse Fill="#0a2a16" Width="12" Height="12" 
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Bottom"/>
+                                                        
+                                                        <!-- Timer Chip -->
+                                                        <Border CornerRadius="10" Padding="6,2" 
+                                                                Background="{Binding ChipBackground}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                                                                Visibility="{Binding HasTimer, Converter={StaticResource BoolToVisibility}}">
+                                                            <TextBlock Text="{Binding ElapsedMinutesText}" 
+                                                                       Foreground="White" FontSize="10" FontWeight="SemiBold"/>
+                                                        </Border>
+                                                    </Grid>
+                                                </Border>
+                                            </Grid>
+                                            
+                                            <!-- Footer Info -->
+                                            <StackPanel Grid.Row="2" Spacing="4">
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12"/>
+                                                <TextBlock Text="{Binding ItemsSummary}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="11" 
+                                                           TextWrapping="Wrap"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxHeight="32"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Bar Tables Section -->
+                <Border Background="{StaticResource AcrylicCardBrush}" 
+                        CornerRadius="16" 
+                        Padding="24">
+                    
+                    <StackPanel Spacing="20">
+                        <!-- Section Header -->
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE7F8;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+                            <TextBlock Text="Bar Tables" 
+                                       FontSize="24" FontWeight="SemiBold" 
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                            <Border Style="{StaticResource FluentStatusBadgeStyle}" Margin="12,0,0,0">
+                                <TextBlock Text="{Binding FilteredBarTables.Count}" 
+                                           Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                            </Border>
+                        </StackPanel>
+                        
+                        <!-- Tables Grid -->
+                        <GridView ItemsSource="{Binding FilteredBarTables}" 
+                                  IsItemClickEnabled="False" 
+                                  SelectionMode="None"
+                                  HorizontalAlignment="Stretch">
+                            <GridView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsWrapGrid Orientation="Horizontal" 
+                                                   ItemWidth="216" 
+                                                   ItemHeight="212"
+                                                   HorizontalAlignment="Center"/>
+                                </ItemsPanelTemplate>
+                            </GridView.ItemsPanel>
+                            <GridView.ItemContainerStyle>
+                                <Style TargetType="GridViewItem">
+                                    <Setter Property="Margin" Value="0"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                </Style>
+                            </GridView.ItemContainerStyle>
+                            <GridView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource FluentCardStyle}" 
+                                            Width="200" Height="180"
+                                            RenderTransformOrigin="0.5,0.5">
+                                        <Border.RenderTransform>
+                                            <CompositeTransform/>
+                                        </Border.RenderTransform>
+                                        <Border.ContextFlyout>
+                                            <MenuFlyout>
+                                                <!-- Bar Table Specific Options -->
+                                                <MenuFlyoutItem Text="Open Table" Click="OpenTableMenu_Click" 
+                                                                Visibility="{Binding IsBarTable, Converter={StaticResource BoolToVisibility}}"
+                                                                Icon="Play"/>
+                                                <MenuFlyoutItem Text="Add Items" Click="AddItemsMenu_Click" 
+                                                                Icon="Add">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Check Summary" Click="CheckSummaryMenu_Click" 
+                                                                Icon="View">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Close Table" Click="CloseTableMenu_Click" 
+                                                                Icon="Cancel">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Move Table" Click="MoveMenu_Click" 
+                                                                Icon="Forward">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Assign to Billiard Table" Click="AssignToBilliardMenu_Click" 
+                                                                Icon="Forward">
+                                                    <MenuFlyoutItem.Visibility>
+                                                        <Binding Path="IsBarTable">
+                                                            <Binding.Converter>
+                                                                <conv:BoolToVisibilityConverter/>
+                                                            </Binding.Converter>
+                                                        </Binding>
+                                                    </MenuFlyoutItem.Visibility>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator/>
+                                                <MenuFlyoutItem Text="Run Diagnostics" Click="DiagnosticsMenu_Click" 
+                                                                Icon="Repair"/>
+                                            </MenuFlyout>
+                                        </Border.ContextFlyout>
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StatusText}" Opacity="0.8"/>
+                                                </StackPanel>
+                                            </ToolTip>
+                                        </ToolTipService.ToolTip>
+                                        
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            
+                                            <!-- Header with Status -->
+                                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,0,8,0"
+                                                        Background="{Binding Occupied, Converter={StaticResource OccupiedToColorConverter}}">
+                                                    <TextBlock Text="{Binding Label}" 
+                                                               FontSize="16" FontWeight="SemiBold" 
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Table Visual -->
+                                            <Grid Grid.Row="1" Margin="0,0,0,12">
+                                                <Grid Width="120" Height="120" HorizontalAlignment="Center">
+                                                    <Ellipse Fill="{Binding BackgroundBrush}" Width="120" Height="120"/>
+                                                    <Ellipse Width="110" Height="110" Fill="#777" Opacity="0.35"/>
+                                                    <Ellipse Width="100" Height="100" Fill="#aaa" Opacity="0.25"/>
+                                                </Grid>
+                                            </Grid>
+                                            
+                                            <!-- Footer Info -->
+                                            <StackPanel Grid.Row="2" Spacing="4">
+                                                <TextBlock Text="{Binding StatusText}" 
+                                                           HorizontalAlignment="Center" 
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           FontSize="12"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </GridView.ItemTemplate>
+                        </GridView>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
-</Page> 
+</Page>

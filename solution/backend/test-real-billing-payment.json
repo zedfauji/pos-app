@@ -1,0 +1,18 @@
+{
+  "SessionId": "test-session",
+  "BillingId": "aace33ca-f165-4d63-a6b7-9f92725de5bb",
+  "TotalDue": 100.00,
+  "Lines": [
+    {
+      "AmountPaid": 50.00,
+      "PaymentMethod": "cash",
+      "DiscountAmount": 0.00,
+      "DiscountReason": null,
+      "TipAmount": 0.00,
+      "ExternalRef": null,
+      "Meta": null
+    }
+  ],
+  "ServerId": "test-server"
+}
+

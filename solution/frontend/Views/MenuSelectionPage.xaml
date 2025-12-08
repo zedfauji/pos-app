@@ -12,9 +12,6 @@
         <conv:CustomizeButtonTextConverter x:Key="CustomizeButtonTextConverter"/>
         
         <!-- Using Fluent styles from DesignSystem.xaml -->
-        <Style x:Key="CardStyle" TargetType="Border" BasedOn="{StaticResource FluentCardStyle}">
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
     </Page.Resources>
 
     <Grid Margin="20">
@@ -57,7 +54,7 @@
                             Content="Refresh" 
                             Click="RefreshButton_Click"
                             Margin="16,0,0,0"
-                            Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                            Style="{StaticResource ButtonStyle}"/>
                 </StackPanel>
                 
                 <ScrollViewer Height="500" VerticalScrollBarVisibility="Auto">
@@ -143,7 +140,7 @@
                                                     Click="AddItem_Click"
                                                     VerticalAlignment="Center"
                                                     IsEnabled="{Binding CanAdd}"
-                                                    Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                                                    Style="{StaticResource ButtonStyle}"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -198,7 +195,7 @@
                                 Content="Clear All" 
                                 Click="ClearSelection_Click"
                                 Margin="0,8,0,0"
-                                Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                                Style="{StaticResource ButtonStyle}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -209,11 +206,11 @@
             <Button Content="Cancel" 
                     Click="Cancel_Click" 
                     Margin="0,0,12,0"
-                    Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                    Style="{StaticResource ButtonStyle}"/>
             <Button Content="Add to Order" 
                     Click="AddToOrder_Click" 
                     IsEnabled="{Binding CanAddToOrder}"
-                    Style="{StaticResource FluentSecondaryButtonStyle}"/>
+                    Style="{StaticResource ButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Page>

@@ -1,0 +1,41 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.VendorsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Padding="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Vendors" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8"/>
+
+        <ListView Grid.Row="1" x:Name="VendorsList" IsItemClickEnabled="True" SelectionMode="Single" ItemClick="VendorsList_ItemClick">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="3*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ContactInfo}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Status}"/>
+                        <Grid.ContextFlyout>
+                            <MenuFlyout>
+                                <MenuFlyoutItem Text="Edit" Click="Vendor_Edit_Click"/>
+                                <MenuFlyoutItem Text="Delete" Click="Vendor_Delete_Click"/>
+                                <MenuFlyoutSeparator/>
+                                <MenuFlyoutItem Text="View Items" Click="Vendor_ViewItems_Click"/>
+                            </MenuFlyout>
+                        </Grid.ContextFlyout>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>
