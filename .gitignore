@@ -42,3 +42,9 @@ solution/backend/config/serviceAccount.json
 *.secret.json
 *.secrets.json
 secrets/*.json
+
+# Installer build artifacts
+MagiDesk-Frontend-Installer/
+MagiDesk-Frontend-Installer.zip
+solution/MagiDesk-Frontend-Installer.zip
+solution/MagiDesk-Frontend-Portable/

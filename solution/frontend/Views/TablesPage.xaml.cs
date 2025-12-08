@@ -17,6 +17,7 @@ using Microsoft.Extensions.Configuration;
 using MagiDesk.Shared.DTOs.Users;
 using MagiDesk.Shared.DTOs.Tables;
 using MagiDesk.Shared.DTOs;
+using System.Linq;
 
 namespace MagiDesk.Frontend.Views;
 
@@ -26,10 +27,34 @@ public sealed partial class TablesPage : Page
     public ObservableCollection<TableItem> BarTables { get; } = new();
     public ObservableCollection<TableItem> FilteredBilliardTables { get; } = new();
     public ObservableCollection<TableItem> FilteredBarTables { get; } = new();
+    public ObservableCollection<FloorDto> Floors { get; } = new();
+    public ObservableCollection<TableLayoutDto> LayoutTables { get; } = new();
+    private FloorDto? _selectedFloor;
+    
     private TableRepository _repo = new TableRepository();
+    private FloorsTablesService _floorsService = new FloorsTablesService();
     private DispatcherTimer _pollTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
     private readonly string _timerCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "timers.json");
     private readonly string _thresholdsCachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "thresholds.json");
+    private readonly string _layoutSettingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "layout-settings.json");
+    
+    public FloorDto? SelectedFloor
+    {
+        get => _selectedFloor;
+        set
+        {
+            if (_selectedFloor?.FloorId != value?.FloorId)
+            {
+                _selectedFloor = value;
+                // Only auto-load if we're not in the initial load sequence
+                // TablesPage_Loaded will handle the initial load explicitly
+                if (this.IsLoaded)
+                {
+                    _ = LoadFromDatabaseAsync();
+                }
+            }
+        }
+    }
 
     public TablesPage()
     {
@@ -285,10 +310,23 @@ public class AddItemRow : INotifyPropertyChanged
 
     private async void TablesPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Starting");
         FilterCombo.SelectedIndex = 0; // All
+        await LoadFloorsAsync();
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Floors loaded");
         await LoadFromDatabaseAsync();
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Database loaded");
+        // Load settings BEFORE loading tables to prevent layout reset
+        LoadLayoutSettings();
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Settings loaded");
+        // Wait a moment for settings to apply, then load tables
+        await Task.Delay(100);
+        await LoadLayoutTablesAsync();
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Layout tables loaded");
         // Leverage the unified refresh to load caches, rehydrate, and persist
-        await RefreshFromStoreAsync();
+        // BUT don't reload layout tables - just sync status
+        await RefreshFromStoreAsync(skipLayoutReload: true);
+        System.Diagnostics.Debug.WriteLine("[TablesPage] TablesPage_Loaded: Refresh complete");
     }
 
     private Dictionary<string, DateTimeOffset> LoadTimersCache()
@@ -321,43 +359,167 @@ public class AddItemRow : INotifyPropertyChanged
     {
         BilliardTables.Clear();
         BarTables.Clear();
+        
+        // Don't load tables if no floor is selected - prevents loading all tables from all floors
+        if (SelectedFloor == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: No floor selected, skipping table load");
+            ApplyFilter();
+            UpdateStatus();
+            return;
+        }
+        
+        try
+        {
+            // Try loading from new multi-floor API first - MUST pass floorId to filter correctly
+            var tables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+            
+            if (tables != null && tables.Count > 0)
+            {
+                foreach (var table in tables.Where(t => t.IsActive))
+                {
+                    var item = new TableItem(table.TableName, table.TableType)
+                    {
+                        Occupied = table.Status == "occupied",
+                        OrderId = table.OrderId,
+                        StartTime = table.StartTime,
+                        Server = table.Server
+                    };
+                    
+                    if (table.TableType == "billiard")
+                        BilliardTables.Add(item);
+                    else if (table.TableType == "bar")
+                        BarTables.Add(item);
+                }
+                
+                ApplyFilter();
+                UpdateStatus();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading from floors API: {ex.Message}");
+        }
+        
+        // Fallback to old API for backward compatibility
+        // NOTE: Old API doesn't support floor filtering, so we need to filter manually
+        // This fallback should only be used if the new API completely fails
+        System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: New API failed or returned no results, using fallback");
         await _repo.EnsureSchemaAsync();
         var rows = await _repo.GetAllAsync();
+        
+        // If we have a selected floor, try to filter by getting tables from the new API again
+        // This ensures we don't show tables from wrong floors
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                // Try one more time to get floor-specific tables
+                var floorTables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                if (floorTables != null && floorTables.Count > 0)
+                {
+                    // Use the floor-specific tables instead of all tables
+                    foreach (var table in floorTables.Where(t => t.IsActive))
+                    {
+                        var item = new TableItem(table.TableName, table.TableType)
+                        {
+                            Occupied = table.Status == "occupied",
+                            OrderId = table.OrderId,
+                            StartTime = table.StartTime,
+                            Server = table.Server
+                        };
+                        
+                        if (table.TableType == "billiard")
+                            BilliardTables.Add(item);
+                        else if (table.TableType == "bar")
+                            BarTables.Add(item);
+                    }
+                    ApplyFilter();
+                    UpdateStatus();
+                    return;
+                }
+            }
+            catch (Exception ex2)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Second attempt also failed: {ex2.Message}");
+            }
+        }
+        
+        // Last resort: use old API but try to filter by floor if possible
+        System.Diagnostics.Debug.WriteLine("[TablesPage] LoadFromDatabaseAsync: WARNING - Using old API, attempting floor-based filtering");
+        
+        // Get list of table names that belong to the selected floor for filtering
+        HashSet<string>? validTableNames = null;
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                var floorTables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                if (floorTables != null && floorTables.Count > 0)
+                {
+                    validTableNames = new HashSet<string>(floorTables.Select(t => t.TableName), StringComparer.OrdinalIgnoreCase);
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Filtering old API results to {validTableNames.Count} tables from selected floor");
+                }
+            }
+            catch (Exception ex3)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Could not get floor table list for filtering: {ex3.Message}");
+            }
+        }
+        
         foreach (var r in rows)
         {
+            // Filter out tables that don't belong to the selected floor
+            if (validTableNames != null && !validTableNames.Contains(r.Label))
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadFromDatabaseAsync: Filtering out table '{r.Label}' (not in selected floor)");
+                continue;
+            }
+            
             var item = new TableItem(r.Label, r.Type) { Occupied = r.Occupied };
             item.OrderId = r.OrderId; item.StartTime = r.StartTime; item.Server = r.Server;
             if (r.Type == "billiard") BilliardTables.Add(item);
             else BarTables.Add(item);
         }
-        // Seed if empty
-        if (rows.Count == 0)
-        {
-            var toInsert = new System.Collections.Generic.List<TableStatusDto>();
-            for (int i = 1; i <= 5; i++) toInsert.Add(new TableStatusDto { Label = $"Billiard {i}", Type = "billiard", Occupied = false });
-            for (int i = 1; i <= 10; i++) toInsert.Add(new TableStatusDto { Label = $"Bar {i}", Type = "bar", Occupied = false });
-            await _repo.UpsertManyAsync(toInsert);
-            // Populate UI immediately
-            foreach (var rec in toInsert)
-            {
-                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
-                if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
-            }
-        }
-        // Safety: if still empty for any reason, seed in-memory and persist
-        if (BilliardTables.Count == 0 && BarTables.Count == 0)
-        {
-            var toInsert = new System.Collections.Generic.List<TableStatusDto>();
-            for (int i = 1; i <= 5; i++) toInsert.Add(new TableStatusDto { Label = $"Billiard {i}", Type = "billiard", Occupied = false });
-            for (int i = 1; i <= 10; i++) toInsert.Add(new TableStatusDto { Label = $"Bar {i}", Type = "bar", Occupied = false });
-            foreach (var rec in toInsert)
-            {
-                var item = new TableItem(rec.Label, rec.Type) { Occupied = rec.Occupied };
-                if (rec.Type == "billiard") BilliardTables.Add(item); else BarTables.Add(item);
-            }
-            try { await _repo.UpsertManyAsync(toInsert); } catch { }
-        }
+        
         ApplyFilter();
+        UpdateStatus();
+    }
+    
+    private async Task LoadFloorsAsync()
+    {
+        try
+        {
+            var floors = await _floorsService.GetFloorsAsync();
+            Floors.Clear();
+            foreach (var floor in floors.Where(f => f.IsActive).OrderBy(f => f.DisplayOrder))
+            {
+                Floors.Add(floor);
+            }
+            
+            // Select default floor if available - but don't trigger LoadFromDatabaseAsync yet
+            // We'll do that explicitly in TablesPage_Loaded after floors are loaded
+            if (SelectedFloor == null)
+            {
+                var defaultFloor = Floors.FirstOrDefault(f => f.IsDefault) ?? Floors.FirstOrDefault();
+                if (defaultFloor != null)
+                {
+                    // Set without triggering LoadFromDatabaseAsync
+                    _selectedFloor = defaultFloor;
+                }
+            }
+            
+            // Update ListView selection
+            if (FloorsListView != null && SelectedFloor != null)
+            {
+                FloorsListView.SelectedItem = SelectedFloor;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading floors: {ex.Message}");
+        }
     }
 
     // Click disabled per request; no handler needed.
@@ -374,6 +536,588 @@ public class AddItemRow : INotifyPropertyChanged
     }
 
     private void FilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+    
+    private async void FloorsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] FloorsListView_SelectionChanged: Starting");
+            if (FloorsListView.SelectedItem is FloorDto floor)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] FloorsListView_SelectionChanged: Selected floor={floor.FloorName}");
+                SelectedFloor = floor;
+                await LoadFromDatabaseAsync();
+                await LoadLayoutTablesAsync();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] FloorsListView_SelectionChanged: No floor selected");
+                SelectedFloor = null;
+                await LoadFromDatabaseAsync();
+                await LoadLayoutTablesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] FloorsListView_SelectionChanged: Error - {ex.Message}\n{ex.StackTrace}");
+            // Show error to user
+            await ShowSafeContentDialog("Error", $"Failed to load floor: {ex.Message}", "OK");
+        }
+    }
+
+    private async Task LoadLayoutTablesAsync()
+    {
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Starting, SelectedFloor={SelectedFloor?.FloorName ?? "null"}");
+        
+        if (SelectedFloor == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutTablesAsync: No floor selected");
+            // Clear tables if no floor selected
+            LayoutTables.Clear();
+            if (LayoutPreviewControl != null)
+            {
+                LayoutPreviewControl.Tables = null;
+            }
+            return;
+        }
+        
+        try
+        {
+            LayoutTables.Clear();
+            
+            var tables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Fetched {tables?.Count ?? 0} tables from API");
+            if (tables != null)
+            {
+                foreach (var table in tables.Where(t => t.IsActive))
+                {
+                    LayoutTables.Add(table);
+                }
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Added {LayoutTables.Count} active tables to LayoutTables");
+            
+            // Sync status from TableItems to layout tables
+            SyncLayoutTablesStatus();
+            
+            // Update the preview control - ensure we're on UI thread
+            // Capture local references to avoid closure issues
+            var previewControl = LayoutPreviewControl;
+            var floor = SelectedFloor;
+            
+            if (previewControl == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutTablesAsync: LayoutPreviewControl is null, skipping update");
+                return;
+            }
+            
+            if (this.DispatcherQueue == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutTablesAsync: DispatcherQueue is null, skipping update");
+                return;
+            }
+            
+            // Create a copy of the collection to avoid modification issues
+            var tablesCopy = new List<TableLayoutDto>();
+            try
+            {
+                foreach (var table in LayoutTables)
+                {
+                    if (table != null)
+                    {
+                        tablesCopy.Add(table);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Error copying tables - {ex.Message}");
+                return;
+            }
+            
+            var enqueued = this.DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Setting LayoutPreviewControl.Floor and Tables (count={tablesCopy.Count})");
+                    
+                    if (previewControl == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutTablesAsync: PreviewControl became null in dispatcher");
+                        return;
+                    }
+                    
+                    // Set properties safely - handle COM exceptions
+                    SetPreviewControlPropertiesSafe(previewControl, floor, tablesCopy);
+                }
+                catch (Exception ex)
+                {
+                    var errorMsg = $"[TablesPage] LoadLayoutTablesAsync: Error updating preview control - {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
+                    System.Diagnostics.Debug.WriteLine(errorMsg);
+                    
+                    // Log to crash log as well
+                    var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
+                    try
+                    {
+                        File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {errorMsg}\n");
+                    }
+                    catch { }
+                }
+            });
+            
+            if (!enqueued)
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutTablesAsync: Failed to enqueue to dispatcher");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutTablesAsync: Error - {ex.Message}\n{ex.StackTrace}");
+            throw; // Re-throw to be caught by caller
+        }
+    }
+
+    private void SyncLayoutTablesStatus()
+    {
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] SyncLayoutTablesStatus: Starting (BilliardTables={BilliardTables.Count}, BarTables={BarTables.Count}, LayoutTables={LayoutTables.Count})");
+        // Sync status from TableItems to LayoutTables for real-time updates
+        var allTableItems = BilliardTables.Concat(BarTables).ToList();
+        int syncedCount = 0;
+        foreach (var layoutTable in LayoutTables)
+        {
+            var tableItem = allTableItems.FirstOrDefault(t => t.Label == layoutTable.TableName);
+            if (tableItem != null)
+            {
+                var oldStatus = layoutTable.Status;
+                layoutTable.Status = tableItem.Occupied ? "occupied" : "available";
+                layoutTable.OrderId = tableItem.OrderId;
+                layoutTable.StartTime = tableItem.StartTime;
+                layoutTable.Server = tableItem.Server;
+                syncedCount++;
+                if (oldStatus != layoutTable.Status)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] SyncLayoutTablesStatus: Updated {layoutTable.TableName} status: {oldStatus} -> {layoutTable.Status}");
+                }
+            }
+        }
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] SyncLayoutTablesStatus: Synced {syncedCount} tables");
+    }
+    
+    private void SetPreviewControlPropertiesSafe(Controls.FloorLayoutPreviewControl control, FloorDto? floor, List<TableLayoutDto> tables)
+    {
+        try
+        {
+            // Wait for control to be fully loaded before setting properties
+            if (!control.IsLoaded)
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] SetPreviewControlPropertiesSafe: Control not loaded, waiting...");
+                control.Loaded += (s, e) =>
+                {
+                    try
+                    {
+                        SetPreviewControlPropertiesSafe(control, floor, tables);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[TablesPage] SetPreviewControlPropertiesSafe (Loaded handler): Error - {ex.Message}");
+                    }
+                };
+                return;
+            }
+            
+            // Set Floor first
+            if (floor != null)
+            {
+                try
+                {
+                    control.Floor = floor;
+                }
+                catch (System.Runtime.InteropServices.COMException)
+                {
+                    System.Diagnostics.Debug.WriteLine("[TablesPage] SetPreviewControlPropertiesSafe: COM exception setting Floor (ignored)");
+                }
+            }
+            
+            // Create new collection to avoid binding issues
+            var newCollection = new ObservableCollection<TableLayoutDto>();
+            foreach (var table in tables)
+            {
+                if (table != null)
+                {
+                    newCollection.Add(table);
+                }
+            }
+            
+            // Set Tables property - wrap in try-catch for COM exceptions
+            try
+            {
+                // Use property setter directly - no DependencyProperty needed
+                control.Tables = newCollection;
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] SetPreviewControlPropertiesSafe: Successfully set Tables (count={newCollection.Count})");
+            }
+            catch (System.Runtime.InteropServices.COMException comEx)
+            {
+                var hresult = unchecked((uint)comEx.HResult);
+                var errorMsg = $"[TablesPage] SetPreviewControlPropertiesSafe: COM Exception (HRESULT: 0x{hresult:X8}) - {comEx.Message}";
+                System.Diagnostics.Debug.WriteLine(errorMsg);
+                
+                // Log to crash log
+                var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
+                try
+                {
+                    File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {errorMsg}\n");
+                }
+                catch { }
+                
+                // Don't re-throw - COM exceptions are often recoverable
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorMsg = $"[TablesPage] SetPreviewControlPropertiesSafe: Error - {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
+            System.Diagnostics.Debug.WriteLine(errorMsg);
+        }
+    }
+
+    // Layout Settings Management
+    private void LoadLayoutSettings()
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutSettings: Starting");
+            var dir = Path.GetDirectoryName(_layoutSettingsPath)!;
+            Directory.CreateDirectory(dir);
+            if (!File.Exists(_layoutSettingsPath))
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutSettings: No settings file found");
+                return;
+            }
+            
+            var json = File.ReadAllText(_layoutSettingsPath);
+            var settings = JsonSerializer.Deserialize<LayoutPreviewSettings>(json);
+            if (settings == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutSettings: Failed to deserialize settings");
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutSettings: Loaded settings - Zoom={settings.ZoomLevel}, ShowLabels={settings.ShowTableLabels}, ShowGrid={settings.ShowGrid}");
+            
+            // Apply settings synchronously to prevent layout reset
+            if (ShowFloorLayoutToggle != null) ShowFloorLayoutToggle.IsOn = settings.ShowFloorLayout;
+            if (ShowTableLabelsToggle != null) 
+            {
+                ShowTableLabelsToggle.IsOn = settings.ShowTableLabels;
+                if (LayoutPreviewControl != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutSettings: Setting ShowLabels={settings.ShowTableLabels}");
+                    LayoutPreviewControl.ShowLabels = settings.ShowTableLabels;
+                }
+            }
+            if (ShowAvailabilityColorToggle != null) 
+            {
+                ShowAvailabilityColorToggle.IsOn = settings.ShowAvailabilityColor;
+                if (LayoutPreviewControl != null) LayoutPreviewControl.ShowAvailabilityColor = settings.ShowAvailabilityColor;
+            }
+            if (ShowShapesOnlyToggle != null) 
+            {
+                ShowShapesOnlyToggle.IsOn = settings.ShowShapesOnly;
+                if (LayoutPreviewControl != null) LayoutPreviewControl.ShowShapesOnly = settings.ShowShapesOnly;
+            }
+            if (ShowGridToggle != null) 
+            {
+                ShowGridToggle.IsOn = settings.ShowGrid;
+                if (LayoutPreviewControl != null) LayoutPreviewControl.ShowGrid = settings.ShowGrid;
+            }
+            if (ZoomSlider != null) 
+            {
+                // Temporarily disable ValueChanged handler to prevent zoom reset
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutSettings: Setting zoom to {settings.ZoomLevel} (handler disabled)");
+                ZoomSlider.ValueChanged -= ZoomSlider_ValueChanged;
+                ZoomSlider.Value = settings.ZoomLevel;
+                if (LayoutPreviewControl != null) 
+                {
+                    System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutSettings: Setting LayoutPreviewControl.ZoomLevel={settings.ZoomLevel}");
+                    LayoutPreviewControl.ZoomLevel = settings.ZoomLevel;
+                }
+                ZoomSlider.ValueChanged += ZoomSlider_ValueChanged;
+            }
+            System.Diagnostics.Debug.WriteLine("[TablesPage] LoadLayoutSettings: Complete");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] LoadLayoutSettings: Error - {ex.Message}");
+        }
+    }
+
+    private void SaveLayoutSettings()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(_layoutSettingsPath)!;
+            Directory.CreateDirectory(dir);
+            
+            var settings = new LayoutPreviewSettings
+            {
+                ShowFloorLayout = ShowFloorLayoutToggle?.IsOn ?? true,
+                ShowTableLabels = ShowTableLabelsToggle?.IsOn ?? true,
+                ShowAvailabilityColor = ShowAvailabilityColorToggle?.IsOn ?? true,
+                ShowShapesOnly = ShowShapesOnlyToggle?.IsOn ?? false,
+                ShowGrid = ShowGridToggle?.IsOn ?? false,
+                ZoomLevel = ZoomSlider?.Value ?? 1.0
+            };
+            
+            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_layoutSettingsPath, json);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error saving layout settings: {ex.Message}");
+        }
+    }
+
+    // Layout Settings Event Handlers
+    // LayoutSettingsButton_Click removed - settings are now always visible in the right sidebar
+
+    private void ShowFloorLayoutToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        SaveLayoutSettings();
+    }
+
+    private void ShowTableLabelsToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (LayoutPreviewControl != null && ShowTableLabelsToggle != null)
+        {
+            LayoutPreviewControl.ShowLabels = ShowTableLabelsToggle.IsOn;
+        }
+        SaveLayoutSettings();
+    }
+
+    private void ShowAvailabilityColorToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (LayoutPreviewControl != null && ShowAvailabilityColorToggle != null)
+        {
+            LayoutPreviewControl.ShowAvailabilityColor = ShowAvailabilityColorToggle.IsOn;
+        }
+        SaveLayoutSettings();
+    }
+
+    private void ShowShapesOnlyToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (LayoutPreviewControl != null && ShowShapesOnlyToggle != null)
+        {
+            LayoutPreviewControl.ShowShapesOnly = ShowShapesOnlyToggle.IsOn;
+        }
+        SaveLayoutSettings();
+    }
+
+    private void ShowGridToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (LayoutPreviewControl != null && ShowGridToggle != null)
+        {
+            LayoutPreviewControl.ShowGrid = ShowGridToggle.IsOn;
+        }
+        SaveLayoutSettings();
+    }
+
+    private void ZoomSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] ZoomSlider_ValueChanged: {e.OldValue} -> {e.NewValue}");
+        if (ZoomValueText != null)
+        {
+            ZoomValueText.Text = $"{e.NewValue:P0}";
+        }
+        if (LayoutPreviewControl != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] ZoomSlider_ValueChanged: Setting LayoutPreviewControl.ZoomLevel={e.NewValue}");
+            LayoutPreviewControl.ZoomLevel = e.NewValue;
+            // CenterLayout will be called automatically by OnZoomLevelChanged
+        }
+        SaveLayoutSettings();
+    }
+
+    private void CenterLayoutButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Trigger a refresh to center the layout
+        if (LayoutPreviewControl != null)
+        {
+            // Force update by refreshing tables
+            var tables = LayoutPreviewControl.Tables;
+            LayoutPreviewControl.Tables = null;
+            LayoutPreviewControl.Tables = tables;
+        }
+    }
+
+    private void ResetZoomButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (ZoomSlider != null)
+        {
+            ZoomSlider.Value = 1.0;
+        }
+    }
+    
+    private void AutoFitTablesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (LayoutPreviewControl != null)
+        {
+            LayoutPreviewControl.AutoFitTables();
+        }
+    }
+
+    private async void LayoutPreviewControl_TableClicked(object? sender, TableLayoutDto table)
+    {
+        // Find the corresponding TableItem and show its context menu or navigate
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            // Show table status dialog or navigate to table details
+            try
+            {
+                var dialog = new Dialogs.TableStatusDialog
+                {
+                    XamlRoot = this.XamlRoot
+                };
+                await dialog.LoadTableStatusAsync(table.TableName);
+                await dialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error showing table status: {ex.Message}");
+            }
+        }
+    }
+    
+    // Context menu event handlers for layout preview tables
+    private void LayoutPreviewControl_StartSessionRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            // Create a fake FrameworkElement with DataContext for the handler
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            StartMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_StopSessionRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            StopMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_OpenTableRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            OpenTableMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_CloseTableRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            CloseTableMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_AddItemsRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            AddItemsMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_CheckSummaryRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            CheckSummaryMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_MoveTableRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            MoveMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_AssignToBilliardRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            AssignToBilliardMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_TableStatusRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            TableStatusMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_SetThresholdRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            SetThreshold_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_ClearThresholdRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            ClearThreshold_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+    
+    private void LayoutPreviewControl_DiagnosticsRequested(object? sender, TableLayoutDto table)
+    {
+        var tableItem = BilliardTables.Concat(BarTables).FirstOrDefault(t => t.Label == table.TableName);
+        if (tableItem != null)
+        {
+            var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = tableItem };
+            DiagnosticsMenu_Click(fakeElement, new RoutedEventArgs());
+        }
+    }
+
+    private class LayoutPreviewSettings
+    {
+        public bool ShowFloorLayout { get; set; } = true;
+        public bool ShowTableLabels { get; set; } = true;
+        public bool ShowAvailabilityColor { get; set; } = true;
+        public bool ShowShapesOnly { get; set; } = false;
+        public bool ShowGrid { get; set; } = false;
+        public double ZoomLevel { get; set; } = 1.0;
+    }
 
     private async Task ShowSafeContentDialog(string title, string content, string closeButtonText)
     {
@@ -403,7 +1147,10 @@ public class AddItemRow : INotifyPropertyChanged
 
     private async void PollTimer_Tick(object sender, object e)
     {
-        await RefreshFromStoreAsync();
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] PollTimer_Tick: Starting refresh (skipLayoutReload=true to prevent layout reset)");
+        // Use skipLayoutReload=true to prevent layout from resetting on every poll
+        // This only syncs status without reloading the entire layout
+        await RefreshFromStoreAsync(skipLayoutReload: true);
         try
         {
             foreach (var t in FilteredBilliardTables)
@@ -415,14 +1162,59 @@ public class AddItemRow : INotifyPropertyChanged
                 t.Tick();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] PollTimer_Tick: Error ticking tables - {ex.Message}");
+        }
     }
 
-    private async Task RefreshFromStoreAsync()
+    private async Task RefreshFromStoreAsync(bool skipLayoutReload = false)
     {
-        // Load latest tables
-        var rows = await _repo.GetAllAsync();
-        var dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Starting, skipLayoutReload={skipLayoutReload}, SelectedFloor={SelectedFloor?.FloorName ?? "null"}");
+        
+        // Use the new floor-aware API if we have a selected floor, otherwise use old API for status updates only
+        Dictionary<string, TableStatusDto> dict;
+        if (SelectedFloor != null)
+        {
+            try
+            {
+                // Get tables from the correct floor using the new API
+                var tables = await _floorsService.GetAllTablesAsync(SelectedFloor.FloorId);
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Loaded {tables?.Count ?? 0} tables from floor-aware API");
+                
+                // Convert TableLayoutDto to TableStatusDto for compatibility
+                dict = new Dictionary<string, TableStatusDto>(StringComparer.OrdinalIgnoreCase);
+                if (tables != null)
+                {
+                    foreach (var table in tables)
+                    {
+                        dict[table.TableName] = new TableStatusDto
+                        {
+                            Label = table.TableName,
+                            Type = table.TableType,
+                            Occupied = table.Status == "occupied",
+                            OrderId = table.OrderId,
+                            StartTime = table.StartTime,
+                            Server = table.Server
+                        };
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Error loading from floor-aware API: {ex.Message}, falling back to old API");
+                // Fallback to old API
+                var rows = await _repo.GetAllAsync();
+                dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        else
+        {
+            // No floor selected - use old API (but this shouldn't happen in normal flow)
+            var rows = await _repo.GetAllAsync();
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Loaded {rows.Count} tables from old API (no floor selected)");
+            dict = rows.ToDictionary(r => r.Label, r => r, StringComparer.OrdinalIgnoreCase);
+        }
         // Load local timers cache for offline resiliency
         var timers = LoadTimersCache();
         var thresholds = LoadThresholdsCache();
@@ -454,12 +1246,18 @@ public class AddItemRow : INotifyPropertyChanged
         }
         reconcile(BilliardTables, "billiard");
         reconcile(BarTables, "bar");
+        
+        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Syncing layout tables status (LayoutTables.Count={LayoutTables.Count})");
+        // Sync status to layout tables WITHOUT reloading them
+        SyncLayoutTablesStatus();
+        
         // Recovery: if any occupied billiard table has null StartTime, try to rehydrate from active sessions API
         try
         {
             var needsStart = BilliardTables.Where(t => t.Occupied && !t.StartTime.HasValue).Select(t => t.Label).ToList();
             if (needsStart.Count > 0)
             {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Rehydrating {needsStart.Count} tables with missing StartTime");
                 var actives = await _repo.GetActiveSessionsAsync();
                 if (actives != null && actives.Count > 0)
                 {
@@ -475,9 +1273,46 @@ public class AddItemRow : INotifyPropertyChanged
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Error rehydrating sessions - {ex.Message}");
+        }
         ApplyFilter();
         UpdateStatus();
+        
+        // Only reload layout tables if explicitly requested (not during initial load or polling)
+        if (!skipLayoutReload)
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] RefreshFromStoreAsync: ⚠️ RELOADING layout tables (this will reset layout!)");
+            await LoadLayoutTablesAsync();
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[TablesPage] RefreshFromStoreAsync: ✅ Skipping layout reload, just syncing status");
+            // Update the preview control with synced status without reloading
+            // Force a refresh of the visual without changing the collection reference
+            if (LayoutPreviewControl != null && LayoutTables.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Triggering visual refresh without reload (Tables count={LayoutTables.Count})");
+                // Don't create a new collection - just trigger property change notification
+                // The control should update automatically via binding
+                var currentTables = LayoutPreviewControl.Tables;
+                if (currentTables != null)
+                {
+                    // Force update by temporarily clearing and re-setting
+                    // But only if the count matches to avoid reset
+                    if (currentTables.Count == LayoutTables.Count)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[TablesPage] RefreshFromStoreAsync: Tables count matches, skipping visual refresh to prevent reset");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[TablesPage] RefreshFromStoreAsync: Count mismatch (current={currentTables.Count}, new={LayoutTables.Count}), updating");
+                        LayoutPreviewControl.Tables = new ObservableCollection<TableLayoutDto>(LayoutTables);
+                    }
+                }
+            }
+        }
     }
 
     private void LiveToggle_Toggled(object sender, RoutedEventArgs e)
@@ -873,7 +1708,7 @@ public class AddItemRow : INotifyPropertyChanged
         if (!consistencyResult)
         {
             System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Session state consistency check failed for '{item.Label}'");
-            await new ContentDialog
+            var dialog = new ContentDialog
             {
                 Title = "Session State Issue",
                 Content = $"Unable to resolve session state inconsistency for table '{item.Label}'.\n\n" +
@@ -882,7 +1717,14 @@ public class AddItemRow : INotifyPropertyChanged
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.XamlRoot
-            }.ShowAsync();
+            };
+            
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                // User clicked "Run Diagnostics" - run diagnostics for this table
+                DiagnosticsMenu_Click(sender, e);
+            }
             return;
         }
         
@@ -1052,7 +1894,7 @@ public class AddItemRow : INotifyPropertyChanged
                    System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Session state consistency check failed for '{item.Label}'");
                    progressDialog.Hide();
                    
-                   await new ContentDialog
+                   var dialog = new ContentDialog
                    {
                        Title = "Session State Issue",
                        Content = $"Unable to resolve session state inconsistency for table '{item.Label}'.\n\n" +
@@ -1061,7 +1903,15 @@ public class AddItemRow : INotifyPropertyChanged
                        CloseButtonText = "Cancel",
                        DefaultButton = ContentDialogButton.Primary,
                        XamlRoot = this.XamlRoot
-                   }.ShowAsync();
+                   };
+                   
+                   var result = await dialog.ShowAsync();
+                   if (result == ContentDialogResult.Primary)
+                   {
+                       // User clicked "Run Diagnostics" - run diagnostics for this table
+                       var fakeElement = new Microsoft.UI.Xaml.Controls.Border { DataContext = item };
+                       DiagnosticsMenu_Click(fakeElement, new RoutedEventArgs());
+                   }
                    return;
                }
 
@@ -1869,17 +2719,41 @@ public class TableItem : INotifyPropertyChanged
             OnPropertyChanged(nameof(HasTimer));
             OnPropertyChanged(nameof(IsBarTable));
             OnPropertyChanged(nameof(IsBilliardTable));
+            OnPropertyChanged(nameof(IsBilliardTableAndAvailable));
+            OnPropertyChanged(nameof(IsBilliardTableAndOccupied));
+            OnPropertyChanged(nameof(IsBarTableAndAvailable));
+            OnPropertyChanged(nameof(IsBarTableAndOccupied));
         }
     }
 
     public bool IsBarTable => Type.ToLower() == "bar";
     public bool IsBilliardTable => Type.ToLower() == "billiard";
+    
+    // Combined properties for menu visibility
+    public bool IsBilliardTableAndAvailable => IsBilliardTable && IsAvailable;
+    public bool IsBilliardTableAndOccupied => IsBilliardTable && Occupied;
+    public bool IsBarTableAndAvailable => IsBarTable && IsAvailable;
+    public bool IsBarTableAndOccupied => IsBarTable && Occupied;
 
     private bool _occupied;
     public bool Occupied
     {
         get => _occupied;
-        set { if (_occupied != value) { _occupied = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsAvailable)); OnPropertyChanged(nameof(StatusText)); UpdateBrush(); } }
+        set 
+        { 
+            if (_occupied != value) 
+            { 
+                _occupied = value; 
+                OnPropertyChanged(); 
+                OnPropertyChanged(nameof(IsAvailable)); 
+                OnPropertyChanged(nameof(StatusText)); 
+                OnPropertyChanged(nameof(IsBilliardTableAndAvailable));
+                OnPropertyChanged(nameof(IsBilliardTableAndOccupied));
+                OnPropertyChanged(nameof(IsBarTableAndAvailable));
+                OnPropertyChanged(nameof(IsBarTableAndOccupied));
+                UpdateBrush(); 
+            } 
+        }
     }
 
     private string? _orderId;

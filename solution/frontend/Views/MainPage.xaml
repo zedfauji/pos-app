@@ -6,8 +6,6 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
-    xmlns:local="using:MagiDesk.Frontend.Views"
-    xmlns:controls="using:MagiDesk.Frontend.Views.Controls"
     mc:Ignorable="d"
     Background="Transparent">
     <Grid>
@@ -16,65 +14,59 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Section: CommandBar, InfoBar, Caja Banner -->
-        <StackPanel Grid.Row="0" Orientation="Vertical">
-            <!-- Fluent CommandBar with proper styling -->
-            <CommandBar x:Name="TopCommandBar"
-                        Style="{StaticResource FluentCommandBarStyle}"
-                        DefaultLabelPosition="Right">
-                <CommandBar.Content>
-                    <AutoSuggestBox x:Name="SearchBox" 
-                                   PlaceholderText="Search..."
-                                   Width="300"
-                                   Margin="8,0,0,0"/>
-                </CommandBar.Content>
-                
-                <AppBarButton x:Name="AddBtn" 
-                             Icon="Add" 
-                             Label="Add" 
-                             Click="Add_Click"/>
-                <AppBarButton x:Name="EditBtn" 
-                             Icon="Edit" 
-                             Label="Edit" 
-                             Click="Edit_Click"/>
-                <AppBarButton x:Name="DeleteBtn" 
-                             Icon="Delete" 
-                             Label="Delete" 
-                             Click="Delete_Click"/>
-                <AppBarButton x:Name="RefreshBtn" 
-                             Icon="Refresh" 
-                             Label="Refresh" 
-                             Click="Refresh_Click"/>
-                <AppBarSeparator/>
-                <AppBarToggleButton x:Name="DarkToggle" 
-                                   Label="Theme" 
-                                   Click="ThemeToggle_Click">
-                    <AppBarToggleButton.Icon>
-                        <SymbolIcon Symbol="Setting"/>
-                    </AppBarToggleButton.Icon>
-                </AppBarToggleButton>
-                <AppBarButton x:Name="SettingsBtn" 
-                             Icon="Setting" 
-                             Label="Settings"/>
-                <AppBarButton x:Name="LogoutBtn" 
-                             Icon="LeaveChat" 
-                             Label="Logout" 
-                             Click="Logout_Click"/>
-            </CommandBar>
-
-            <!-- Backend connectivity InfoBar -->
-            <InfoBar x:Name="BackendInfo"
-                     IsOpen="False"
-                     Severity="Warning"
-                     Style="{StaticResource FluentInfoBarStyle}"
-                     Message="Backend is unavailable. Features may be limited until connectivity is restored."
-                     Margin="16,0,16,8"/>
+        <!-- Fluent CommandBar with proper styling -->
+        <CommandBar Grid.Row="0" 
+                    x:Name="TopCommandBar"
+                    Style="{StaticResource FluentCommandBarStyle}"
+                    DefaultLabelPosition="Right">
+            <CommandBar.Content>
+                <AutoSuggestBox x:Name="SearchBox" 
+                               PlaceholderText="Search..."
+                               Width="300"
+                               Margin="8,0,0,0"/>
+            </CommandBar.Content>
             
-            <!-- Caja Status Banner -->
-            <controls:CajaStatusBanner x:Name="CajaStatusBanner"
-                                       Margin="16,0,16,8"
-                                       HorizontalAlignment="Stretch"/>
-        </StackPanel>
+            <AppBarButton x:Name="AddBtn" 
+                         Icon="Add" 
+                         Label="Add" 
+                         Click="Add_Click"/>
+            <AppBarButton x:Name="EditBtn" 
+                         Icon="Edit" 
+                         Label="Edit" 
+                         Click="Edit_Click"/>
+            <AppBarButton x:Name="DeleteBtn" 
+                         Icon="Delete" 
+                         Label="Delete" 
+                         Click="Delete_Click"/>
+            <AppBarButton x:Name="RefreshBtn" 
+                         Icon="Refresh" 
+                         Label="Refresh" 
+                         Click="Refresh_Click"/>
+            <AppBarSeparator/>
+            <AppBarToggleButton x:Name="DarkToggle" 
+                               Label="Theme" 
+                               Click="ThemeToggle_Click">
+                <AppBarToggleButton.Icon>
+                    <SymbolIcon Symbol="Setting"/>
+                </AppBarToggleButton.Icon>
+            </AppBarToggleButton>
+            <AppBarButton x:Name="SettingsBtn" 
+                         Icon="Setting" 
+                         Label="Settings"/>
+            <AppBarButton x:Name="LogoutBtn" 
+                         Icon="LeaveChat" 
+                         Label="Logout" 
+                         Click="Logout_Click"/>
+        </CommandBar>
+
+        <!-- Backend connectivity InfoBar -->
+        <InfoBar x:Name="BackendInfo"
+                 Grid.Row="0"
+                 IsOpen="False"
+                 Severity="Warning"
+                 Style="{StaticResource FluentInfoBarStyle}"
+                 Message="Backend is unavailable. Features may be limited until connectivity is restored."
+                 Margin="16,0,16,8"/>
 
         <!-- Fluent NavigationView -->
         <NavigationView Grid.Row="1" 
@@ -130,6 +122,7 @@
 
                 <!-- Administration Group -->
                 <NavigationViewItemHeader Content="Administration"/>
+                <NavigationViewItem Content="Floors &amp; Layouts" Tag="FloorsLayoutsPage" Icon="Map"/>
                 <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
                 <NavigationViewItem Content="Settings" Tag="HierarchicalSettingsPage" Icon="Setting">
                     <NavigationViewItem.MenuItems>

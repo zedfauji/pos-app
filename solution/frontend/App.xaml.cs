@@ -545,12 +545,24 @@ namespace MagiDesk.Frontend
             try
             {
                 var logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
-                SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] UNHANDLED EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}");
+                var exceptionDetails = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] UNHANDLED EXCEPTION: {e.Exception.GetType().Name}: {e.Exception.Message}";
+                SafeAppendToLog(logPath, exceptionDetails);
+                System.Diagnostics.Debug.WriteLine(exceptionDetails);
+                
                 SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Stack trace: {e.Exception.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {e.Exception.StackTrace}");
+                
+                if (e.Exception.InnerException != null)
+                {
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Inner Exception: {e.Exception.InnerException.GetType().Name}: {e.Exception.InnerException.Message}");
+                    SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Inner Stack trace: {e.Exception.InnerException.StackTrace}");
+                    System.Diagnostics.Debug.WriteLine($"Inner Exception: {e.Exception.InnerException.Message}");
+                }
                 
                 if (e.Exception is System.Runtime.InteropServices.COMException comEx)
                 {
                     SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] COM EXCEPTION HRESULT: 0x{comEx.HResult:X8}");
+                    System.Diagnostics.Debug.WriteLine($"COM Exception HRESULT: 0x{comEx.HResult:X8}");
                 }
                 
                 Log.Error("Unhandled UI exception", e.Exception);
@@ -563,11 +575,33 @@ namespace MagiDesk.Frontend
                 System.Diagnostics.Debug.WriteLine($"Error in unhandled exception handler: {ex.Message}");
             }
             
-            // For COM exceptions (0x8001010E), mark as handled to prevent crash
-            if (e.Exception is System.Runtime.InteropServices.COMException comEx2 && comEx2.HResult == unchecked((int)0x8001010E))
+            // For COM exceptions, handle common ones gracefully
+            if (e.Exception is System.Runtime.InteropServices.COMException comEx2)
             {
-                e.Handled = true; // RPC_E_SERVERCALL_RETRYLATER - usually safe to ignore
-                System.Diagnostics.Debug.WriteLine("Handled COM exception 0x8001010E (RPC_E_SERVERCALL_RETRYLATER)");
+                var hresult = unchecked((uint)comEx2.HResult);
+                var logPath2 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MagiDesk", "crash-debug.log");
+                System.Diagnostics.Debug.WriteLine($"COM Exception HRESULT: 0x{hresult:X8}, Message: {comEx2.Message}");
+                
+                // RPC_E_SERVERCALL_RETRYLATER (0x8001010E) - usually safe to ignore
+                if (hresult == 0x8001010E)
+                {
+                    e.Handled = true;
+                    System.Diagnostics.Debug.WriteLine("Handled COM exception 0x8001010E (RPC_E_SERVERCALL_RETRYLATER)");
+                }
+                // Catastrophic failure (0x8000FFFF) - often XAML/binding related, try to handle
+                else if (hresult == 0x8000FFFF || comEx2.Message.Contains("Catastrophic failure"))
+                {
+                    e.Handled = true; // Mark as handled to prevent crash
+                    System.Diagnostics.Debug.WriteLine($"Handled COM exception 0x{hresult:X8} (Catastrophic failure - likely XAML/binding issue)");
+                    SafeAppendToLog(logPath2, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Marked catastrophic failure as handled");
+                }
+            }
+            // For other exceptions, try to handle gracefully if possible
+            else if (e.Exception is NullReferenceException || e.Exception is ArgumentNullException)
+            {
+                // Log but don't crash - these are often recoverable
+                System.Diagnostics.Debug.WriteLine($"Null reference exception - marking as handled: {e.Exception.Message}");
+                e.Handled = true;
             }
             // Let other exceptions crash after logging
         }
