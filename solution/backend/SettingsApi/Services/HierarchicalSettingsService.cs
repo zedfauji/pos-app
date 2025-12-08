@@ -1,7 +1,6 @@
 using MagiDesk.Shared.DTOs.Settings;
 using Npgsql;
 using System.Text.Json;
-using HierarchicalSettings = MagiDesk.Shared.DTOs.Settings.HierarchicalSettings;
 
 namespace SettingsApi.Services;
 

@@ -2,18 +2,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project files for restore
-COPY ["backend/InventoryApi/InventoryApi.csproj", "backend/InventoryApi/"]
-COPY ["shared/MagiDesk.Shared.csproj", "shared/"]
-RUN dotnet restore "backend/InventoryApi/InventoryApi.csproj"
+# Copy project files
+COPY backend/InventoryApi/*.csproj InventoryApi/
+COPY shared/*.csproj /shared/
 
-# Copy source code
-COPY backend/InventoryApi/ backend/InventoryApi/
-COPY shared/ shared/
+RUN dotnet restore "InventoryApi/InventoryApi.csproj"
 
-# Build and publish
-WORKDIR /src/backend/InventoryApi
-RUN dotnet publish "InventoryApi.csproj" -c Release -o /app/publish --no-restore
+# Copy source
+COPY backend/InventoryApi/ InventoryApi/
+COPY shared/ /shared/
+
+RUN dotnet publish "InventoryApi/InventoryApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app

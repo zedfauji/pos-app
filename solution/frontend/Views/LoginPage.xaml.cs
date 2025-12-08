@@ -52,14 +52,7 @@ public sealed partial class LoginPage : Page
                 Info.Message = App.I18n.T("invalid_credentials");
                 Info.IsOpen = true; return;
             }
-            await SessionService.SaveAsync(new SessionDto 
-            { 
-                UserId = res.UserId, 
-                Username = res.Username, 
-                Role = res.Role, 
-                Permissions = res.Permissions ?? Array.Empty<string>(), // Save permissions from RBAC
-                LastLoginAt = res.LastLoginAt 
-            });
+            await SessionService.SaveAsync(new SessionDto { UserId = res.UserId, Username = res.Username, Role = res.Role, LastLoginAt = res.LastLoginAt });
             NavigateToMain();
         }
         catch (System.Exception ex)

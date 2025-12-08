@@ -14,8 +14,5 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.8" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\shared\MagiDesk.Shared.csproj" />
-  </ItemGroup>
 
 </Project>

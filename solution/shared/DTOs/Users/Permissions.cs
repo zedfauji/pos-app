@@ -84,12 +84,6 @@ public static class Permissions
     public const string SESSION_MANAGE = "session:manage";
     public const string SESSION_CLOSE = "session:close";
 
-    // Caja Management Permissions
-    public const string CAJA_OPEN = "caja:open";
-    public const string CAJA_CLOSE = "caja:close";
-    public const string CAJA_VIEW = "caja:view";
-    public const string CAJA_VIEW_HISTORY = "caja:view_history";
-
     /// <summary>
     /// All available permissions
     /// </summary>
@@ -129,10 +123,7 @@ public static class Permissions
         VENDOR_VIEW, VENDOR_CREATE, VENDOR_UPDATE, VENDOR_DELETE, VENDOR_ORDER,
         
         // Session Management
-        SESSION_VIEW, SESSION_MANAGE, SESSION_CLOSE,
-        
-        // Caja Management
-        CAJA_OPEN, CAJA_CLOSE, CAJA_VIEW, CAJA_VIEW_HISTORY
+        SESSION_VIEW, SESSION_MANAGE, SESSION_CLOSE
     };
 
     /// <summary>
@@ -215,13 +206,7 @@ public static class Permissions
         // Session Management
         { SESSION_VIEW, "View active sessions" },
         { SESSION_MANAGE, "Manage sessions" },
-        { SESSION_CLOSE, "Close sessions" },
-        
-        // Caja Management
-        { CAJA_OPEN, "Open caja session" },
-        { CAJA_CLOSE, "Close caja session" },
-        { CAJA_VIEW, "View caja status" },
-        { CAJA_VIEW_HISTORY, "View caja history" }
+        { SESSION_CLOSE, "Close sessions" }
     };
 
     /// <summary>
@@ -240,8 +225,7 @@ public static class Permissions
         { "Customer Management", new[] { CUSTOMER_VIEW, CUSTOMER_CREATE, CUSTOMER_UPDATE, CUSTOMER_DELETE } },
         { "Reservation Management", new[] { RESERVATION_VIEW, RESERVATION_CREATE, RESERVATION_UPDATE, RESERVATION_CANCEL } },
         { "Vendor Management", new[] { VENDOR_VIEW, VENDOR_CREATE, VENDOR_UPDATE, VENDOR_DELETE, VENDOR_ORDER } },
-        { "Session Management", new[] { SESSION_VIEW, SESSION_MANAGE, SESSION_CLOSE } },
-        { "Caja Management", new[] { CAJA_OPEN, CAJA_CLOSE, CAJA_VIEW, CAJA_VIEW_HISTORY } }
+        { "Session Management", new[] { SESSION_VIEW, SESSION_MANAGE, SESSION_CLOSE } }
     };
 
     /// <summary>

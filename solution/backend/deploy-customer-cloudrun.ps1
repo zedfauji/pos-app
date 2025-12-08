@@ -64,8 +64,7 @@ $deployArgs = @(
     "--max-instances", "10",
     "--timeout", "300s",
     "--set-env-vars", "ASPNETCORE_ENVIRONMENT=Production",
-    "--set-env-vars", "CloudRunSocketConnectionString=Host=/cloudsql/bola8pos:northamerica-south1:pos-app-1;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Disable",
-    "--set-env-vars", "UsersApi:BaseUrl=https://magidesk-users-904541739138.northamerica-south1.run.app"
+    "--set-env-vars", "CloudRunSocketConnectionString=Host=/cloudsql/bola8pos:northamerica-south1:pos-app-1;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Disable"
 )
 
 if ($CloudSqlInstance) {

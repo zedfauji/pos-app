@@ -20,10 +20,6 @@ Package.StoreAssociation.xml
 # Installer redistributables (downloaded files)
 solution/frontend/install/redist/
 
-# Installer files (too large for GitHub)
-*.zip
-MagiDesk-Frontend-Installer.zip
-
 # Logs
 *.log
 *.binlog

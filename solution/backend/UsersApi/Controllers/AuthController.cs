@@ -6,8 +6,7 @@ using System.ComponentModel.DataAnnotations;
 namespace UsersApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")] // Default route (v1)
-[Route("api/v1/[controller]")] // Explicit v1 route
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IUsersService _usersService;

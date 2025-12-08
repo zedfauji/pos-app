@@ -249,8 +249,7 @@ public sealed class DatabaseInitializer : IHostedService
             Permissions.CUSTOMER_VIEW, Permissions.CUSTOMER_CREATE, Permissions.CUSTOMER_UPDATE, Permissions.CUSTOMER_DELETE,
             Permissions.RESERVATION_VIEW, Permissions.RESERVATION_CREATE, Permissions.RESERVATION_UPDATE, Permissions.RESERVATION_CANCEL,
             Permissions.VENDOR_VIEW, Permissions.VENDOR_CREATE, Permissions.VENDOR_UPDATE, Permissions.VENDOR_DELETE, Permissions.VENDOR_ORDER,
-            Permissions.SESSION_VIEW, Permissions.SESSION_MANAGE, Permissions.SESSION_CLOSE,
-            Permissions.CAJA_OPEN, Permissions.CAJA_CLOSE, Permissions.CAJA_VIEW, Permissions.CAJA_VIEW_HISTORY
+            Permissions.SESSION_VIEW, Permissions.SESSION_MANAGE, Permissions.SESSION_CLOSE
         };
 
         foreach (var permission in adminPermissions)
@@ -274,8 +273,7 @@ public sealed class DatabaseInitializer : IHostedService
             Permissions.CUSTOMER_VIEW, Permissions.CUSTOMER_CREATE, Permissions.CUSTOMER_UPDATE,
             Permissions.RESERVATION_VIEW, Permissions.RESERVATION_CREATE, Permissions.RESERVATION_UPDATE, Permissions.RESERVATION_CANCEL,
             Permissions.VENDOR_VIEW, Permissions.VENDOR_CREATE, Permissions.VENDOR_UPDATE, Permissions.VENDOR_ORDER,
-            Permissions.SESSION_VIEW, Permissions.SESSION_MANAGE, Permissions.SESSION_CLOSE,
-            Permissions.CAJA_OPEN, Permissions.CAJA_CLOSE, Permissions.CAJA_VIEW, Permissions.CAJA_VIEW_HISTORY
+            Permissions.SESSION_VIEW, Permissions.SESSION_MANAGE, Permissions.SESSION_CLOSE
         };
 
         foreach (var permission in managerPermissions)
@@ -312,8 +310,7 @@ public sealed class DatabaseInitializer : IHostedService
             Permissions.MENU_VIEW,
             Permissions.PAYMENT_VIEW, Permissions.PAYMENT_PROCESS, Permissions.PAYMENT_REFUND,
             Permissions.CUSTOMER_VIEW, Permissions.CUSTOMER_CREATE, Permissions.CUSTOMER_UPDATE,
-            Permissions.SESSION_VIEW,
-            Permissions.CAJA_CLOSE, Permissions.CAJA_VIEW
+            Permissions.SESSION_VIEW
         };
 
         foreach (var permission in cashierPermissions)

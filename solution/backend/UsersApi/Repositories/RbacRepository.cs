@@ -399,7 +399,6 @@ public sealed class RbacRepository : IRbacRepository
                 -- Direct role permissions
                 SELECT rp.permission
                 FROM users.role_permissions rp
-                JOIN users.roles r ON rp.role_id = r.role_id
                 JOIN users.users u ON u.role = r.name
                 WHERE u.user_id = @userId AND u.is_active = true AND u.is_deleted = false
                 
@@ -409,7 +408,6 @@ public sealed class RbacRepository : IRbacRepository
                 SELECT rp.permission
                 FROM users.role_permissions rp
                 JOIN users.role_inheritance ri ON rp.role_id = ri.parent_role_id
-                JOIN users.roles r ON ri.child_role_id = r.role_id
                 JOIN users.users u ON u.role = r.name
                 WHERE u.user_id = @userId AND u.is_active = true AND u.is_deleted = false
             )

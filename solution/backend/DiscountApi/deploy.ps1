@@ -53,8 +53,7 @@ Write-Info "Deploying to Cloud Run service '$ServiceName' in region '$Region'...
 $envPairs = @(
     "ASPNETCORE_URLS=http://0.0.0.0:8080",
     "ASPNETCORE_ENVIRONMENT=Production",
-    "ConnectionStrings__DefaultConnection=Host=/cloudsql/$CloudSqlInstance;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Require;Trust Server Certificate=true",
-    "UsersApi:BaseUrl=https://magidesk-users-904541739138.northamerica-south1.run.app"
+    "ConnectionStrings__DefaultConnection=Host=/cloudsql/$CloudSqlInstance;Port=5432;Username=posapp;Password=Campus_66;Database=postgres;SSL Mode=Require;Trust Server Certificate=true"
 )
 $EnvVars = ($envPairs -join ",")
 $deployArgs = @(

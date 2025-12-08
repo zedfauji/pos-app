@@ -95,19 +95,11 @@
                         <NavigationViewItem Content="All Payments" Tag="AllPaymentsPage" Icon="List"/>
                     </NavigationViewItem.MenuItems>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Caja" Tag="CajaPage" Icon="Shop">
-                    <NavigationViewItem.MenuItems>
-                        <NavigationViewItem Content="Open Caja" Tag="CajaPage" Icon="Add"/>
-                        <NavigationViewItem Content="Close Caja" Tag="CajaPage" Icon="Remove"/>
-                        <NavigationViewItem Content="Caja Reports" Tag="CajaReportsPage" Icon="Document"/>
-                    </NavigationViewItem.MenuItems>
-                </NavigationViewItem>
 
                 <NavigationViewItemSeparator/>
 
                 <!-- Management Group -->
                 <NavigationViewItemHeader Content="Management"/>
-                <NavigationViewItem Content="RBAC Test" Tag="RbacTestPage" Icon="Setting"/>
                 <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Enhanced Menu" Tag="EnhancedMenuManagementPage" Icon="Shop"/>
                 <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$false)][string]$ProjectId,
-    [Parameter(Mandatory=$false)][string]$Region = "northamerica-south1",
+    [Parameter(Mandatory=$false)][string]$Region = "us-central1",
     [Parameter(Mandatory=$false)][string]$ServiceName = "magidesk-settings",
     [Parameter(Mandatory=$false)][string]$CloudSqlInstance = "bola8pos:northamerica-south1:pos-app-1"
 )
@@ -51,12 +51,7 @@ Write-Info "Submitting build to Cloud Build..."
 if ($LASTEXITCODE -ne 0) { Write-Err "Cloud Build failed."; Remove-Item -ErrorAction SilentlyContinue $TempDockerfile; exit 1 }
 
 Write-Info "Deploying to Cloud Run service '$ServiceName' in region '$Region'..."
-$envPairs = @(
-    "ASPNETCORE_URLS=http://0.0.0.0:8080",
-    "ASPNETCORE_ENVIRONMENT=Production",
-    "UsersApi:BaseUrl=https://magidesk-users-904541739138.northamerica-south1.run.app"
-)
-$EnvVars = ($envPairs -join ",")
+$EnvVars = "ASPNETCORE_URLS=http://0.0.0.0:8080,ASPNETCORE_ENVIRONMENT=Production"
 & gcloud.cmd run deploy $ServiceName `
     --image $Image `
     --region $Region `

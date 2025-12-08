@@ -6,20 +6,14 @@ namespace OrderApi.Services;
 public sealed class OrderService : IOrderService
 {
     private readonly IOrderRepository _repo;
-    private readonly IHttpClientFactory? _httpClientFactory;
-    private readonly IConfiguration? _configuration;
 
-    public OrderService(IOrderRepository repo, IHttpClientFactory? httpClientFactory = null, IConfiguration? configuration = null)
+    public OrderService(IOrderRepository repo)
     {
         _repo = repo;
-        _httpClientFactory = httpClientFactory;
-        _configuration = configuration;
     }
 
     public async Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct)
     {
-        // Validate active caja session via PaymentApi
-        await ValidateCajaSessionAsync(ct);
         var pricedItems = new List<OrderItemDto>();
         foreach (var i in req.Items)
         {
@@ -103,47 +97,6 @@ public sealed class OrderService : IOrderService
 
         var created = await _repo.GetOrderAsync(orderId, ct);
         return created!;
-    }
-
-    private async Task ValidateCajaSessionAsync(CancellationToken ct)
-    {
-        if (_httpClientFactory == null || _configuration == null)
-            return; // Skip validation if HTTP client not available
-
-        try
-        {
-            var paymentApiUrl = _configuration["PaymentApi:BaseUrl"] 
-                ?? Environment.GetEnvironmentVariable("PAYMENTAPI_BASEURL");
-            
-            if (string.IsNullOrWhiteSpace(paymentApiUrl))
-                return; // Skip if PaymentApi URL not configured
-
-            var httpClient = _httpClientFactory.CreateClient();
-            httpClient.BaseAddress = new Uri(paymentApiUrl.TrimEnd('/') + "/");
-            httpClient.Timeout = TimeSpan.FromSeconds(5);
-
-            var response = await httpClient.GetAsync("api/caja/active", ct);
-            
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                throw new InvalidOperationException("CAJA_CLOSED: Debe abrir la caja antes de crear órdenes.");
-            }
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                // If we can't verify, allow order creation (fail open for resilience)
-                return;
-            }
-        }
-        catch (InvalidOperationException)
-        {
-            throw; // Re-throw caja closed exception
-        }
-        catch
-        {
-            // If PaymentApi is unavailable, allow order creation (fail open)
-            return;
-        }
     }
 
     public Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct)

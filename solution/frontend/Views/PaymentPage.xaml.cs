@@ -54,31 +54,6 @@ public sealed partial class PaymentPage : Page
         {
             DebugLogger.LogMethodEntry("PaymentPage.ProcessPayment_Click");
             
-            // Validate caja session
-            if (App.CajaService != null)
-            {
-                var activeSession = await App.CajaService.GetActiveSessionAsync();
-                if (activeSession == null)
-                {
-                    var errorDialog = new ContentDialog()
-                    {
-                        Title = "Caja Cerrada",
-                        Content = "Debe abrir la caja antes de procesar pagos. ¿Desea abrir la caja ahora?",
-                        PrimaryButtonText = "Abrir Caja",
-                        CloseButtonText = "Cancelar",
-                        XamlRoot = this.XamlRoot
-                    };
-                    
-                    var result = await errorDialog.ShowAsync();
-                    if (result == ContentDialogResult.Primary)
-                    {
-                        // Navigate to CajaPage
-                        Frame.Navigate(typeof(CajaPage));
-                    }
-                    return;
-                }
-            }
-            
             if (sender is Button button && button.Tag is BillResult bill)
             {
                 DebugLogger.LogStep("ProcessPayment_Click", $"Button clicked for Bill {bill.BillId}, Amount: {bill.TotalAmount}");

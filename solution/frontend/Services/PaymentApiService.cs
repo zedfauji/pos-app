@@ -20,10 +20,6 @@ public sealed class PaymentApiService
     public sealed record PaymentLogDto(long LogId, Guid BillingId, Guid SessionId, string Action, object? OldValue, object? NewValue, string? ServerId, DateTimeOffset CreatedAt);
     public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
 
-    // Refund DTOs
-    public sealed record ProcessRefundRequestDto(decimal RefundAmount, string? RefundReason, string RefundMethod = "original", string? ExternalRef = null, object? Meta = null);
-    public sealed record RefundDto(Guid RefundId, Guid PaymentId, Guid BillingId, Guid SessionId, decimal RefundAmount, string? RefundReason, string RefundMethod, string? ExternalRef, object? Meta, string? CreatedBy, DateTimeOffset CreatedAt);
-
     // Register payments (supports split via multiple lines)
     public async Task<BillLedgerDto?> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct = default)
     {
@@ -153,52 +149,5 @@ public sealed class PaymentApiService
         System.Diagnostics.Debug.WriteLine($"PaymentApiService: Parsed {payments.Count} payments from response");
         
         return payments;
-    }
-
-    // Refund methods
-    public async Task<RefundDto?> ProcessRefundAsync(Guid paymentId, ProcessRefundRequestDto request, CancellationToken ct = default)
-    {
-        System.Diagnostics.Debug.WriteLine($"PaymentApiService: Processing refund - PaymentId={paymentId}, Amount={request.RefundAmount}, Method={request.RefundMethod}");
-        
-        try
-        {
-            var res = await _http.PostAsJsonAsync($"api/payments/payment/{paymentId}/refund?serverId={Uri.EscapeDataString(Environment.UserName)}", request, ct);
-            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Refund HTTP response status = {res.StatusCode}");
-            
-            if (!res.IsSuccessStatusCode)
-            {
-                var errorContent = await res.Content.ReadAsStringAsync(ct);
-                System.Diagnostics.Debug.WriteLine($"PaymentApiService: Refund failed with status {res.StatusCode}: {errorContent}");
-                throw new InvalidOperationException($"Refund failed: {res.StatusCode} - {errorContent}");
-            }
-            
-            var refund = await res.Content.ReadFromJsonAsync<RefundDto>(cancellationToken: ct);
-            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Refund successful - RefundId={refund?.RefundId}, Amount={refund?.RefundAmount}");
-            return refund;
-        }
-        catch (HttpRequestException ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"PaymentApiService: HTTP error during ProcessRefundAsync: {ex.Message}");
-            throw new InvalidOperationException($"Refund API request failed: {ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"PaymentApiService: Unexpected error during ProcessRefundAsync: {ex.Message}");
-            throw new InvalidOperationException($"Refund processing failed: {ex.Message}", ex);
-        }
-    }
-
-    public async Task<IReadOnlyList<RefundDto>> GetRefundsByPaymentIdAsync(Guid paymentId, CancellationToken ct = default)
-    {
-        var res = await _http.GetAsync($"api/payments/payment/{paymentId}/refunds", ct);
-        if (!res.IsSuccessStatusCode) return Array.Empty<RefundDto>();
-        return await res.Content.ReadFromJsonAsync<IReadOnlyList<RefundDto>>(cancellationToken: ct) ?? Array.Empty<RefundDto>();
-    }
-
-    public async Task<IReadOnlyList<RefundDto>> GetRefundsByBillingIdAsync(Guid billingId, CancellationToken ct = default)
-    {
-        var res = await _http.GetAsync($"api/payments/{billingId}/refunds", ct);
-        if (!res.IsSuccessStatusCode) return Array.Empty<RefundDto>();
-        return await res.Content.ReadFromJsonAsync<IReadOnlyList<RefundDto>>(cancellationToken: ct) ?? Array.Empty<RefundDto>();
     }
 }
