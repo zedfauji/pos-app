@@ -28,15 +28,17 @@ public sealed class PaymentRepository : IPaymentRepository
         }
     }
 
-    public async Task InsertPaymentsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid sessionId, Guid billingId, string? serverId, IReadOnlyList<RegisterPaymentLineDto> lines, CancellationToken ct)
+    public async Task InsertPaymentsAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid sessionId, Guid billingId, Guid? cajaSessionId, string? serverId, IReadOnlyList<RegisterPaymentLineDto> lines, CancellationToken ct)
     {
-        const string ins = @"INSERT INTO pay.payments(session_id, billing_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by)
-                             VALUES(@sid, @bid, @amt, @pm, @disc, @drea, @tip, @ext, @meta, @by)";
+        const string ins = @"INSERT INTO pay.payments(session_id, billing_id, caja_session_id, amount_paid, payment_method, discount_amount, discount_reason, tip_amount, external_ref, meta, created_by)
+                             VALUES(@sid, @bid, @cajaSid, @amt, @pm, @disc, @drea, @tip, @ext, @meta, @by)
+                             RETURNING payment_id";
         foreach (var l in lines)
         {
             await using var cmd = new NpgsqlCommand(ins, conn, tx);
             cmd.Parameters.AddWithValue("@sid", sessionId);
             cmd.Parameters.AddWithValue("@bid", billingId);
+            cmd.Parameters.AddWithValue("@cajaSid", (object?)cajaSessionId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@amt", l.AmountPaid);
             cmd.Parameters.AddWithValue("@pm", l.PaymentMethod);
             cmd.Parameters.AddWithValue("@disc", l.DiscountAmount);
@@ -45,7 +47,31 @@ public sealed class PaymentRepository : IPaymentRepository
             cmd.Parameters.AddWithValue("@ext", (object?)l.ExternalRef ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@meta", l.Meta is null ? DBNull.Value : JsonSerializer.SerializeToElement(l.Meta));
             cmd.Parameters.AddWithValue("@by", (object?)serverId ?? DBNull.Value);
-            await cmd.ExecuteNonQueryAsync(ct);
+            
+            var paymentId = (Guid)await cmd.ExecuteScalarAsync(ct);
+            
+            // Add caja transaction for sale
+            if (cajaSessionId.HasValue)
+            {
+                const string cajaTransSql = @"
+                    INSERT INTO caja.caja_transactions (caja_session_id, transaction_id, transaction_type, amount, timestamp)
+                    VALUES (@cajaSid, @transId, 'sale', @amt, now())";
+                await using var cajaCmd = new NpgsqlCommand(cajaTransSql, conn, tx);
+                cajaCmd.Parameters.AddWithValue("@cajaSid", cajaSessionId.Value);
+                cajaCmd.Parameters.AddWithValue("@transId", paymentId);
+                cajaCmd.Parameters.AddWithValue("@amt", l.AmountPaid);
+                await cajaCmd.ExecuteNonQueryAsync(ct);
+                
+                // Add tip as separate transaction if present
+                if (l.TipAmount > 0)
+                {
+                    await using var tipCmd = new NpgsqlCommand(cajaTransSql.Replace("'sale'", "'tip'").Replace("@amt", "@tipAmt"), conn, tx);
+                    tipCmd.Parameters.AddWithValue("@cajaSid", cajaSessionId.Value);
+                    tipCmd.Parameters.AddWithValue("@transId", paymentId);
+                    tipCmd.Parameters.AddWithValue("@tipAmt", l.TipAmount);
+                    await tipCmd.ExecuteNonQueryAsync(ct);
+                }
+            }
         }
     }
 
@@ -354,15 +380,16 @@ public sealed class PaymentRepository : IPaymentRepository
         }
     }
 
-    public async Task<RefundDto> InsertRefundAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid paymentId, Guid billingId, Guid sessionId, decimal refundAmount, string? refundReason, string refundMethod, string? externalRef, object? meta, string? createdBy, CancellationToken ct)
+    public async Task<RefundDto> InsertRefundAsync(NpgsqlConnection conn, NpgsqlTransaction tx, Guid paymentId, Guid billingId, Guid sessionId, Guid? cajaSessionId, decimal refundAmount, string? refundReason, string refundMethod, string? externalRef, object? meta, string? createdBy, CancellationToken ct)
     {
-        const string ins = @"INSERT INTO pay.refunds(payment_id, billing_id, session_id, refund_amount, refund_reason, refund_method, external_ref, meta, created_by)
-                            VALUES(@pid, @bid, @sid, @amt, @reason, @method, @ext, @meta, @by)
+        const string ins = @"INSERT INTO pay.refunds(payment_id, billing_id, session_id, caja_session_id, refund_amount, refund_reason, refund_method, external_ref, meta, created_by)
+                            VALUES(@pid, @bid, @sid, @cajaSid, @amt, @reason, @method, @ext, @meta, @by)
                             RETURNING refund_id, payment_id, billing_id, session_id, refund_amount, refund_reason, refund_method, external_ref, meta, created_by, created_at";
         await using var cmd = new NpgsqlCommand(ins, conn, tx);
         cmd.Parameters.AddWithValue("@pid", paymentId);
         cmd.Parameters.AddWithValue("@bid", billingId);
         cmd.Parameters.AddWithValue("@sid", sessionId);
+        cmd.Parameters.AddWithValue("@cajaSid", (object?)cajaSessionId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@amt", refundAmount);
         cmd.Parameters.AddWithValue("@reason", (object?)refundReason ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@method", refundMethod);
@@ -374,8 +401,23 @@ public sealed class PaymentRepository : IPaymentRepository
         if (!await rdr.ReadAsync(ct))
             throw new InvalidOperationException("Failed to insert refund");
         
+        var refundId = rdr.GetFieldValue<Guid>(0);
+        
+        // Add caja transaction for refund
+        if (cajaSessionId.HasValue)
+        {
+            const string cajaTransSql = @"
+                INSERT INTO caja.caja_transactions (caja_session_id, transaction_id, transaction_type, amount, timestamp)
+                VALUES (@cajaSid, @transId, 'refund', @amt, now())";
+            await using var cajaCmd = new NpgsqlCommand(cajaTransSql, conn, tx);
+            cajaCmd.Parameters.AddWithValue("@cajaSid", cajaSessionId.Value);
+            cajaCmd.Parameters.AddWithValue("@transId", refundId);
+            cajaCmd.Parameters.AddWithValue("@amt", refundAmount);
+            await cajaCmd.ExecuteNonQueryAsync(ct);
+        }
+        
         return new RefundDto(
-            rdr.GetFieldValue<Guid>(0), // refund_id
+            refundId, // refund_id
             rdr.GetFieldValue<Guid>(1), // payment_id
             rdr.GetFieldValue<Guid>(2), // billing_id
             rdr.GetFieldValue<Guid>(3), // session_id

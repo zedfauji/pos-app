@@ -1,0 +1,102 @@
+<Page x:Class="MagiDesk.Frontend.Views.RbacTestPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="16">
+            <TextBlock Text="RBAC Test Page" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="Test Role-Based Access Control from the frontend" 
+                       Style="{StaticResource BodyTextBlockStyle}" 
+                       Foreground="{ThemeResource SystemColorGrayTextBrush}" />
+
+            <!-- Current User Info -->
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Current User" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="User ID:" Margin="0,0,12,0" />
+                        <TextBlock x:Name="UserIdText" Grid.Row="0" Grid.Column="1" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Username:" Margin="0,0,12,0" />
+                        <TextBlock x:Name="UsernameText" Grid.Row="1" Grid.Column="1" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Role:" Margin="0,0,12,0" />
+                        <TextBlock x:Name="RoleText" Grid.Row="2" Grid.Column="1" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Permissions:" Margin="0,0,12,0" />
+                        <TextBlock x:Name="PermissionsCountText" Grid.Row="3" Grid.Column="1" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Permissions List -->
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="User Permissions" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <ScrollViewer MaxHeight="300">
+                        <ItemsControl x:Name="PermissionsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                            BorderThickness="1" 
+                                            CornerRadius="4" 
+                                            Padding="8" 
+                                            Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding}" 
+                                                   FontFamily="Consolas" 
+                                                   FontSize="12" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <!-- API Test Section -->
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="API Endpoint Tests" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    
+                    <ComboBox x:Name="EndpointCombo" Header="Select Endpoint" Width="400">
+                        <ComboBoxItem Content="SettingsApi - GET /api/v2/settings/frontend" Tag="settings" />
+                        <ComboBoxItem Content="MenuApi - GET /api/v2/menu/items" Tag="menu" />
+                        <ComboBoxItem Content="OrderApi - GET /api/v2/orders" Tag="orders" />
+                        <ComboBoxItem Content="InventoryApi - GET /api/v2/inventory/items" Tag="inventory" />
+                        <ComboBoxItem Content="PaymentApi - POST /api/v2/payments" Tag="payment" />
+                    </ComboBox>
+
+                    <CheckBox x:Name="IncludeUserIdCheck" Content="Include X-User-Id Header" IsChecked="True" />
+
+                    <Button x:Name="TestButton" Content="Test Endpoint" Click="TestButton_Click" />
+
+                    <Border x:Name="ResultBorder" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" 
+                            CornerRadius="4" 
+                            Padding="12" 
+                            Visibility="Collapsed">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="ResultStatusText" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock x:Name="ResultDetailsText" 
+                                       FontFamily="Consolas" 
+                                       FontSize="11" 
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Permission Check Section -->
+            <Border Style="{StaticResource FluentCardStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Permission Check" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBox x:Name="PermissionInput" 
+                             Header="Permission to Check" 
+                             PlaceholderText="e.g., menu:view, order:create" />
+                    <Button Content="Check Permission" Click="CheckPermissionButton_Click" />
+                    <TextBlock x:Name="PermissionResultText" 
+                               Margin="0,8,0,0" 
+                               FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
+

@@ -1,11 +1,13 @@
 using MagiDesk.Shared.DTOs.Users;
+using MagiDesk.Shared.Authorization.Services;
 
 namespace UsersApi.Services;
 
 /// <summary>
 /// Interface for Role-Based Access Control operations
+/// Extends the shared IRbacService interface
 /// </summary>
-public interface IRbacService
+public interface IRbacService : MagiDesk.Shared.Authorization.Services.IRbacService
 {
     // Role Management
     Task<RoleDto> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default);

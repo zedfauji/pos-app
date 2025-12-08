@@ -8,16 +8,39 @@ public sealed class PaymentService : IPaymentService
     private readonly IPaymentRepository _repo;
     private readonly IConfiguration _config;
     private readonly ImmutableIdService _idService;
+    private readonly ICajaService _cajaService;
+    private readonly ICajaRepository _cajaRepository;
 
-    public PaymentService(IPaymentRepository repo, IConfiguration config, ImmutableIdService idService)
+    public PaymentService(
+        IPaymentRepository repo, 
+        IConfiguration config, 
+        ImmutableIdService idService,
+        ICajaService cajaService,
+        ICajaRepository cajaRepository)
     {
         _repo = repo;
         _config = config;
         _idService = idService;
+        _cajaService = cajaService;
+        _cajaRepository = cajaRepository;
     }
 
     public async Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
     {
+        // Validate active caja session
+        var hasActiveCaja = await _cajaService.ValidateActiveSessionAsync(ct);
+        if (!hasActiveCaja)
+        {
+            throw new InvalidOperationException("CAJA_CLOSED: Debe abrir la caja antes de procesar pagos.");
+        }
+
+        // Get active caja session
+        var activeCaja = await _cajaService.GetActiveSessionAsync(ct);
+        if (activeCaja == null)
+        {
+            throw new InvalidOperationException("CAJA_CLOSED: No hay una caja activa.");
+        }
+
         if (req.Lines is null || req.Lines.Count == 0)
             throw new InvalidOperationException("NO_PAYMENT_LINES");
         if (req.Lines.Any(l => l.AmountPaid < 0 || l.DiscountAmount < 0 || l.TipAmount < 0))
@@ -114,8 +137,8 @@ public sealed class PaymentService : IPaymentService
             // Current ledger snapshot for logging
             var old = await _repo.GetLedgerAsync(req.BillingId, token);
 
-            // Insert all payment legs
-            await _repo.InsertPaymentsAsync(conn, tx, req.SessionId, req.BillingId, req.ServerId, req.Lines, token);
+            // Insert all payment legs (with caja session link)
+            await _repo.InsertPaymentsAsync(conn, tx, req.SessionId, req.BillingId, activeCaja.Id, req.ServerId, req.Lines, token);
 
             // Aggregate deltas
             var addPaid = req.Lines.Sum(l => l.AmountPaid);
@@ -229,6 +252,20 @@ public sealed class PaymentService : IPaymentService
 
     public async Task<RefundDto> ProcessRefundAsync(Guid paymentId, ProcessRefundRequestDto request, string? serverId, CancellationToken ct)
     {
+        // Validate active caja session
+        var hasActiveCaja = await _cajaService.ValidateActiveSessionAsync(ct);
+        if (!hasActiveCaja)
+        {
+            throw new InvalidOperationException("CAJA_CLOSED: Debe abrir la caja antes de procesar reembolsos.");
+        }
+
+        // Get active caja session
+        var activeCaja = await _cajaService.GetActiveSessionAsync(ct);
+        if (activeCaja == null)
+        {
+            throw new InvalidOperationException("CAJA_CLOSED: No hay una caja activa.");
+        }
+
         // Validation
         if (request.RefundAmount <= 0)
             throw new InvalidOperationException("INVALID_REFUND_AMOUNT: Refund amount must be greater than zero");
@@ -258,12 +295,17 @@ public sealed class PaymentService : IPaymentService
             // Get old ledger state for logging
             var oldLedger = await _repo.GetLedgerAsync(payment.BillingId, token);
 
+            // Get active caja session ID
+            var activeCajaInTx = await _cajaService.GetActiveSessionAsync(token);
+            var cajaSessionId = activeCajaInTx?.Id;
+
             // Insert refund record
             refund = await _repo.InsertRefundAsync(
                 conn, tx,
                 paymentId,
                 payment.BillingId,
                 payment.SessionId,
+                cajaSessionId,
                 request.RefundAmount,
                 request.RefundReason,
                 request.RefundMethod,

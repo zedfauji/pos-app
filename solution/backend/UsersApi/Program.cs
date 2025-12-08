@@ -1,6 +1,12 @@
 using Npgsql;
 using UsersApi.Services;
 using UsersApi.Repositories;
+using MagiDesk.Shared.Authorization.Requirements;
+using MagiDesk.Shared.Authorization.Handlers;
+using MagiDesk.Shared.Authorization.Middleware;
+using MagiDesk.Shared.Authorization.Services;
+using Microsoft.AspNetCore.Authorization;
+using MagiDesk.Shared.DTOs.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,10 +14,33 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+
+// RBAC Services
 builder.Services.AddScoped<IUsersRepository, UsersRepository>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<IRbacRepository, RbacRepository>();
-builder.Services.AddScoped<IRbacService, RbacService>();
+builder.Services.AddScoped<UsersApi.Services.IRbacService, RbacService>();
+
+// Register shared IRbacService interface (for authorization handlers)
+builder.Services.AddScoped<MagiDesk.Shared.Authorization.Services.IRbacService>(sp => 
+    sp.GetRequiredService<UsersApi.Services.IRbacService>());
+
+// Authorization Services
+builder.Services.AddAuthorization(options =>
+{
+    // Register authorization policies for each permission
+    // Policy name format: "Permission:{permission_name}"
+    foreach (var permission in Permissions.AllPermissions)
+    {
+        options.AddPolicy($"Permission:{permission}", policy =>
+        {
+            policy.Requirements.Add(new PermissionRequirement(permission));
+        });
+    }
+});
+
+// Register permission requirement handler (from shared library)
+builder.Services.AddSingleton<IAuthorizationHandler, MagiDesk.Shared.Authorization.Handlers.PermissionRequirementHandler>();
 
 // Npgsql DataSource (dev: use LocalConnectionString, prod: use CloudRunSocketConnectionString)
 var pgSection = builder.Configuration.GetSection("Postgres");
@@ -24,11 +53,16 @@ else
 {
     connString = pgSection.GetValue<string>("CloudRunSocketConnectionString");
 }
-if (!string.IsNullOrWhiteSpace(connString))
+if (string.IsNullOrWhiteSpace(connString))
 {
-    var dataSource = new NpgsqlDataSourceBuilder(connString).Build();
-    builder.Services.AddSingleton(dataSource);
+    // Fallback to environment variable or default
+    connString = builder.Configuration["ConnectionStrings:DefaultConnection"]
+        ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
+        ?? throw new InvalidOperationException("PostgreSQL connection string not configured. Set Postgres:CloudRunSocketConnectionString or ConnectionStrings:DefaultConnection");
 }
+
+var dataSource = new NpgsqlDataSourceBuilder(connString).Build();
+builder.Services.AddSingleton(dataSource);
 builder.Services.AddHostedService<DatabaseInitializer>();
 
 var app = builder.Build();
@@ -39,6 +73,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Add middleware to extract user ID from requests (from shared library)
+app.UseMiddleware<MagiDesk.Shared.Authorization.Middleware.UserIdExtractionMiddleware>();
+
+// Map all controllers - versioning is handled via attribute routing
+// v1 controllers: [Route("api/[controller]")] and [Route("api/v1/[controller]")]
+// v2 controllers: [Route("api/v2/[controller]")]
+app.MapControllers();
 
 // Health check endpoint for Cloud Run
 app.MapGet("/health", () => Results.Ok("OK"));
