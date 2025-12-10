@@ -2,15 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Expect build context at solution/ so we can see backend/ and shared/
-COPY src/Shared/shared/*.csproj shared/
-COPY src/Backend/SettingsApi/*.csproj SettingsApi/
-RUN dotnet restore "SettingsApi/SettingsApi.csproj"
+# Build context is repo root (dockerContext: .)
+COPY ./ ./
 
-# Copy source and publish
-COPY src/Shared/shared/ shared/
-COPY src/Backend/SettingsApi/ SettingsApi/
-RUN dotnet publish "SettingsApi/SettingsApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Build and publish
+WORKDIR /src/src/Backend/SettingsApi
+RUN dotnet publish -c Release -o /app/publish
 
 ## Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
@@ -20,7 +17,7 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Copy Firestore service account into container (if present)
-COPY src/Backend/config/serviceAccount.json /secrets/serviceAccount.json
+COPY --from=build /src/src/Backend/config/serviceAccount.json /secrets/serviceAccount.json 2>/dev/null || true
 ENV GOOGLE_APPLICATION_CREDENTIALS=/secrets/serviceAccount.json
 
 # Expose port for Cloud Run
