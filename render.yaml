@@ -200,6 +200,6 @@ databases:
     region: oregon
     postgresMajorVersion: 17
     ipAllowList: []  # Allow all IPs (configure as needed)
-    pitrEnabled: true  # Point-in-time recovery enabled
+    # Note: PITR (Point-in-time recovery) is enabled by default on Render databases
     # Initial data import should be done via migration script
 
