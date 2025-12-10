@@ -50,3 +50,13 @@ infra/terraform/.terraform.lock.hcl
 
 # Migration artifacts
 scripts/migration/migration-log-*.txt
+
+# Legacy reference folder
+
+legacy-reference/
+
+# Build artifacts
+
+**/publish/
+
+**/TestResults/

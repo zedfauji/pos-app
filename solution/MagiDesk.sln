@@ -1,4 +1,5 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -27,8 +28,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Tests", "..\tests\MagiDesk.Tests\MagiDesk.Tests.csproj", "{C9B5F9D1-2345-6789-ABCD-EF0123456789}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscountApi", "..\src\Backend\DiscountApi\DiscountApi.csproj", "{9EEB8453-501F-489C-9692-987C8A7508B7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryProxy", "..\src\Backend\InventoryProxy\InventoryProxy.csproj", "{3312B6F5-9F0D-4881-878C-B63C04362449}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,10 +83,6 @@ Global
 		{9EEB8453-501F-489C-9692-987C8A7508B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9EEB8453-501F-489C-9692-987C8A7508B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9EEB8453-501F-489C-9692-987C8A7508B7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3312B6F5-9F0D-4881-878C-B63C04362449}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3312B6F5-9F0D-4881-878C-B63C04362449}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3312B6F5-9F0D-4881-878C-B63C04362449}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3312B6F5-9F0D-4881-878C-B63C04362449}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

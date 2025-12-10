@@ -182,6 +182,7 @@ services:
           property: connectionString
     healthCheckPath: /health
     autoDeploy: true
+    # Note: Connected to 'develop' branch for safe integration deploys
 
 databases:
   # PostgreSQL Database
