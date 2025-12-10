@@ -9,7 +9,7 @@ WORKDIR /src
 COPY ./ ./
 
 # Copy the rest and publish
-WORKDIR /src/backend/CustomerApi
+WORKDIR /src/src/Backend/CustomerApi
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage

@@ -2,16 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Expect build context at solution/
-# Copy csproj for better caching and restore
-COPY backend/TablesApi/*.csproj TablesApi/
-COPY shared/*.csproj /shared/
-RUN dotnet restore "TablesApi/TablesApi.csproj"
+# Build context is repo root (dockerContext: .)
+# Copy entire solution to ensure Directory.Build.props is available
+COPY ./ ./
 
-# Copy source and publish
-COPY backend/TablesApi/ TablesApi/
-COPY shared/ /shared/
-RUN dotnet publish "TablesApi/TablesApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Build and publish
+WORKDIR /src/src/Backend/TablesApi
+RUN dotnet publish -c Release -o /app/publish
 
 ## Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final

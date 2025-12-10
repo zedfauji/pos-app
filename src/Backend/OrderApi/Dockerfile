@@ -7,7 +7,8 @@ WORKDIR /src
 COPY ./ ./
 
 # Publish
-WORKDIR /src/backend/OrderApi
+# Note: Build context is repo root, so COPY ./ ./ creates /src/src/Backend/ structure
+WORKDIR /src/src/Backend/OrderApi
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage

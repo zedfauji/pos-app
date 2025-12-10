@@ -9,7 +9,7 @@ WORKDIR /src
 COPY ./ ./
 
 # Copy the rest and publish
-WORKDIR /src/backend/MenuApi
+WORKDIR /src/src/Backend/MenuApi
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage

@@ -4,10 +4,10 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["backend/DiscountApi/DiscountApi.csproj", "backend/DiscountApi/"]
-RUN dotnet restore "backend/DiscountApi/DiscountApi.csproj"
+COPY ["src/Backend/DiscountApi/DiscountApi.csproj", "src/Backend/DiscountApi/"]
+RUN dotnet restore "src/Backend/DiscountApi/DiscountApi.csproj"
 COPY . .
-WORKDIR "/src/backend/DiscountApi"
+WORKDIR "/src/Backend/DiscountApi"
 RUN dotnet build "DiscountApi.csproj" -c Release -o /app/build
 
 FROM build AS publish

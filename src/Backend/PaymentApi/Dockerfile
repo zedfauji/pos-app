@@ -6,7 +6,7 @@ WORKDIR /src
 COPY ./ ./
 
 # Publish PaymentApi
-WORKDIR /src/backend/PaymentApi
+WORKDIR /src/src/Backend/PaymentApi
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage

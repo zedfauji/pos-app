@@ -2,18 +2,13 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project files for restore
-COPY ["backend/UsersApi/UsersApi.csproj", "backend/UsersApi/"]
-COPY ["shared/MagiDesk.Shared.csproj", "shared/"]
-RUN dotnet restore "backend/UsersApi/UsersApi.csproj"
-
-# Copy source code
-COPY backend/UsersApi/ backend/UsersApi/
-COPY shared/ shared/
+# Build context is repo root (dockerContext: .)
+# Copy entire solution to ensure Directory.Build.props is available
+COPY ./ ./
 
 # Build and publish
-WORKDIR /src/backend/UsersApi
-RUN dotnet publish "UsersApi.csproj" -c Release -o /app/publish --no-restore
+WORKDIR /src/src/Backend/UsersApi
+RUN dotnet publish -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
