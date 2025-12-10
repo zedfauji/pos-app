@@ -6,18 +6,16 @@ services:
   # TablesApi Service
   - type: web
     name: TablesApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/TablesApi/TablesApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/TablesApi.dll
+    dockerfilePath: src/Backend/TablesApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -27,18 +25,16 @@ services:
   # OrderApi Service
   - type: web
     name: OrderApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/OrderApi/OrderApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/OrderApi.dll
+    dockerfilePath: src/Backend/OrderApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -48,18 +44,16 @@ services:
   # PaymentApi Service
   - type: web
     name: PaymentApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/PaymentApi/PaymentApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/PaymentApi.dll
+    dockerfilePath: src/Backend/PaymentApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -69,18 +63,16 @@ services:
   # MenuApi Service
   - type: web
     name: MenuApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/MenuApi/MenuApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/MenuApi.dll
+    dockerfilePath: src/Backend/MenuApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -90,18 +82,16 @@ services:
   # CustomerApi Service
   - type: web
     name: CustomerApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/CustomerApi/CustomerApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/CustomerApi.dll
+    dockerfilePath: src/Backend/CustomerApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -111,18 +101,16 @@ services:
   # DiscountApi Service
   - type: web
     name: DiscountApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/DiscountApi/DiscountApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/DiscountApi.dll
+    dockerfilePath: src/Backend/DiscountApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -132,18 +120,16 @@ services:
   # InventoryApi Service
   - type: web
     name: InventoryApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/InventoryApi/InventoryApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/InventoryApi.dll
+    dockerfilePath: src/Backend/InventoryApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -153,18 +139,16 @@ services:
   # SettingsApi Service
   - type: web
     name: SettingsApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/SettingsApi/SettingsApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/SettingsApi.dll
+    dockerfilePath: src/Backend/SettingsApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -174,18 +158,16 @@ services:
   # UsersApi Service
   - type: web
     name: UsersApi
-    env: dotnet
+    runtime: docker
     plan: starter
     region: oregon
-    buildCommand: dotnet publish src/Backend/UsersApi/UsersApi.csproj -c Release -o ./publish
-    startCommand: dotnet ./publish/UsersApi.dll
+    dockerfilePath: src/Backend/UsersApi/Dockerfile
     envVars:
       - key: ASPNETCORE_URLS
         value: http://0.0.0.0:10000
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ConnectionStrings__Postgres
-        sync: false
         fromDatabase:
           name: magidesk-pos
           property: connectionString
@@ -195,7 +177,7 @@ services:
 databases:
   # PostgreSQL Database
   - name: magidesk-pos
-    databaseName: postgres
+    databaseName: magideskdb
     plan: basic-1gb
     region: oregon
     postgresMajorVersion: 17
