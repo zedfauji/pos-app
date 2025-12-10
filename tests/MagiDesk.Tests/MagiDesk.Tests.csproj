@@ -29,13 +29,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../shared/MagiDesk.Shared.csproj" />
-    <ProjectReference Include="../backend/OrderApi/OrderApi.csproj" />
-    <ProjectReference Include="../backend/PaymentApi/PaymentApi.csproj" />
-    <ProjectReference Include="../backend/MenuApi/MenuApi.csproj" />
-    <ProjectReference Include="../backend/InventoryApi/InventoryApi.csproj" />
-    <ProjectReference Include="../backend/SettingsApi/SettingsApi.csproj" />
-    <ProjectReference Include="../backend/TablesApi/TablesApi.csproj" />
+    <ProjectReference Include="..\..\src\Shared\shared\MagiDesk.Shared.csproj" />
+    <ProjectReference Include="..\..\src\Backend\OrderApi\OrderApi.csproj" />
+    <ProjectReference Include="..\..\src\Backend\PaymentApi\PaymentApi.csproj" />
+    <ProjectReference Include="..\..\src\Backend\MenuApi\MenuApi.csproj" />
+    <ProjectReference Include="..\..\src\Backend\InventoryApi\InventoryApi.csproj" />
+    <ProjectReference Include="..\..\src\Backend\SettingsApi\SettingsApi.csproj" />
+    <ProjectReference Include="..\..\src\Backend\TablesApi\TablesApi.csproj" />
   </ItemGroup>
 
 </Project>

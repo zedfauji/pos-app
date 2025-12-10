@@ -7,7 +7,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     xmlns:local="using:MagiDesk.Frontend.Views"
-    xmlns:controls="using:MagiDesk.Frontend.Views.Controls"
     mc:Ignorable="d"
     Background="Transparent">
     <Grid>
@@ -70,10 +69,7 @@
                      Message="Backend is unavailable. Features may be limited until connectivity is restored."
                      Margin="16,0,16,8"/>
             
-            <!-- Caja Status Banner -->
-            <controls:CajaStatusBanner x:Name="CajaStatusBanner"
-                                       Margin="16,0,16,8"
-                                       HorizontalAlignment="Stretch"/>
+            <!-- Caja Status Banner - Removed: CajaStatusBanner control not found -->
         </StackPanel>
 
         <!-- Fluent NavigationView -->

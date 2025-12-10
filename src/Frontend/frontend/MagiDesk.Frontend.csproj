@@ -45,7 +45,7 @@
   <!-- OrdersPage is now a dedicated page; do not remove it -->
 
     <ItemGroup>
-        <ProjectReference Include="..\shared\MagiDesk.Shared.csproj" />
+        <ProjectReference Include="..\..\Shared\shared\MagiDesk.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,0 +1,36 @@
+PostgreSQL Database Dump Instructions
+=====================================
+
+This script generates instructions for creating a PostgreSQL database dump.
+
+Direct pg_dump Commands:
+------------------------
+
+1. Full Database Dump (Custom Format - recommended for large databases):
+   pg_dump -h localhost -U posapp -d postgres -F c -f dumps\database.dump
+
+2. Full Database Dump (SQL Format):
+   pg_dump -h localhost -U posapp -d postgres -F p -f dumps\database-dump-20251209-205820.sql
+
+3. Schema Only (no data):
+   pg_dump -h localhost -U posapp -d postgres -s -f dumps\database-dump-20251209-205820.sql
+
+4. Data Only (no schema):
+   pg_dump -h localhost -U posapp -d postgres -a -f dumps\database-dump-20251209-205820.sql
+
+5. Specific Tables:
+   pg_dump -h localhost -U posapp -d postgres -t tablename -f dumps\database-dump-20251209-205820.sql
+
+For Cloud SQL (GCP):
+--------------------
+   gcloud sql export sql bola8pos:northamerica-south1:pos-app-1 gs://bucket-name/dump.sql --database=postgres
+
+Environment Variables:
+----------------------
+   $env:PGPASSWORD = "Campus_66"
+   pg_dump -h localhost -U posapp -d postgres -F p -f dumps\database-dump-20251209-205820.sql
+
+Connection String Format:
+-------------------------
+   Host=/cloudsql/bola8pos:northamerica-south1:pos-app-1;Port=5432;Username=posapp;Password=Campus_66;Database=postgres
+

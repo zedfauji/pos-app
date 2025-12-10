@@ -1,30 +1,34 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{657AD4B1-2FB5-47E6-A690-9379106ABBBF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Shared", "shared\MagiDesk.Shared.csproj", "{497194E1-CED4-421C-A36D-94A05ABB0886}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Shared", "..\src\Shared\shared\MagiDesk.Shared.csproj", "{497194E1-CED4-421C-A36D-94A05ABB0886}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Frontend", "frontend\MagiDesk.Frontend.csproj", "{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Frontend", "..\src\Frontend\frontend\MagiDesk.Frontend.csproj", "{B1BE121F-7042-4A9A-B221-43FE2CA98EFF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApi", "backend\InventoryApi\InventoryApi.csproj", "{25FDD4D1-658F-4E3D-9FB5-054EF8750C0C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryApi", "..\src\Backend\InventoryApi\InventoryApi.csproj", "{25FDD4D1-658F-4E3D-9FB5-054EF8750C0C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MenuApi", "backend\MenuApi\MenuApi.csproj", "{695D812A-5266-40B0-AB6A-691607DF33A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MenuApi", "..\src\Backend\MenuApi\MenuApi.csproj", "{695D812A-5266-40B0-AB6A-691607DF33A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderApi", "backend\OrderApi\OrderApi.csproj", "{F5B3C465-FD89-4356-B968-CAF1E5A668A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderApi", "..\src\Backend\OrderApi\OrderApi.csproj", "{F5B3C465-FD89-4356-B968-CAF1E5A668A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentApi", "backend\PaymentApi\PaymentApi.csproj", "{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentApi", "..\src\Backend\PaymentApi\PaymentApi.csproj", "{57FBA2B7-4C40-4BB5-9C4E-0E3F4F6CE2A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsersApi", "backend\UsersApi\UsersApi.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UsersApi", "..\src\Backend\UsersApi\UsersApi.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerApi", "backend\CustomerApi\CustomerApi.csproj", "{D2E3F4A5-B6C7-8901-CDEF-234567890ABC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomerApi", "..\src\Backend\CustomerApi\CustomerApi.csproj", "{D2E3F4A5-B6C7-8901-CDEF-234567890ABC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SettingsApi", "backend\SettingsApi\SettingsApi.csproj", "{E3F4A5B6-C7D8-9012-DEF3-4567890ABCDE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SettingsApi", "..\src\Backend\SettingsApi\SettingsApi.csproj", "{E3F4A5B6-C7D8-9012-DEF3-4567890ABCDE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TablesApi", "backend\TablesApi\TablesApi.csproj", "{F4A5B6C7-D8E9-0123-EF45-67890ABCDEF1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TablesApi", "..\src\Backend\TablesApi\TablesApi.csproj", "{F4A5B6C7-D8E9-0123-EF45-67890ABCDEF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Tests", "MagiDesk.Tests\MagiDesk.Tests.csproj", "{C9B5F9D1-2345-6789-ABCD-EF0123456789}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagiDesk.Tests", "..\tests\MagiDesk.Tests\MagiDesk.Tests.csproj", "{C9B5F9D1-2345-6789-ABCD-EF0123456789}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiscountApi", "..\src\Backend\DiscountApi\DiscountApi.csproj", "{9EEB8453-501F-489C-9692-987C8A7508B7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryProxy", "..\src\Backend\InventoryProxy\InventoryProxy.csproj", "{3312B6F5-9F0D-4881-878C-B63C04362449}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -76,6 +80,14 @@ Global
 		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9B5F9D1-2345-6789-ABCD-EF0123456789}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EEB8453-501F-489C-9692-987C8A7508B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9EEB8453-501F-489C-9692-987C8A7508B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9EEB8453-501F-489C-9692-987C8A7508B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9EEB8453-501F-489C-9692-987C8A7508B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3312B6F5-9F0D-4881-878C-B63C04362449}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3312B6F5-9F0D-4881-878C-B63C04362449}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3312B6F5-9F0D-4881-878C-B63C04362449}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3312B6F5-9F0D-4881-878C-B63C04362449}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
