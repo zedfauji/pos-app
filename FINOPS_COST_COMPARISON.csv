@@ -1,0 +1,8 @@
+Provider,Compute,Database,Storage/Other,Total,Savings vs GCP,Percentage Savings,Migration Effort,ROI Months,Notes
+GCP Cloud Run (db-f1-micro),$76.50,$25.00,$5.50,$107.00,Baseline,0%,-,0,Current setup with micro DB
+GCP Cloud Run (db-g1-small),$76.50,$55.00,$5.50,$137.00,Baseline,0%,-,0,Current setup with small DB
+Render.com (starter DB),$63.00,$7.00,$0.00,$83.00,$24.00,22%,MEDIUM,2-3,Starter DB (1GB RAM, needs upgrade for 20GB)
+Render.com (upgraded DB),$63.00,$20.00,$0.00,$96.00,$11.00,10%,MEDIUM,2-3,20GB storage included
+DigitalOcean App Platform,$108.00,$15.00,$0.00,$123.00,$14.00,13%,MEDIUM-HIGH,3-4,More expensive compute but simpler pricing
+DigitalOcean Droplets (manual),$72.00,$15.00,$10.00,$97.00,$10.00,9%,HIGH,4-6,Self-managed, more control, higher ops overhead
+

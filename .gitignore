@@ -38,3 +38,15 @@ solution/backend/config/serviceAccount.json
 *.secret.json
 *.secrets.json
 secrets/*.json
+
+# Infrastructure
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/*.tfvars
+infra/terraform/.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Migration artifacts
+scripts/migration/migration-log-*.txt

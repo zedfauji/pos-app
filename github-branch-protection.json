@@ -1,0 +1,92 @@
+{
+  "_description": "GitHub Branch Protection Rules for MagiDesk POS",
+  "_repository": "your-org/magidesk-pos",
+  "_note": "This file contains templates for different branch patterns. Use the specific JSON files for each branch type.",
+  
+  "main_branch_protection": {
+    "_file": "github-branch-protection-main.json",
+    "_description": "Use this file to protect the main branch: gh api repos/OWNER/REPO/branches/main/protection --method PUT --input github-branch-protection-main.json",
+    "required_status_checks": {
+      "strict": true,
+      "contexts": [
+        "ci/lint",
+        "ci/test",
+        "ci/build-backend",
+        "ci/build-frontend"
+      ]
+    },
+    "enforce_admins": true,
+    "required_pull_request_reviews": {
+      "required_approving_review_count": 1,
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": false,
+      "require_last_push_approval": false
+    },
+    "restrictions": null,
+    "required_linear_history": false,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "block_creations": false,
+    "required_conversation_resolution": true,
+    "lock_branch": false,
+    "allow_fork_syncing": true
+  },
+
+  "structure_branch_protection": {
+    "_file": "github-branch-protection-structure.json",
+    "_description": "For structure/* branches (lenient rules during restructuring)"
+  },
+
+  "branch_naming_conventions": {
+    "allowed_patterns": [
+      "^main$",
+      "^structure/.*",
+      "^feature/.*",
+      "^bugfix/.*",
+      "^hotfix/.*",
+      "^release/.*",
+      "^refactor/.*",
+      "^docs/.*"
+    ],
+    "blocked_patterns": [
+      "^work-by-.*",
+      "^.*-by-cursor$",
+      "^.*-by-windsurf$",
+      "^.*-by-grok$",
+      "^.*-cursor$",
+      "^.*-windsurf$"
+    ],
+    "blocked_words": [
+      "temp",
+      "tmp",
+      "test-branch",
+      "wip",
+      "draft"
+    ]
+  },
+
+  "setup_instructions": {
+    "main_branch": [
+      "gh api repos/OWNER/REPO/branches/main/protection --method PUT --input github-branch-protection-main.json",
+      "# Replace OWNER/REPO with your repository (e.g., zedfauji/pos-app)"
+    ],
+    "structure_branch": [
+      "gh api repos/OWNER/REPO/branches/structure/restructure-v1/protection --method PUT --input github-branch-protection-structure.json"
+    ],
+    "github_ui_alternative": [
+      "1. Go to repository Settings > Branches",
+      "2. Click 'Add rule' or edit existing 'main' rule",
+      "3. Configure protection rules as defined in github-branch-protection-main.json",
+      "4. Save changes"
+    ]
+  },
+
+  "notes": [
+    "Branch protection must be applied per-branch using GitHub API",
+    "GitHub doesn't support branch patterns in API - use UI for pattern-based rules",
+    "Use github-branch-protection-main.json for main branch (ready to use)",
+    "Use github-branch-protection-structure.json for structure/* branches",
+    "Requires GitHub repository admin access"
+  ]
+}
+

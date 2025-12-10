@@ -1,0 +1,19 @@
+{
+  "required_status_checks": {
+    "strict": false,
+    "contexts": [
+      "ci/lint"
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": true,
+  "allow_deletions": true,
+  "block_creations": false,
+  "required_conversation_resolution": false,
+  "lock_branch": false,
+  "allow_fork_syncing": true
+}
+

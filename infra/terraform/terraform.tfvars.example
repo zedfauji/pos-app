@@ -1,0 +1,29 @@
+# ============================================
+# MagiDesk POS - Terraform Variables Example
+# ============================================
+# Copy this file to terraform.tfvars and fill in actual values
+# terraform.tfvars is gitignored (contains sensitive data)
+
+project_id = "bola8pos"
+region     = "northamerica-south1"
+
+cloud_sql_instance_name = "pos-app-1"
+cloud_sql_tier          = "db-f1-micro"  # Options: db-f1-micro, db-g1-small
+
+database_name     = "postgres"
+database_user     = "posapp"
+database_password = "CHANGE_ME_SECURE_PASSWORD"  # ⚠️ CHANGE THIS!
+
+# VPC Configuration (optional - leave null for default)
+vpc_network_id = null
+
+# Deletion protection
+enable_deletion_protection = true
+
+# Cloud Run Configuration
+min_instances    = 0
+max_instances    = 10
+memory          = "512Mi"
+cpu             = 1
+timeout_seconds = 300
+

@@ -1,0 +1,344 @@
+{
+  "audit_date": "2024",
+  "overall_score": 6.2,
+  "pillars": [
+    {
+      "pillar": "UI/UX Elegance",
+      "score": 6.5,
+      "issues": [
+        {
+          "id": "ui-001",
+          "severity": "medium",
+          "title": "Missing Animations & Transitions",
+          "description": "No page transitions, card hover states, or loading skeletons. Feels static.",
+          "impact": "Reduces perceived quality, feels prototype-y",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Add ThemeShadow, hover animations, RepositionThemeTransition to cards in DesignSystem.xaml"
+          }
+        },
+        {
+          "id": "ui-002",
+          "severity": "high",
+          "title": "Cluttered Single-View Layouts",
+          "description": "SettingsPage has 8+ sections in one scroll view (336 lines). Missing accordions.",
+          "impact": "Poor UX, overwhelming for users",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Wrap settings sections in Expander controls with FluentExpanderStyle"
+          }
+        },
+        {
+          "id": "ui-003",
+          "severity": "medium",
+          "title": "Inconsistent Fluent Design Usage",
+          "description": "Mixed usage of Fluent vs. legacy styles. Missing AcrylicBrush usage.",
+          "impact": "Inconsistent look and feel",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Audit all pages, replace legacy styles (PrimaryAction, Action) with Fluent 2 tokens"
+          }
+        },
+        {
+          "id": "ui-004",
+          "severity": "low",
+          "title": "No Multi-Monitor Optimization",
+          "description": "Single window, no docking/split-view. TablesPage could use secondary monitor.",
+          "impact": "Missed productivity opportunity",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Implement Window management API, secondary monitor detection, split-view support"
+          }
+        }
+      ]
+    },
+    {
+      "pillar": "Professional Polish",
+      "score": 5.8,
+      "issues": [
+        {
+          "id": "polish-001",
+          "severity": "high",
+          "title": "Accessibility Gaps",
+          "description": "No keyboard shortcuts documented, missing AutomationProperties, unverified screen reader support.",
+          "impact": "WCAG AA compliance risk, excludes users with disabilities",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Add AutomationProperties.LabeledBy, KeyboardAccelerators (Ctrl+S, Esc), focus indicators"
+          }
+        },
+        {
+          "id": "polish-002",
+          "severity": "high",
+          "title": "Inconsistent Error Handling",
+          "description": "Mixed usage of ContentDialog, InfoBar, inline text. No global error service.",
+          "impact": "Poor UX, inconsistent error experience",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Create ErrorNotificationService singleton, standardize on InfoBar with consistent styling"
+          }
+        },
+        {
+          "id": "polish-003",
+          "severity": "medium",
+          "title": "Missing Toast Notification System",
+          "description": "No global toast/in-app notifications. Status messages inconsistent.",
+          "impact": "Users miss important updates",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Implement TeachingTip-based toast system or custom overlay with auto-dismiss"
+          }
+        },
+        {
+          "id": "polish-004",
+          "severity": "medium",
+          "title": "Limited Theming",
+          "description": "Only Light/Dark/System. No custom color palette or brand customization.",
+          "impact": "Blocks white-labeling opportunities",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Implement ResourceDictionary-based theming with custom palette injection via appsettings.json"
+          }
+        }
+      ]
+    },
+    {
+      "pillar": "Sellable Features & Customizations",
+      "score": 7.0,
+      "issues": [
+        {
+          "id": "features-001",
+          "severity": "high",
+          "title": "Missing Role-Based Access Control (RBAC)",
+          "description": "UsersApi exists but no RBAC enforcement in frontend. All users see all features.",
+          "impact": "Security risk, blocks enterprise sales",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Implement PermissionService with HasPermission() and GetVisibility() methods, bind to UI Visibility"
+          }
+        },
+        {
+          "id": "features-002",
+          "severity": "medium",
+          "title": "No Plugin/Extensibility API",
+          "description": "Monolithic frontend, no plugin hooks, no third-party integration API.",
+          "impact": "Limits ecosystem growth, reduces stickiness",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Design plugin SDK with IPlugin interface, event system, and plugin loader service"
+          }
+        },
+        {
+          "id": "features-003",
+          "severity": "medium",
+          "title": "Limited White-Labeling",
+          "description": "No custom logo/branding injection, no custom domain support.",
+          "impact": "Missed revenue opportunity (white-label premium tier)",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Add BrandingService, inject logos via ResourceDictionary, custom themes via config"
+          }
+        },
+        {
+          "id": "features-004",
+          "severity": "low",
+          "title": "Basic Analytics Exports",
+          "description": "No scheduled reports, limited export formats, no dashboard customization.",
+          "impact": "Reduces value proposition for data-driven businesses",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Add ExportService (PDF via PdfSharpCore, Excel via EPPlus), scheduled reports via background service"
+          }
+        }
+      ]
+    },
+    {
+      "pillar": "Architecture & Security",
+      "score": 6.0,
+      "issues": [
+        {
+          "id": "arch-001",
+          "severity": "critical",
+          "title": "Missing Authentication/Authorization",
+          "description": "NO JWT/OIDC implementation found. Static service initialization, no token refresh.",
+          "impact": "BLOCKING for enterprise sales. Security vulnerability.",
+          "recommendations": {
+            "priority": "critical",
+            "code_snippet": "Add JwtBearer authentication to all API Program.cs, create AuthService with login/token refresh, secure token storage (DPAPI or Windows Credential Manager)"
+          }
+        },
+        {
+          "id": "arch-002",
+          "severity": "high",
+          "title": "Static Service Pattern (Anti-Pattern)",
+          "description": "Services stored as static properties in App.xaml.cs. Limited testability.",
+          "impact": "Hard to test, maintain, violates SOLID principles",
+          "recommendations": {
+            "priority": "high",
+            "code_snippet": "Migrate App static services to IServiceProvider, use constructor injection in ViewModels/Pages"
+          }
+        },
+        {
+          "id": "arch-003",
+          "severity": "medium",
+          "title": "Missing API Gateway",
+          "description": "Direct API calls from frontend to 9 different APIs. No rate limiting, versioning.",
+          "impact": "Scalability and security concerns",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Implement Kong API gateway or ASP.NET Core YARP (Yet Another Reverse Proxy) for routing/rate limiting"
+          }
+        },
+        {
+          "id": "arch-004",
+          "severity": "medium",
+          "title": "Limited Input Validation",
+          "description": "Some validation in CustomerRegistrationPage, no centralized validation service.",
+          "impact": "Security risk, potential for invalid data",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Create ValidationService with FluentValidation or DataAnnotations, validate all user inputs"
+          }
+        },
+        {
+          "id": "arch-005",
+          "severity": "low",
+          "title": "Database Optimization Gaps",
+          "description": "No indexing strategy visible, basic connection pooling, no health monitoring.",
+          "impact": "Performance degradation at scale",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Audit database indexes (use MCP postgres tools), add health check endpoints, implement query optimization"
+          }
+        }
+      ]
+    },
+    {
+      "pillar": "Billiard-Specific Enhancements",
+      "score": 7.5,
+      "issues": [
+        {
+          "id": "billiard-001",
+          "severity": "low",
+          "title": "Missing Drag-Drop Floor Plan",
+          "description": "Static table grid layout, no visual floor plan designer.",
+          "impact": "Nice-to-have, not critical",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Implement Canvas-based floor plan designer with drag-drop table positioning, save to database"
+          }
+        },
+        {
+          "id": "billiard-002",
+          "severity": "medium",
+          "title": "No AI Upsell Engine",
+          "description": "No smart product recommendations, missing 'frequently ordered together'.",
+          "impact": "Missed revenue opportunity (competitive differentiator)",
+          "recommendations": {
+            "priority": "medium",
+            "code_snippet": "Create UpsellService with recommendation engine based on order history, time-of-day patterns"
+          }
+        },
+        {
+          "id": "billiard-003",
+          "severity": "low",
+          "title": "Basic Combo Billing",
+          "description": "Combo functionality exists but no smart suggestions or analytics.",
+          "impact": "Enhancement opportunity",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Add combo analytics dashboard, smart combo builder with popular combinations"
+          }
+        },
+        {
+          "id": "billiard-004",
+          "severity": "low",
+          "title": "Missing Cue Modifier Tracking",
+          "description": "No specialized tracking for cue-related items or rental workflow.",
+          "impact": "Domain-specific enhancement",
+          "recommendations": {
+            "priority": "low",
+            "code_snippet": "Add cue modifier type to menu system, implement rental/return workflow"
+          }
+        }
+      ]
+    }
+  ],
+  "quick_wins": [
+    {
+      "priority": "critical",
+      "title": "Implement JWT Authentication",
+      "effort": "2-3 days",
+      "impact": "BLOCKING for enterprise",
+      "files_affected": [
+        "solution/backend/*/Program.cs",
+        "solution/frontend/Services/AuthService.cs (new)",
+        "solution/frontend/Services/HttpAuthHandler.cs (new)"
+      ]
+    },
+    {
+      "priority": "high",
+      "title": "Add Keyboard Shortcuts & Accessibility",
+      "effort": "1 day",
+      "impact": "WCAG compliance, better UX",
+      "files_affected": [
+        "solution/frontend/Views/*.xaml",
+        "solution/frontend/Services/AccessibilityService.cs (new)"
+      ]
+    },
+    {
+      "priority": "high",
+      "title": "Global Error Notification Service",
+      "effort": "1 day",
+      "impact": "Consistent error handling",
+      "files_affected": [
+        "solution/frontend/Services/ErrorNotificationService.cs (new)",
+        "solution/frontend/App.xaml.cs"
+      ]
+    },
+    {
+      "priority": "high",
+      "title": "Accordion Settings Page",
+      "effort": "2 days",
+      "impact": "Much better UX, feels professional",
+      "files_affected": [
+        "solution/frontend/Views/SettingsPage.xaml",
+        "solution/frontend/Views/HierarchicalSettingsPage.xaml"
+      ]
+    },
+    {
+      "priority": "medium",
+      "title": "RBAC UI Integration",
+      "effort": "3-4 days",
+      "impact": "Enterprise requirement",
+      "files_affected": [
+        "solution/frontend/Services/PermissionService.cs (new)",
+        "solution/frontend/ViewModels/*.cs",
+        "solution/frontend/Views/*.xaml"
+      ]
+    }
+  ],
+  "estimated_effort": {
+    "critical": "2-3 days",
+    "high": "7-10 days",
+    "medium": "15-20 days",
+    "low": "10-15 days",
+    "total": "34-48 days (1.5-2 months)"
+  },
+  "technology_stack": {
+    "frontend": "WinUI 3, .NET 8, C#",
+    "backend": "ASP.NET Core, .NET 8, PostgreSQL (Npgsql)",
+    "architecture": "Microservices (9 APIs)",
+    "ui_framework": "Fluent 2 Design System (partial)",
+    "patterns": "MVVM, Dependency Injection (partial)"
+  },
+  "file_statistics": {
+    "total_cs_files": 387,
+    "total_xaml_files": 92,
+    "total_json_files": 57,
+    "viewmodels": 26,
+    "views": 70,
+    "services": 51
+  }
+}
+

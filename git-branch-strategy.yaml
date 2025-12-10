@@ -1,0 +1,222 @@
+# Git Branch Strategy & Cleanup Plan
+# MagiDesk POS - Non-Destructive Branch Management
+
+version: "1.0"
+audit_date: "2024"
+baseline_tag: "revamp-baseline-v1"
+
+# ============================================
+# Phase 1: Baseline Tagging (NON-DESTRUCTIVE)
+# ============================================
+
+baseline_commands:
+  - name: "Tag main as revamp baseline"
+    commands:
+      - git checkout main
+      - git pull origin main
+      - git tag -a revamp-baseline-v1 -m "Pre-revamp baseline: 9 microservices, manual deployment, branch chaos"
+      - git push origin revamp-baseline-v1
+    description: "Creates immutable baseline tag before restructuring"
+
+  - name: "Create structure branch"
+    commands:
+      - git checkout main
+      - git checkout -b structure/restructure-v1
+      - git push -u origin structure/restructure-v1
+    description: "Clean branch for repository restructuring work"
+
+# ============================================
+# Phase 2: Branch Archive (Before Merging/Pruning)
+# ============================================
+
+archive_commands:
+  - name: "Archive RBAC implementation"
+    branch: "implement-rbac-api-cursor"
+    commands:
+      - git checkout implement-rbac-api-cursor
+      - git tag -a archive/rbac-api-$(date +%Y%m%d) -m "Pre-merge archive: RBAC API implementation"
+      - git push origin archive/rbac-api-$(date +%Y%m%d)
+    action: "MERGE to main, then delete"
+
+  - name: "Archive split payment"
+    branch: "implement-split-payment"
+    commands:
+      - git checkout implement-split-payment
+      - git tag -a archive/split-payment-$(date +%Y%m%d) -m "Pre-merge archive: Split payment feature"
+      - git push origin archive/split-payment-$(date +%Y%m%d)
+    action: "MERGE to main, then delete"
+
+  - name: "Archive settings restructure"
+    branch: "settings-restructure"
+    commands:
+      - git checkout settings-restructure
+      - git tag -a archive/settings-restructure-$(date +%Y%m%d) -m "Pre-merge archive: Settings page restructuring"
+      - git push origin archive/settings-restructure-$(date +%Y%m%d)
+    action: "MERGE to main, then delete"
+
+# ============================================
+# Phase 3: Branch Cleanup Actions
+# ============================================
+
+cleanup_actions:
+  high_priority_merge:
+    branches:
+      - name: "implement-rbac-api-cursor"
+        commands:
+          - git checkout main
+          - git pull origin main
+          - git merge --no-ff implement-rbac-api-cursor -m "Merge: RBAC API implementation"
+          - git push origin main
+          - git branch -d implement-rbac-api-cursor
+          - git push origin --delete implement-rbac-api-cursor
+        priority: "HIGH"
+        
+      - name: "implement-split-payment"
+        commands:
+          - git checkout main
+          - git pull origin main
+          - git merge --no-ff implement-split-payment -m "Merge: Split payment feature"
+          - git push origin main
+          - git branch -d implement-split-payment
+          - git push origin --delete implement-split-payment
+        priority: "HIGH"
+        
+      - name: "settings-restructure"
+        commands:
+          - git checkout main
+          - git pull origin main
+          - git merge --no-ff settings-restructure -m "Merge: Settings page restructuring"
+          - git push origin main
+          - git branch -d settings-restructure
+          - git push origin --delete settings-restructure
+        priority: "HIGH"
+
+  prune_immediately:
+    branches:
+      - name: "implement-table-layout-ui-cursor"
+        reason: "Already reverted on main"
+        commands:
+          - git branch -D implement-table-layout-ui-cursor
+          - git push origin --delete implement-table-layout-ui-cursor
+        
+      - name: "work-by-curser"
+        reason: "Typo in branch name, no clear purpose"
+        commands:
+          - git branch -D work-by-curser
+          - git push origin --delete work-by-curser
+        
+      - name: "work-by-windsurf"
+        reason: "Too generic, no clear purpose"
+        commands:
+          - git branch -D work-by-windsurf
+          - git push origin --delete work-by-windsurf
+        
+      - name: "work-by-grok"
+        reason: "Too generic, no clear purpose"
+        commands:
+          - git branch -D work-by-grok
+          - git push origin --delete work-by-grok
+        
+      - name: "work-by-sonnet-windsurf"
+        reason: "Too generic, no clear purpose"
+        commands:
+          - git branch -D work-by-sonnet-windsurf
+          - git push origin --delete work-by-sonnet-windsurf
+
+  review_before_prune:
+    branches:
+      - name: "UI-revamp-cursor"
+        commands:
+          - git log --oneline UI-revamp-cursor ^main | head -20
+          - git diff main...UI-revamp-cursor --stat
+        action: "Review UI changes, extract valuable code, then prune"
+        
+      - name: "WinUI-Redesign-Cursor"
+        commands:
+          - git log --oneline WinUI-Redesign-Cursor ^main | head -20
+          - git diff main...WinUI-Redesign-Cursor --stat
+        action: "Review UI changes, extract valuable code, then prune"
+        
+      - name: "work-by-cursor-printing"
+        commands:
+          - git log --oneline work-by-cursor-printing ^main | head -20
+          - git diff main...work-by-cursor-printing --stat
+        action: "Extract printing-related changes, then prune"
+
+# ============================================
+# Pull Request Template
+# ============================================
+
+pull_request_template: |
+  ## Description
+  <!-- Describe your changes -->
+
+  ## Type of Change
+  - [ ] Bug fix
+  - [ ] New feature
+  - [ ] Breaking change
+  - [ ] Documentation update
+  - [ ] Refactoring
+
+  ## Related Branch
+  <!-- Link to related branch or issue -->
+
+  ## Testing
+  - [ ] Unit tests pass
+  - [ ] Integration tests pass
+  - [ ] Manual testing completed
+
+  ## Checklist
+  - [ ] Code follows project style guidelines
+  - [ ] Self-review completed
+  - [ ] Comments added for complex logic
+  - [ ] Documentation updated (if needed)
+  - [ ] No new warnings generated
+  - [ ] Tests added/updated
+
+  ## Deployment Notes
+  <!-- Any special deployment considerations -->
+
+  ## Screenshots (if UI changes)
+  <!-- Add screenshots here -->
+
+# ============================================
+# Branch Naming Convention (Future)
+# ============================================
+
+branch_naming_convention:
+  feature: "feature/description-kebab-case"
+  bugfix: "bugfix/description-kebab-case"
+  hotfix: "hotfix/description-kebab-case"
+  refactor: "refactor/description-kebab-case"
+  docs: "docs/description-kebab-case"
+  structure: "structure/description-kebab-case"
+  
+  examples:
+    - "feature/rbac-implementation"
+    - "bugfix/payment-validation-error"
+    - "hotfix/critical-session-crash"
+    - "refactor/extract-auth-service"
+    - "docs/api-documentation-update"
+    - "structure/migrate-to-new-layout"
+
+# ============================================
+# Branch Protection Rules (Recommended)
+# ============================================
+
+branch_protection_rules:
+  main:
+    required_status_checks:
+      - ci/lint
+      - ci/test
+      - ci/build-backend
+    require_pull_request: true
+    required_approvals: 1
+    dismiss_stale_reviews: true
+    require_up_to_date: true
+    
+  structure/restructure-v1:
+    required_status_checks:
+      - ci/lint
+    require_pull_request: false  # Allow direct pushes during restructuring
+
