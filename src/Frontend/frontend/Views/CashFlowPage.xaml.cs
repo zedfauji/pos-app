@@ -168,7 +168,6 @@ public sealed partial class CashFlowPage : Page, IToolbarConsumer
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating metrics: {ex.Message}");
         }
     }
 

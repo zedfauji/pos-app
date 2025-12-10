@@ -159,7 +159,6 @@ public sealed partial class SessionsPage : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating metrics: {ex.Message}");
         }
     }
 

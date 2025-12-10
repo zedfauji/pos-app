@@ -91,7 +91,6 @@ public sealed partial class PrinterSettingsPage : Page, ISettingsSubPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error collecting UI values: {ex.Message}");
         }
     }
 
@@ -491,19 +490,16 @@ public sealed partial class PrinterSettingsPage : Page, ISettingsSubPage
     private void ShowSuccess(string message)
     {
         // This would show a success notification
-        System.Diagnostics.Debug.WriteLine($"SUCCESS: {message}");
     }
 
     private void ShowError(string message)
     {
         // This would show an error notification
-        System.Diagnostics.Debug.WriteLine($"ERROR: {message}");
     }
 
     private void ShowInfo(string message)
     {
         // This would show an info notification
-        System.Diagnostics.Debug.WriteLine($"INFO: {message}");
     }
 
     private async void OpenReceiptDesigner_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -526,7 +522,6 @@ public sealed partial class PrinterSettingsPage : Page, ISettingsSubPage
         catch (Exception ex)
         {
             // Handle error
-            System.Diagnostics.Debug.WriteLine($"Error opening Receipt Designer: {ex.Message}");
         }
     }
 
@@ -552,7 +547,6 @@ public sealed partial class PrinterSettingsPage : Page, ISettingsSubPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error showing preview: {ex.Message}");
         }
     }
 

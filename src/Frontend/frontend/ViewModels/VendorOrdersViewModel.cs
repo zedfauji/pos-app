@@ -167,7 +167,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading vendor orders: {ex.Message}");
         }
     }
 
@@ -213,7 +212,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error creating order: {ex.Message}");
             throw;
         }
     }
@@ -226,7 +224,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting order: {ex.Message}");
             return null;
         }
     }
@@ -245,7 +242,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating order: {ex.Message}");
             throw;
         }
     }
@@ -266,7 +262,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error sending order: {ex.Message}");
             throw;
         }
     }
@@ -289,7 +284,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error receiving order: {ex.Message}");
             throw;
         }
     }
@@ -308,7 +302,6 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error cancelling order: {ex.Message}");
             throw;
         }
     }
@@ -317,11 +310,9 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("Importing orders from external systems...");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error importing orders: {ex.Message}");
             throw;
         }
     }
@@ -330,11 +321,9 @@ public class VendorOrdersViewModel : INotifyPropertyChanged
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("Exporting orders to CSV/Excel...");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error exporting orders: {ex.Message}");
             throw;
         }
     }

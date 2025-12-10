@@ -69,7 +69,6 @@ public sealed partial class VendorDetailsPage : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error initializing services: {ex.Message}");
         }
 
         // Set up tab selection changed handler
@@ -142,18 +141,15 @@ public sealed partial class VendorDetailsPage : Page
                 }
                 catch (HttpRequestException httpEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Network error loading orders: {httpEx.Message}");
                     ordersList = new List<SharedVendorOrderDto>();
                     // Continue with empty list rather than failing completely
                 }
                 catch (TaskCanceledException)
                 {
-                    System.Diagnostics.Debug.WriteLine("Request timeout loading orders");
                     ordersList = new List<SharedVendorOrderDto>();
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error loading orders: {ex.Message}");
                     ordersList = new List<SharedVendorOrderDto>();
                 }
 
@@ -198,7 +194,6 @@ public sealed partial class VendorDetailsPage : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading vendor data: {ex.Message}");
             // Don't show error to user here - let individual tabs handle their own errors
         }
     }
@@ -246,7 +241,6 @@ public sealed partial class VendorDetailsPage : Page
                 ItemsLoadingText.Visibility = Visibility.Collapsed;
                 ItemsEmptyText.Text = "Unable to connect to the server. Please check your network connection.";
                 ItemsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Network error loading items: {httpEx.Message}");
                 return;
             }
             catch (TaskCanceledException)
@@ -254,7 +248,6 @@ public sealed partial class VendorDetailsPage : Page
                 ItemsLoadingText.Visibility = Visibility.Collapsed;
                 ItemsEmptyText.Text = "Request timed out. Please try again.";
                 ItemsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine("Request timeout loading items");
                 return;
             }
             catch (Exception ex)
@@ -262,7 +255,6 @@ public sealed partial class VendorDetailsPage : Page
                 ItemsLoadingText.Visibility = Visibility.Collapsed;
                 ItemsEmptyText.Text = $"Error loading items: {ex.Message}";
                 ItemsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Error loading items: {ex.Message}");
                 return;
             }
 
@@ -286,7 +278,6 @@ public sealed partial class VendorDetailsPage : Page
             ItemsLoadingText.Visibility = Visibility.Collapsed;
             ItemsEmptyText.Text = $"Unexpected error: {ex.Message}";
             ItemsEmptyText.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine($"Unexpected error in LoadItemsAsync: {ex.Message}");
         }
     }
 
@@ -315,7 +306,6 @@ public sealed partial class VendorDetailsPage : Page
                 OrdersLoadingText.Visibility = Visibility.Collapsed;
                 OrdersEmptyText.Text = "Unable to connect to the server. Please check your network connection.";
                 OrdersEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Network error loading orders: {httpEx.Message}");
                 return;
             }
             catch (TaskCanceledException)
@@ -323,7 +313,6 @@ public sealed partial class VendorDetailsPage : Page
                 OrdersLoadingText.Visibility = Visibility.Collapsed;
                 OrdersEmptyText.Text = "Request timed out. Please try again.";
                 OrdersEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine("Request timeout loading orders");
                 return;
             }
             catch (Exception ex)
@@ -331,7 +320,6 @@ public sealed partial class VendorDetailsPage : Page
                 OrdersLoadingText.Visibility = Visibility.Collapsed;
                 OrdersEmptyText.Text = $"Error loading orders: {ex.Message}";
                 OrdersEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Error loading orders: {ex.Message}");
                 return;
             }
 
@@ -355,7 +343,6 @@ public sealed partial class VendorDetailsPage : Page
             OrdersLoadingText.Visibility = Visibility.Collapsed;
             OrdersEmptyText.Text = $"Unexpected error: {ex.Message}";
             OrdersEmptyText.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine($"Unexpected error in LoadOrdersAsync: {ex.Message}");
         }
     }
 
@@ -438,7 +425,6 @@ public sealed partial class VendorDetailsPage : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error creating vendor item: {ex.Message}");
             throw;
         }
     }
@@ -594,7 +580,6 @@ public sealed partial class VendorDetailsPage : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating vendor item: {ex.Message}");
             throw;
         }
     }
@@ -791,7 +776,6 @@ public sealed partial class VendorDetailsPage : Page
                 AnalyticsLoadingText.Visibility = Visibility.Collapsed;
                 AnalyticsEmptyText.Text = "Unable to connect to the server. Please check your network connection.";
                 AnalyticsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Network error loading analytics: {httpEx.Message}");
                 return;
             }
             catch (TaskCanceledException)
@@ -799,7 +783,6 @@ public sealed partial class VendorDetailsPage : Page
                 AnalyticsLoadingText.Visibility = Visibility.Collapsed;
                 AnalyticsEmptyText.Text = "Request timed out. Please try again.";
                 AnalyticsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine("Request timeout loading analytics");
                 return;
             }
             catch (Exception ex)
@@ -807,7 +790,6 @@ public sealed partial class VendorDetailsPage : Page
                 AnalyticsLoadingText.Visibility = Visibility.Collapsed;
                 AnalyticsEmptyText.Text = $"Error loading analytics: {ex.Message}";
                 AnalyticsEmptyText.Visibility = Visibility.Visible;
-                System.Diagnostics.Debug.WriteLine($"Error loading analytics: {ex.Message}");
                 return;
             }
 
@@ -846,7 +828,6 @@ public sealed partial class VendorDetailsPage : Page
             AnalyticsLoadingText.Visibility = Visibility.Collapsed;
             AnalyticsEmptyText.Text = $"Unexpected error: {ex.Message}";
             AnalyticsEmptyText.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine($"Unexpected error in LoadAnalyticsAsync: {ex.Message}");
         }
     }
 

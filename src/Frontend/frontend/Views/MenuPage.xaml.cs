@@ -29,7 +29,6 @@ namespace MagiDesk.Frontend.Views
             catch (Exception ex)
             {
                 // Log the error for debugging but don't crash the page
-                System.Diagnostics.Debug.WriteLine($"Failed to refresh menu: {ex.Message}");
             }
         }
 

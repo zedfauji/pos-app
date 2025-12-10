@@ -18,7 +18,6 @@ public sealed partial class OrderRepository
             // If the endpoint doesn't exist or returns an error, assume inventory is available
             if (!res.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine($"Inventory check failed with status {res.StatusCode}, assuming inventory is available");
                 return true;
             }
             
@@ -29,7 +28,6 @@ public sealed partial class OrderRepository
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Inventory check exception: {ex.Message}, assuming inventory is available");
             return true; // Assume available if there's an error
         }
     }
@@ -47,13 +45,11 @@ public sealed partial class OrderRepository
                 // If inventory deduction fails, log but don't throw - this is best-effort
                 if (!res.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Inventory deduction failed for SKU {it.Sku} with status {res.StatusCode}");
                 }
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Inventory deduction exception: {ex.Message}");
             // Don't throw - this is best-effort inventory deduction
         }
     }

@@ -127,9 +127,7 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         try
         {
             AllMenuItems.Clear();
-            Debug.WriteLine("MenuManagementPage: Loading menu items...");
             var items = await _menuService.ListItemsAsync(new MenuApiService.ItemsQuery(Q: null, Category: null, GroupName: null, AvailableOnly: null));
-            Debug.WriteLine($"MenuManagementPage: Retrieved {items.Count()} items from API");
             
             foreach (var item in items)
             {
@@ -149,11 +147,9 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                 });
             }
             
-            Debug.WriteLine($"MenuManagementPage: Added {AllMenuItems.Count} items to collection");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"MenuManagementPage: Error loading menu items: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to load menu items: {ex.Message}");
         }
     }
@@ -176,7 +172,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error populating category filter: {ex.Message}");
         }
     }
 
@@ -249,7 +244,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error applying filters: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to apply filters: {ex.Message}");
         }
     }
@@ -285,7 +279,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error refreshing category groups: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to refresh category groups: {ex.Message}");
         }
     }
@@ -372,7 +365,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error creating category UI: {ex.Message}");
         }
     }
 
@@ -395,7 +387,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error toggling category expansion: {ex.Message}");
         }
     }
 
@@ -641,7 +632,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         catch (Exception ex)
         {
             // Fallback: Log error if dialog fails
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 
@@ -653,9 +643,7 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         try
         {
             Modifiers.Clear();
-            Debug.WriteLine("MenuManagementPage: Loading modifiers...");
             var modifiers = await _menuService.ListModifiersAsync(new MenuApiService.ModifierQuery(Q: null));
-            Debug.WriteLine($"MenuManagementPage: Retrieved {modifiers.Count()} modifiers from API");
             
             foreach (var modifier in modifiers)
             {
@@ -678,11 +666,9 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
                 });
             }
             
-            Debug.WriteLine($"MenuManagementPage: Added {Modifiers.Count} modifiers to collection");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"MenuManagementPage: Error loading modifiers: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to load modifiers: {ex.Message}");
         }
     }
@@ -916,7 +902,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error in MenuItem_DragStarting: {ex.Message}");
         }
     }
 
@@ -932,7 +917,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error in CategoryHeader_DragOver: {ex.Message}");
         }
     }
 
@@ -959,7 +943,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error in CategoryHeader_Drop: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to move item to category: {ex.Message}");
         }
     }
@@ -985,7 +968,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error extracting category name: {ex.Message}");
         }
         return string.Empty;
     }
@@ -1018,7 +1000,6 @@ public sealed partial class MenuManagementPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Error updating menu item category: {ex.Message}");
             throw;
         }
     }

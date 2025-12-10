@@ -109,7 +109,6 @@ public class AuditReportsViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading audit data: {ex.Message}");
         }
     }
 
@@ -211,11 +210,9 @@ public class AuditReportsViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(TotalValue));
             OnPropertyChanged(nameof(TopItemsCount));
 
-            System.Diagnostics.Debug.WriteLine($"Generated custom report with {customLogs.Count()} logs and {customTransactions.Count()} transactions");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error generating custom report: {ex.Message}");
             throw;
         }
     }
@@ -232,7 +229,6 @@ public class AuditReportsViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error generating inventory report: {ex.Message}");
             throw;
         }
     }
@@ -265,13 +261,10 @@ public class AuditReportsViewModel : INotifyPropertyChanged
                 var inventoryReportFile = await Windows.Storage.ApplicationData.Current.LocalFolder.CreateFileAsync($"inventory_report_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
                 await Windows.Storage.FileIO.WriteBytesAsync(inventoryReportFile, inventoryReportData);
                 
-                System.Diagnostics.Debug.WriteLine($"Exported audit logs to: {auditLogsFile.Path}");
-                System.Diagnostics.Debug.WriteLine($"Exported inventory report to: {inventoryReportFile.Path}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error exporting data: {ex.Message}");
             throw;
         }
     }
@@ -293,12 +286,10 @@ public class AuditReportsViewModel : INotifyPropertyChanged
             if (file != null)
             {
                 await Windows.Storage.FileIO.WriteBytesAsync(file, inventoryReportData);
-                System.Diagnostics.Debug.WriteLine($"Exported inventory report to: {file.Path}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error exporting inventory report: {ex.Message}");
             throw;
         }
     }

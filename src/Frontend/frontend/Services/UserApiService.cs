@@ -238,7 +238,6 @@ public class UserApiService
         try
         {
             // Log the update request for debugging
-            System.Diagnostics.Debug.WriteLine($"Updating role {roleId} with request: {System.Text.Json.JsonSerializer.Serialize(request)}");
             var res = await _http.PutAsJsonAsync($"api/rbac/roles/{roleId}", request, ct);
             
             if (!res.IsSuccessStatusCode)

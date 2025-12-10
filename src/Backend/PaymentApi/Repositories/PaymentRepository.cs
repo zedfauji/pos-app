@@ -79,7 +79,6 @@ public sealed class PaymentRepository : IPaymentRepository
         // compute status: paid if paid+disc >= due; partial if >0 else unpaid
         var newStatus = (paid + disc >= due) ? "paid" : (paid + disc > 0m ? "partial" : "unpaid");
         
-        System.Diagnostics.Debug.WriteLine($"PaymentRepository.UpsertLedgerAsync: BillingId={billingId}, Due={due}, Paid={paid}, Disc={disc}, Tip={tip}, Status={newStatus}");
 
         const string upsert = @"INSERT INTO pay.bill_ledger(billing_id, session_id, total_due, total_discount, total_paid, total_tip, status, updated_at)
                                VALUES(@bid, @sid, @due, @disc, @paid, @tip, @st, now())
@@ -156,7 +155,6 @@ public sealed class PaymentRepository : IPaymentRepository
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.ListPaymentsAsync: Error reading payment row: {ex.Message}");
                     continue;
                 }
             }
@@ -164,7 +162,6 @@ public sealed class PaymentRepository : IPaymentRepository
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"PaymentRepository.ListPaymentsAsync: Exception: {ex.Message}");
             throw;
         }
     }
@@ -240,7 +237,6 @@ public sealed class PaymentRepository : IPaymentRepository
                     // Try to read payment_id - handle both UUID and bigint types
                     Guid paymentId;
                     var fieldType = rdr.GetFieldType(0);
-                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: payment_id field type = {fieldType?.FullName}");
                     
                     if (fieldType == typeof(Guid))
                     {
@@ -251,14 +247,12 @@ public sealed class PaymentRepository : IPaymentRepository
                         // Legacy support: if payment_id is stored as bigint/int, we need to handle this differently
                         // For now, throw a more descriptive error
                         var longId = rdr.GetInt64(0);
-                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Found payment_id as long: {longId}");
                         // Create a deterministic Guid from the long value
                         var bytes = new byte[16];
                         var longBytes = BitConverter.GetBytes(longId);
                         Array.Copy(longBytes, 0, bytes, 0, Math.Min(longBytes.Length, 8));
                         // Fill remaining bytes with zeros for consistency
                         paymentId = new Guid(bytes);
-                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Converted long {longId} to Guid {paymentId}");
                     }
                     else if (fieldType == typeof(string))
                     {
@@ -269,7 +263,6 @@ public sealed class PaymentRepository : IPaymentRepository
                     {
                         // Try to get as object and convert
                         var obj = rdr.GetValue(0);
-                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: payment_id as object: {obj?.GetType().FullName} = {obj}");
                         if (obj is Guid guid)
                         {
                             paymentId = guid;
@@ -303,24 +296,17 @@ public sealed class PaymentRepository : IPaymentRepository
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Error reading payment row: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Exception type: {ex.GetType().FullName}");
-                    System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Stack trace: {ex.StackTrace}");
                     if (ex.InnerException != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Inner exception: {ex.InnerException.Message}");
                     }
                     // Skip this row and continue
                     continue;
                 }
             }
-            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Successfully loaded {list.Count} payments");
             return list;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Exception: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"PaymentRepository.GetAllPaymentsAsync: Stack trace: {ex.StackTrace}");
             throw;
         }
     }

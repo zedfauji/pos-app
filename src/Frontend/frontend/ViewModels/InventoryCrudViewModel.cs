@@ -48,7 +48,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading items: {ex.Message}");
         }
     }
 
@@ -61,7 +60,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading categories: {ex.Message}");
             return new List<string>();
         }
     }
@@ -76,7 +74,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting item: {ex.Message}");
             return null;
         }
     }
@@ -91,7 +88,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error adding item: {ex.Message}");
             throw;
         }
     }
@@ -110,7 +106,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error updating item: {ex.Message}");
             throw;
         }
     }
@@ -128,7 +123,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error deleting item: {ex.Message}");
             throw;
         }
     }
@@ -146,7 +140,6 @@ public class InventoryCrudViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error adjusting stock: {ex.Message}");
             throw;
         }
     }

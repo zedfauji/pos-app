@@ -131,7 +131,6 @@ namespace MagiDesk.Frontend.ViewModels
         {
             if (_orders == null || _tables == null) 
             {
-                System.Diagnostics.Debug.WriteLine("OrdersManagementViewModel: _orders or _tables is null");
                 HasError = true;
                 ErrorMessage = "Orders or Tables API is not available.";
                 return;
@@ -143,18 +142,15 @@ namespace MagiDesk.Frontend.ViewModels
                 HasError = false;
                 ErrorMessage = null;
 
-                System.Diagnostics.Debug.WriteLine("OrdersManagementViewModel: Starting to load orders...");
 
                 // Get all active sessions first
                 var activeSessions = await _tables.GetActiveSessionsAsync();
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Found {activeSessions?.Count ?? 0} active sessions");
                 
                 if (activeSessions == null || activeSessions.Count == 0)
                 {
                     // No active sessions, show empty state
                     TableGroups.Clear();
                     _tableGroups.Clear();
-                    System.Diagnostics.Debug.WriteLine("OrdersManagementViewModel: No active sessions found");
                     return;
                 }
 
@@ -164,7 +160,6 @@ namespace MagiDesk.Frontend.ViewModels
 
                 // Group sessions by table and fetch orders for each session
                 var sessionsByTable = activeSessions.GroupBy(s => s.TableId);
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Grouped into {sessionsByTable.Count()} table groups");
 
                 foreach (var tableGroup in sessionsByTable)
                 {
@@ -173,7 +168,6 @@ namespace MagiDesk.Frontend.ViewModels
                         TableLabel = tableGroup.Key
                     };
 
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Processing table {tableGroup.Key} with {tableGroup.Count()} sessions");
 
                     foreach (var session in tableGroup)
                     {
@@ -181,7 +175,6 @@ namespace MagiDesk.Frontend.ViewModels
                         {
                             // Try to get orders for this session
                             var orders = await _orders.GetOrdersBySessionAsync(session.SessionId);
-                            System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Found {orders?.Count ?? 0} orders for session {session.SessionId}");
                             
                             if (orders != null)
                             {
@@ -200,13 +193,11 @@ namespace MagiDesk.Frontend.ViewModels
                                     };
 
                                     tableOrdersGroup.Orders.Add(orderItem);
-                                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Added order {order.Id} to table {session.TableId}");
                                 }
                             }
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"Error processing session {session.SessionId}: {ex.Message}");
                         }
                     }
 
@@ -214,11 +205,9 @@ namespace MagiDesk.Frontend.ViewModels
                     {
                         TableGroups.Add(tableOrdersGroup);
                         _tableGroups[tableGroup.Key] = tableOrdersGroup;
-                        System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Added table group {tableGroup.Key} with {tableOrdersGroup.Orders.Count} orders");
                     }
                 }
 
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Total table groups: {TableGroups.Count}");
 
                 // Notify property changes
                 foreach (var group in TableGroups)
@@ -232,7 +221,6 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 HasError = true;
                 ErrorMessage = $"Failed to load orders: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Error loading orders: {ex}");
             }
             finally
             {
@@ -246,14 +234,12 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 // Navigate to order details page
                 // This would typically involve navigation to the detailed order view
-                System.Diagnostics.Debug.WriteLine($"Loading order details for Order {order.OrderId}");
                 
                 // For now, we'll just show a message
                 // In a real implementation, you'd navigate to the order details page
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading order details: {ex.Message}");
             }
         }
 
@@ -264,13 +250,11 @@ namespace MagiDesk.Frontend.ViewModels
             try
             {
                 IsLoading = true;
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Marking order {order.OrderId} as delivered");
 
                 // First, get the order details to get the items
                 var orderDetails = await _orders.GetOrderAsync(order.OrderId);
                 if (orderDetails == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Could not get order details for order {order.OrderId}");
                     return;
                 }
 
@@ -278,7 +262,6 @@ namespace MagiDesk.Frontend.ViewModels
                 var itemDeliveries = orderDetails.Items.Select(item => 
                     new OrderApiService.ItemDeliveryDto(item.Id, item.Quantity)).ToList();
 
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Marking {itemDeliveries.Count} items as delivered for order {order.OrderId}");
 
                 // Call the API to mark items as delivered
                 var updatedOrder = await _orders.MarkItemsDeliveredAsync(order.OrderId, itemDeliveries);
@@ -298,19 +281,16 @@ namespace MagiDesk.Frontend.ViewModels
                         group.NotifyPropertyChanged(nameof(group.HasActiveOrders));
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Successfully marked order {order.OrderId} as delivered");
                     
                     // Refresh the entire orders list to get updated data from server
                     await LoadOrdersAsync();
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Failed to mark order {order.OrderId} as delivered - API returned null");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error marking order as delivered: {ex.Message}");
             }
             finally
             {
@@ -325,7 +305,6 @@ namespace MagiDesk.Frontend.ViewModels
             try
             {
                 IsLoading = true;
-                System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Marking order {order.OrderId} as waiting");
 
                 // Call the API to mark order as waiting
                 var updatedOrder = await _orders.MarkOrderWaitingAsync(order.OrderId);
@@ -336,19 +315,16 @@ namespace MagiDesk.Frontend.ViewModels
                     order.NotifyPropertyChanged(nameof(order.Status));
                     order.NotifyPropertyChanged(nameof(order.StatusColor));
 
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Successfully marked order {order.OrderId} as waiting");
                     
                     // Refresh the entire orders list to get updated data from server
                     await LoadOrdersAsync();
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"OrdersManagementViewModel: Failed to mark order {order.OrderId} as waiting - API returned null");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error marking order as waiting: {ex.Message}");
             }
             finally
             {
@@ -378,7 +354,6 @@ namespace MagiDesk.Frontend.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error closing order: {ex.Message}");
             }
             finally
             {

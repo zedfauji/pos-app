@@ -23,7 +23,6 @@ public sealed class KitchenService : IKitchenService
                 
                 if (!res.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to deduct drink {drink.Sku} for order {orderId}: {res.StatusCode}");
                     return false;
                 }
             }
@@ -31,7 +30,6 @@ public sealed class KitchenService : IKitchenService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Kitchen service exception for order {orderId}: {ex.Message}");
             return false;
         }
     }
@@ -48,7 +46,6 @@ public sealed class KitchenService : IKitchenService
                 
                 if (!res.IsSuccessStatusCode)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to deduct raw material {material.Sku} for order {orderId}: {res.StatusCode}");
                     return false;
                 }
             }
@@ -56,7 +53,6 @@ public sealed class KitchenService : IKitchenService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Kitchen service exception for order {orderId}: {ex.Message}");
             return false;
         }
     }

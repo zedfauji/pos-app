@@ -1,0 +1,156 @@
+name: magidesk-pos
+region: nyc
+env: docker
+
+databases:
+  - name: magidesk-postgres
+    engine: PG
+    version: "17"
+    production: false
+    plan: db-s-dev-database  # $15/mo: 1 vCPU, 1GB RAM, 10GB SSD
+
+services:
+  # Tables API
+  - name: tables-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/TablesApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs  # $0 in dev (free tier)
+    run_command: dotnet TablesApi.dll
+
+  # Order API
+  - name: order-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/OrderApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet OrderApi.dll
+
+  # Payment API
+  - name: payment-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/PaymentApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet PaymentApi.dll
+
+  # Menu API
+  - name: menu-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/MenuApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet MenuApi.dll
+
+  # Customer API
+  - name: customer-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/CustomerApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet CustomerApi.dll
+
+  # Discount API
+  - name: discount-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/DiscountApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet DiscountApi.dll
+
+  # Inventory API
+  - name: inventory-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/InventoryApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet InventoryApi.dll
+
+  # Settings API
+  - name: settings-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/SettingsApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet SettingsApi.dll
+
+  # Users API
+  - name: users-api
+    type: worker
+    dockerfile_path: Dockerfile
+    docker_context: src/Backend/UsersApi
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+      - key: ConnectionStrings__Postgres
+        value: ${magidesk-postgres.DATABASE_URL}
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Development
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: dotnet UsersApi.dll
+

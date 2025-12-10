@@ -58,11 +58,9 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
         try
         {
             Modifiers.Clear();
-            System.Diagnostics.Debug.WriteLine("ModifierManagementPage: Loading modifiers...");
             
             var query = new MenuApiService.ModifierQuery(Q: null, Page: 1, PageSize: 100);
             var modifiers = await _menuService.ListModifiersAsync(query);
-            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Retrieved {modifiers.Count} modifiers from API");
 
             foreach (var modifier in modifiers)
             {
@@ -91,11 +89,9 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
                 Modifiers.Add(vm);
             }
 
-            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Added {Modifiers.Count} modifiers to collection");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"ModifierManagementPage: Error loading modifiers: {ex.Message}");
             ShowErrorDialog("Error", $"Failed to load modifiers: {ex.Message}");
         }
     }
@@ -205,7 +201,6 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
     private void EditOption_Click(object sender, RoutedEventArgs e)
     {
         // TODO: Implement option editing dialog
-        System.Diagnostics.Debug.WriteLine("Edit option clicked");
     }
 
     private void DeleteOption_Click(object sender, RoutedEventArgs e)
@@ -219,7 +214,6 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
     private void SaveModifier_Click(object sender, RoutedEventArgs e)
     {
         // TODO: Implement save to backend
-        System.Diagnostics.Debug.WriteLine($"Saving modifier: {SelectedModifier?.Name}");
     }
 
     private void CancelEdit_Click(object sender, RoutedEventArgs e)
@@ -243,7 +237,6 @@ public sealed partial class ModifierManagementPage : Page, INotifyPropertyChange
         catch (Exception ex)
         {
             // Fallback: Log error if dialog fails
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 

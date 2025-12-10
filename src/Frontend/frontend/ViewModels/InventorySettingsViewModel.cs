@@ -129,7 +129,6 @@ public sealed class InventorySettingsViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading vendors: {ex.Message}");
         }
     }
 

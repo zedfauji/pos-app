@@ -134,7 +134,6 @@ public sealed partial class VendorsInventoryPage : Page, IToolbarConsumer
         catch (Exception ex)
         {
             // Fallback: Log error if dialog fails
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 }

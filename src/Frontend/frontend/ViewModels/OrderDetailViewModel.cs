@@ -235,7 +235,6 @@ namespace MagiDesk.Frontend.ViewModels
             {
                 HasError = true;
                 ErrorMessage = $"Failed to load order: {ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Error loading order {OrderId}: {ex}");
             }
             finally
             {
@@ -265,7 +264,6 @@ namespace MagiDesk.Frontend.ViewModels
                         catch (Exception ex)
                         {
                             // Log the error for debugging but don't crash the enrichment process
-                            System.Diagnostics.Debug.WriteLine($"Failed to get menu item name for ID {menuItemId}: {ex.Message}");
                         }
                     }
                     if (!string.IsNullOrWhiteSpace(name))
@@ -314,7 +312,6 @@ namespace MagiDesk.Frontend.ViewModels
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading logs for order {OrderId}: {ex}");
             }
         }
 

@@ -45,29 +45,23 @@ public class TableRepository
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"TableRepository: Looking for active session for table: '{tableLabel}'");
             var list = await GetActiveSessionsAsync(ct);
-            System.Diagnostics.Debug.WriteLine($"TableRepository: Found {list.Count} active sessions");
             
             foreach (var session in list)
             {
-                System.Diagnostics.Debug.WriteLine($"TableRepository: Active session - TableId='{session.TableId}', SessionId='{session.SessionId}', BillingId='{session.BillingId}'");
             }
             
             var match = list.FirstOrDefault(s => string.Equals(s.TableId, tableLabel, StringComparison.OrdinalIgnoreCase));
             if (match != null)
             {
-                System.Diagnostics.Debug.WriteLine($"TableRepository: Found matching session for '{tableLabel}' - SessionId='{match.SessionId}', BillingId='{match.BillingId}'");
                 return (match.SessionId, match.BillingId);
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"TableRepository: No matching session found for table '{tableLabel}'");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"TableRepository: Exception in GetActiveSessionForTableAsync: {ex.Message}");
         }
         return (null, null);
     }
@@ -387,17 +381,14 @@ public class TableRepository
             if (!string.IsNullOrWhiteSpace(server)) query.Add($"server={Uri.EscapeDataString(server)}");
             
             var url = new Uri(baseUri + (query.Count > 0 ? ("?" + string.Join("&", query)) : string.Empty));
-            System.Diagnostics.Debug.WriteLine($"TableRepository.GetBillsAsync calling: {url}");
             
             var res = await _http.GetAsync(url, ct);
             if (!res.IsSuccessStatusCode) 
             {
-                System.Diagnostics.Debug.WriteLine($"GetBillsAsync failed with status {res.StatusCode}");
                 return list;
             }
             
             var data = await res.Content.ReadFromJsonAsync<List<BillResult>>(cancellationToken: ct) ?? new();
-            System.Diagnostics.Debug.WriteLine($"GetBillsAsync returned {data.Count} bills");
             return data;
         }
         catch (Exception ex)
@@ -414,22 +405,18 @@ public class TableRepository
         try
         {
             var url = new Uri(new Uri(_apiBaseUrl!), "/bills/unsettled");
-            System.Diagnostics.Debug.WriteLine($"TableRepository.GetUnsettledBillsAsync calling: {url}");
             
             var res = await _http.GetAsync(url, ct);
             if (!res.IsSuccessStatusCode) 
             {
-                System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync failed with status {res.StatusCode}");
                 return list;
             }
             
             var data = await res.Content.ReadFromJsonAsync<List<BillResult>>(cancellationToken: ct) ?? new();
-            System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync returned {data.Count} unsettled bills");
             
             // Add detailed logging for each bill
             foreach (var bill in data)
             {
-                System.Diagnostics.Debug.WriteLine($"  - Bill {bill.BillId} (BillingId: {bill.BillingId}) - ${bill.TotalAmount:F2} - Table: {bill.TableLabel}");
             }
             
             return data;
@@ -437,7 +424,6 @@ public class TableRepository
         catch (Exception ex)
         {
             Log.Error("GetUnsettledBillsAsync failed", ex);
-            System.Diagnostics.Debug.WriteLine($"GetUnsettledBillsAsync exception: {ex.Message}");
             return list;
         }
     }
@@ -606,7 +592,6 @@ public class TableRepository
             if (!res.IsSuccessStatusCode)
             {
                 var errorContent = await res.Content.ReadAsStringAsync(ct);
-                System.Diagnostics.Debug.WriteLine($"ReopenSessionAsync failed: {res.StatusCode} - {errorContent}");
                 return null;
             }
             var result = await res.Content.ReadFromJsonAsync<ReopenSessionResult>(cancellationToken: ct);
@@ -614,7 +599,6 @@ public class TableRepository
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"ReopenSessionAsync exception: {ex.Message}");
             return null;
         }
     }

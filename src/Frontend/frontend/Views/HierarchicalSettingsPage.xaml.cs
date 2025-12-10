@@ -390,7 +390,6 @@ public sealed partial class HierarchicalSettingsPage : Page
                 {
                     subPage.SetSubCategory(item.Key);
                     var categorySettings = ViewModel.GetCategorySettings(categoryKey);
-                    System.Diagnostics.Debug.WriteLine($"Setting {categoryKey} settings: {categorySettings?.GetType().Name}");
                     subPage.SetSettings(categorySettings);
                 }
                 
@@ -699,66 +698,55 @@ public sealed partial class HierarchicalSettingsPage : Page
                 // Collect current UI values and update the ViewModel
                 var currentSettings = printerPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("printers", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected printer settings: DefaultPrinter={currentSettings.Receipt.DefaultPrinter}");
             }
             else if (SettingsContentFrame.Content is GeneralSettingsPage generalPage)
             {
                 var currentSettings = generalPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("general", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected general settings: BusinessName={currentSettings.BusinessName}");
             }
             else if (SettingsContentFrame.Content is PosSettingsPage posPage)
             {
                 var currentSettings = posPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("pos", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected POS settings: DefaultTaxRate={currentSettings.Tax.DefaultTaxRate}");
             }
             else if (SettingsContentFrame.Content is InventorySettingsPage inventoryPage)
             {
                 var currentSettings = inventoryPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("inventory", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Inventory settings: LowStockThreshold={currentSettings.Stock.LowStockThreshold}");
             }
             else if (SettingsContentFrame.Content is CustomersSettingsPage customersPage)
             {
                 var currentSettings = customersPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("customers", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Customers settings: EnableWalletSystem={currentSettings.Wallet.EnableWalletSystem}");
             }
             else if (SettingsContentFrame.Content is PaymentsSettingsPage paymentsPage)
             {
                 var currentSettings = paymentsPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("payments", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Payments settings: MaxDiscountPercentage={currentSettings.Discounts.MaxDiscountPercentage}");
             }
             else if (SettingsContentFrame.Content is NotificationsSettingsPage notificationsPage)
             {
                 var currentSettings = notificationsPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("notifications", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Notifications settings: EnableEmail={currentSettings.Email.EnableEmail}");
             }
             else if (SettingsContentFrame.Content is SecuritySettingsPage securityPage)
             {
                 var currentSettings = securityPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("security", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Security settings: EnforceRolePermissions={currentSettings.Rbac.EnforceRolePermissions}");
             }
             else if (SettingsContentFrame.Content is IntegrationsSettingsPage integrationsPage)
             {
                 var currentSettings = integrationsPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("integrations", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected Integrations settings: EnableWebhooks={currentSettings.Webhooks.EnableWebhooks}");
             }
             else if (SettingsContentFrame.Content is SystemSettingsPage systemPage)
             {
                 var currentSettings = systemPage.GetCurrentSettings();
                 ViewModel.UpdateCategorySettings("system", currentSettings);
-                System.Diagnostics.Debug.WriteLine($"Collected System settings: LogLevel={currentSettings.Logging.LogLevel}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error collecting current page settings: {ex.Message}");
         }
     }
 

@@ -55,7 +55,6 @@ public sealed partial class RestockRequestDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading items: {ex.Message}");
         }
     }
 
@@ -81,7 +80,6 @@ public sealed partial class RestockRequestDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading vendors: {ex.Message}");
         }
     }
 
@@ -118,7 +116,6 @@ public sealed partial class RestockRequestDialog : ContentDialog
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading stock for {selectedItem}: {ex.Message}");
                 CurrentStockText.Text = "Error";
                 Request.CurrentStock = 0;
             }

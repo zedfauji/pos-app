@@ -111,11 +111,9 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                 });
             }
             
-            System.Diagnostics.Debug.WriteLine($"Loaded {MenuItems.Count} menu items");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load menu items: {ex.Message}");
             await ShowErrorDialog($"Failed to load menu items: {ex.Message}");
         }
     }
@@ -134,11 +132,9 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                 SelectedServer = AvailableServers[0];
             }
             
-            System.Diagnostics.Debug.WriteLine($"Loaded {AvailableServers.Count} servers");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load servers: {ex.Message}");
         }
     }
 
@@ -172,7 +168,6 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
             if (invalidModifiers.Any())
             {
                 var requiredModifiers = string.Join(", ", invalidModifiers.Select(m => m.DisplayName));
-                System.Diagnostics.Debug.WriteLine($"Required modifiers not selected: {requiredModifiers}");
                 ShowErrorDialog($"Required modifiers not selected: {requiredModifiers}");
                 return;
             }
@@ -217,7 +212,6 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
             }
 
             UpdateSummary();
-            System.Diagnostics.Debug.WriteLine($"Added {selectedItem.Name} to selection");
         }
     }
 
@@ -293,14 +287,12 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
     {
         if (SelectedServer == null || SelectedItems.Count == 0)
         {
-            System.Diagnostics.Debug.WriteLine("Cannot add to order: No server selected or no items selected");
             await ShowErrorDialog("Please select a server and add items to the order.");
             return;
         }
 
         try
         {
-            System.Diagnostics.Debug.WriteLine($"AddToOrder_Click: SelectedServer={SelectedServer?.Name}, SelectedItems.Count={SelectedItems.Count}, OrderId={OrderId}");
             
             var orderItems = new List<OrderApiService.CreateOrderItemDto>();
             
@@ -328,11 +320,9 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                 var result = await _orderService.AddItemsAsync(OrderId.Value, orderItems);
                 if (result == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Failed to add items to order {OrderId.Value}: AddItemsAsync returned null");
                     await ShowErrorDialog("Failed to add items to existing order. Please try again.");
                     return;
                 }
-                System.Diagnostics.Debug.WriteLine($"Added {orderItems.Count} items to existing order {OrderId.Value}");
             }
             else
             {
@@ -346,7 +336,6 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                     orderItems
                 );
                 
-                System.Diagnostics.Debug.WriteLine($"Creating new order: SessionId={SessionId}, TableLabel={TableLabel}, ServerId={SelectedServer.Id}, ServerName={SelectedServer.Name}, ItemCount={orderItems.Count}");
                 
                 if (_orderService == null)
                 {
@@ -356,13 +345,11 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
                 var newOrder = await _orderService.CreateOrderAsync(createRequest);
                 if (newOrder == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Failed to create order: CreateOrderAsync returned null");
                     await ShowErrorDialog("Failed to create order. Please try again.");
                     return;
                 }
                 
                 OrderId = newOrder.Id;
-                System.Diagnostics.Debug.WriteLine($"Created new order {newOrder.Id} with {orderItems.Count} items");
             }
 
             // Navigate back to tables page
@@ -370,7 +357,6 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to add items to order: {ex.Message}");
             await ShowErrorDialog($"Failed to add items to order: {ex.Message}");
         }
     }
@@ -442,7 +428,6 @@ public sealed partial class MenuSelectionPage : Page, INotifyPropertyChanged
         catch (Exception ex)
         {
             // Fallback: Log error if dialog fails
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 

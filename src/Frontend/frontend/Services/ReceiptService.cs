@@ -77,21 +77,18 @@ public sealed class ReceiptService : IDisposable
         try
         {
             _logger.LogInformation("ReceiptService.InitializeAsync: Starting initialization");
-            System.Diagnostics.Debug.WriteLine("ReceiptService.InitializeAsync: Starting initialization");
             
             // PDFSharp-based ReceiptService doesn't need UI components for initialization
             // This method is kept for compatibility with existing initialization calls
             // All PDF generation is CPU-bound and doesn't require UI thread context
             
             _logger.LogInformation("ReceiptService.InitializeAsync: Initialization completed successfully");
-            System.Diagnostics.Debug.WriteLine("ReceiptService.InitializeAsync: Initialization completed successfully");
             
             await Task.CompletedTask; // Ensure method is async
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "ReceiptService.InitializeAsync: Failed to initialize");
-            System.Diagnostics.Debug.WriteLine($"ReceiptService.InitializeAsync: Exception - {ex.Message}");
             throw;
         }
     }

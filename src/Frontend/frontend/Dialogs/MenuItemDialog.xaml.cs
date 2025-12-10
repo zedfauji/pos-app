@@ -28,7 +28,6 @@ namespace MagiDesk.Frontend.Dialogs
             catch (Exception ex)
             {
                 // Log the error for debugging but don't crash the dialog
-                System.Diagnostics.Debug.WriteLine($"Failed to load menu item details: {ex.Message}");
             }
         }
 

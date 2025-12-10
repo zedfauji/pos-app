@@ -397,7 +397,6 @@ public class AddItemRow : INotifyPropertyChanged
         {
             // Fallback: Log error instead of showing dialog to prevent COM exceptions
             Log.Error($"Failed to show ContentDialog: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"ContentDialog Error: {title} - {content}");
         }
     }
 
@@ -690,7 +689,6 @@ public class AddItemRow : INotifyPropertyChanged
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Starting consistency check for '{tableLabel}'");
             
             // Step 1: Get current table state
             var allTables = await _repo.GetAllAsync();
@@ -698,7 +696,6 @@ public class AddItemRow : INotifyPropertyChanged
             
             if (tableState == null)
             {
-                System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Table '{tableLabel}' not found in API");
                 return false;
             }
             
@@ -722,28 +719,23 @@ public class AddItemRow : INotifyPropertyChanged
             
             if (!isConsistent)
             {
-                System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Inconsistency detected for '{tableLabel}': {issueDescription}");
                 
                 // Step 4: Attempt automatic repair
                 bool repairSuccess = await AttemptSessionStateRepairAsync(tableLabel, tableState, sessionId, issueDescription);
                 if (repairSuccess)
                 {
-                    System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Successfully repaired state for '{tableLabel}'");
                     return true;
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Failed to repair state for '{tableLabel}'");
                     return false;
                 }
             }
             
-            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: State is consistent for '{tableLabel}'");
             return true;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"EnsureSessionStateConsistencyAsync: Error for '{tableLabel}': {ex.Message}");
             return false;
         }
     }
@@ -752,12 +744,10 @@ public class AddItemRow : INotifyPropertyChanged
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Attempting repair for '{tableLabel}' - {issueDescription}");
             
             if (tableState.Occupied && !sessionId.HasValue)
             {
                 // Case 1: Table shows occupied but no session - try to recreate session
-                System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Attempting to recreate session for '{tableLabel}'");
                 
                 // Get server info from table state
                 var serverName = tableState.Server ?? "SYSTEM";
@@ -767,15 +757,12 @@ public class AddItemRow : INotifyPropertyChanged
                 var (ok, newSessionId, newBillingId, message) = await _repo.StartSessionAsync(tableLabel, serverId, serverName);
                 if (ok)
                 {
-                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Successfully recreated session for '{tableLabel}' - SessionId: {newSessionId}");
                     return true;
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Failed to recreate session for '{tableLabel}': {message}");
                     
                     // If session recreation fails, we need to free the table
-                    System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Freeing table '{tableLabel}' as fallback");
                     await _repo.UpsertAsync(new TableStatusDto 
                     { 
                         Label = tableLabel, 
@@ -791,7 +778,6 @@ public class AddItemRow : INotifyPropertyChanged
             else if (!tableState.Occupied && sessionId.HasValue)
             {
                 // Case 2: Table shows available but session exists - clean up orphaned session
-                System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Cleaning up orphaned session for '{tableLabel}'");
                 
                 // This is a backend issue - the session should be cleaned up by the API
                 // For now, we'll mark the table as occupied to match the session
@@ -811,7 +797,6 @@ public class AddItemRow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"AttemptSessionStateRepairAsync: Error repairing '{tableLabel}': {ex.Message}");
             return false;
         }
     }
@@ -835,11 +820,9 @@ public class AddItemRow : INotifyPropertyChanged
         }
         
         // Step 2: Ensure session state consistency before starting
-        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Ensuring session state consistency for table '{item.Label}'");
         var consistencyResult = await EnsureSessionStateConsistencyAsync(item.Label);
         if (!consistencyResult)
         {
-            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Session state consistency check failed for '{item.Label}'");
             await new ContentDialog
             {
                 Title = "Session State Issue",
@@ -857,11 +840,9 @@ public class AddItemRow : INotifyPropertyChanged
         var (ok, user) = await PromptSelectEmployeeAsync();
         if (!ok || user == null) return;
 
-        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Starting session for table '{item.Label}' with server '{user.Username}'");
         var startResult = await _repo.StartSessionAsync(item.Label, user.UserId ?? string.Empty, user.Username ?? string.Empty);
         if (!startResult.ok)
         {
-            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Failed to start session for table '{item.Label}': {startResult.message}");
             await new ContentDialog
             {
                 Title = "Unable to start",
@@ -872,13 +853,11 @@ public class AddItemRow : INotifyPropertyChanged
             return;
         }
         
-        System.Diagnostics.Debug.WriteLine($"StartMenu_Click: Successfully started session for table '{item.Label}' - SessionId: {startResult.sessionId}");
         
         // Step 4: Verify session was created properly
         var (verifySessionId, verifyBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
         if (!verifySessionId.HasValue)
         {
-            System.Diagnostics.Debug.WriteLine($"StartMenu_Click: WARNING - Session not found after start for table '{item.Label}'");
             await new ContentDialog
             {
                 Title = "Session Warning",
@@ -940,7 +919,6 @@ public class AddItemRow : INotifyPropertyChanged
         try
         {
             // Step 1: Validate table state
-            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Starting stop process for table '{item.Label}'");
             
             if (!item.Occupied)
             {
@@ -956,7 +934,6 @@ public class AddItemRow : INotifyPropertyChanged
             }
             
             // Step 2: Close any open orders for this table's session
-            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Closing open orders for table '{item.Label}'");
             var ordersClosed = 0;
             try
             {
@@ -965,7 +942,6 @@ public class AddItemRow : INotifyPropertyChanged
                 {
                     // Get the current session ID for this table
                     var (activeSessionId, activeBillingId) = await _repo.GetActiveSessionForTableAsync(item.Label);
-                    System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Active session for '{item.Label}': SessionId={activeSessionId}, BillingId={activeBillingId}");
                     
                     if (activeSessionId.HasValue)
                     {
@@ -973,7 +949,6 @@ public class AddItemRow : INotifyPropertyChanged
                         var openOrders = await ordersSvc.GetOrdersBySessionAsync(activeSessionId.Value, includeHistory: false);
                         var ordersToClose = openOrders.Where(o => o.Status == "open").ToList();
                         
-                        System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Found {ordersToClose.Count} open orders to close");
                         
                         // Close each open order
                         foreach (var order in ordersToClose)
@@ -982,41 +957,33 @@ public class AddItemRow : INotifyPropertyChanged
                             {
                                 await ordersSvc.CloseOrderAsync(order.Id);
                                 ordersClosed++;
-                                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully closed order {order.Id}");
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Failed to close order {order.Id}: {ex.Message}");
                             }
                         }
                         
                         if (ordersClosed > 0)
                         {
-                            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Closed {ordersClosed} orders for session {activeSessionId.Value}");
                         }
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"StopMenu_Click: No active session found for table '{item.Label}'");
                     }
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"StopMenu_Click: OrdersApi service is not available");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Error closing orders: {ex.Message}");
                 // Continue with table stopping even if order closing fails
             }
             
                // Step 3: Ensure session state consistency before stopping
-               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Ensuring session state consistency for table '{item.Label}'");
                var consistencyResult = await EnsureSessionStateConsistencyAsync(item.Label);
                if (!consistencyResult)
                {
-                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Session state consistency check failed for '{item.Label}'");
                    progressDialog.Hide();
                    
                    await new ContentDialog
@@ -1033,14 +1000,12 @@ public class AddItemRow : INotifyPropertyChanged
                }
 
                // Step 4: Stop the table session
-               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Calling StopSessionAsync for table '{item.Label}'");
                var stopResult = await _repo.StopSessionAsync(item.Label);
 
                progressDialog.Hide(); // Hide progress dialog
 
                if (!stopResult.ok)
                {
-                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: StopSessionAsync failed for '{item.Label}': {stopResult.message}");
 
                    // Enhanced error handling with automatic recovery
                    var errorMessage = stopResult.message ?? "Unknown error occurred";
@@ -1068,19 +1033,16 @@ public class AddItemRow : INotifyPropertyChanged
                        var choice = await dlg.ShowAsync();
                        if (choice == ContentDialogResult.Primary)
                        {
-                           System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Attempting automatic repair for table '{item.Label}'");
                            
                            // Try to repair the session state
                            var repairResult = await EnsureSessionStateConsistencyAsync(item.Label);
                            if (repairResult)
                            {
-                               System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully repaired session state for '{item.Label}'");
                                
                                // Try stopping again after repair
                                var retryStopResult = await _repo.StopSessionAsync(item.Label);
                                if (retryStopResult.ok)
                                {
-                                   System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully stopped session after repair for '{item.Label}'");
                                    await RefreshFromStoreAsync();
                                    return;
                                }
@@ -1155,7 +1117,6 @@ public class AddItemRow : INotifyPropertyChanged
                 return;
             }
             
-            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Successfully stopped session for table '{item.Label}'");
             
             // Step 4: Refresh the UI
             await RefreshFromStoreAsync();
@@ -1218,7 +1179,6 @@ public class AddItemRow : INotifyPropertyChanged
         catch (Exception ex)
         {
             progressDialog.Hide();
-            System.Diagnostics.Debug.WriteLine($"StopMenu_Click: Unexpected error for table '{item.Label}': {ex.Message}");
             await new ContentDialog
             {
                 Title = "Unexpected Error",
@@ -1235,7 +1195,6 @@ public class AddItemRow : INotifyPropertyChanged
 
         try
         {
-            System.Diagnostics.Debug.WriteLine($"TableStatusMenu_Click: Table Label = '{item.Label}'");
             
             var dialog = new Dialogs.TableStatusDialog
             {
@@ -1702,7 +1661,6 @@ public class AddItemRow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error opening menu dialog: {ex.Message}");
             await new ContentDialog
             {
                 Title = "Error",

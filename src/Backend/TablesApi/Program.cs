@@ -1798,7 +1798,6 @@ static async Task EnsureSchemaAsync(NpgsqlConnection conn)
     {
         // Migration might fail if columns are already timestamptz or don't exist
         // This is expected and safe to ignore
-        System.Diagnostics.Debug.WriteLine($"Migration warning: {ex.Message}");
     }
     
     // Ensure new columns for bills

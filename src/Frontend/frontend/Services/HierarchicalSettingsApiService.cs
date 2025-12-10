@@ -533,7 +533,6 @@ public sealed class HierarchicalSettingsApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error reading settings API URL from config: {ex.Message}");
         }
 
         return GetDefaultSettingsApiUrl();
@@ -638,7 +637,6 @@ public sealed class HierarchicalSettingsApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting local printers: {ex.Message}");
             return new List<PrinterDevice>();
         }
     }

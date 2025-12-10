@@ -142,7 +142,6 @@ namespace MagiDesk.Frontend.Services
             catch (Exception ex)
             {
                 // Log the exception for debugging
-                System.Diagnostics.Debug.WriteLine($"I18nService initialization error: {ex.Message}");
                 Current = AppLanguage.Eng;
             }
         }
@@ -166,7 +165,6 @@ namespace MagiDesk.Frontend.Services
                 catch (Exception ex)
                 {
                     // Log the exception for debugging
-                    System.Diagnostics.Debug.WriteLine($"I18nService save error: {ex.Message}");
                 }
                 LanguageChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -193,7 +191,6 @@ namespace MagiDesk.Frontend.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"I18nService file save error: {ex.Message}");
             }
         }
 
@@ -214,7 +211,6 @@ namespace MagiDesk.Frontend.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"I18nService file load error: {ex.Message}");
             }
             
             return AppLanguage.Eng;

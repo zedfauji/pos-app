@@ -57,7 +57,6 @@ public sealed partial class SettingsPage : Page
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in SettingsPage constructor");
-            System.Diagnostics.Debug.WriteLine($"SettingsPage initialization error: {ex.Message}");
         }
     }
 
@@ -86,7 +85,6 @@ public sealed partial class SettingsPage : Page
         {
             _logger.LogError(ex, "Failed to create SettingsApiService, using fallback");
             _settingsApi = new SettingsApiService(new HttpClient { BaseAddress = new Uri("https://magidesk-settings-904541739138.us-central1.run.app/") }, null);
-            System.Diagnostics.Debug.WriteLine($"Settings API initialization failed: {ex.Message}");
         }
     }
 
@@ -108,7 +106,6 @@ public sealed partial class SettingsPage : Page
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize ViewModel");
-            System.Diagnostics.Debug.WriteLine($"ViewModel initialization error: {ex.Message}");
         }
     }
 

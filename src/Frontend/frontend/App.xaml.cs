@@ -73,12 +73,10 @@ namespace MagiDesk.Frontend
             catch (IOException)
             {
                 // File is locked by another process - silently ignore to prevent crash
-                System.Diagnostics.Debug.WriteLine($"Could not write to log file (locked): {message}");
             }
             catch (Exception ex)
             {
                 // Any other error - log to debug output only
-                System.Diagnostics.Debug.WriteLine($"Log write error: {ex.Message}");
             }
         }
 
@@ -106,12 +104,10 @@ namespace MagiDesk.Frontend
                 try
                 {
                     SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Initializing WebView2 runtime");
-                    System.Diagnostics.Debug.WriteLine("Initializing WebView2 runtime...");
                     
                     // Ensure WebView2 runtime is available
                     var webView2Version = Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
                     SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] WebView2 version: {webView2Version}");
-                    System.Diagnostics.Debug.WriteLine($"WebView2 version: {webView2Version}");
                     
                     // Create WebView2 environment to ensure it's properly initialized
                     var webView2Environment = Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync();
@@ -139,9 +135,6 @@ namespace MagiDesk.Frontend
                         if (e.Exception is System.Runtime.InteropServices.COMException comEx)
                         {
                             SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] COM EXCEPTION HRESULT: 0x{comEx.HResult:X8}");
-                            System.Diagnostics.Debug.WriteLine($"FIRST-CHANCE COM EXCEPTION: {comEx.Message}");
-                            System.Diagnostics.Debug.WriteLine($"HRESULT: 0x{comEx.HResult:X8}");
-                            System.Diagnostics.Debug.WriteLine($"Stack Trace: {comEx.StackTrace}");
                         }
                     }
                     catch { } // Don't let logging crash the app
@@ -255,7 +248,6 @@ namespace MagiDesk.Frontend
                 // CRITICAL FIX: Remove Window.Current usage to prevent COM exceptions in WinUI 3 Desktop Apps
                 // Window.Current is a Windows Runtime COM interop call that causes Marshal.ThrowExceptionForHR errors
                 // We use App.MainWindow instead for thread-safe access
-                System.Diagnostics.Debug.WriteLine("MainWindow set successfully");
 
                 SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Checking window content");
                 if (window.Content is not Frame rootFrame)
@@ -302,7 +294,6 @@ namespace MagiDesk.Frontend
                 // CRITICAL FIX: Remove WindowNative COM interop calls to prevent Marshal.ThrowExceptionForHR errors
                 // WindowNative.GetWindowHandle is a Windows Runtime COM interop call that causes COM exceptions in WinUI 3 Desktop Apps
                 // Window activation is handled automatically by the system
-                System.Diagnostics.Debug.WriteLine("Window launched successfully");
                 SafeAppendToLog(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] OnLaunched completed successfully");
                 Log.Info("OnLaunched completed successfully");
             }
@@ -356,8 +347,6 @@ namespace MagiDesk.Frontend
                 Log.Info($"  usersBase = {usersBase}");
                 Log.Info($"  CustomerApi:BaseUrl = {config["CustomerApi:BaseUrl"]}");
                 Log.Info($"  customerBase = {customerBase}");
-                System.Diagnostics.Debug.WriteLine($"API Init - UsersApi:BaseUrl = {config["UsersApi:BaseUrl"]}");
-                System.Diagnostics.Debug.WriteLine($"API Init - usersBase = {usersBase}");
                 Api = new Services.ApiService(backendBase, inventoryBase);
 
                 var inner = new HttpClientHandler();
@@ -365,7 +354,6 @@ namespace MagiDesk.Frontend
                 var logging = new Services.HttpLoggingHandler(inner);
                 var http = new HttpClient(logging) { BaseAddress = new Uri(usersBase.TrimEnd('/') + "/") };
                 UsersApi = new Services.UserApiService(http);
-                System.Diagnostics.Debug.WriteLine($"UsersApi created successfully with BaseAddress: {http.BaseAddress}");
 
                 var innerMenu = new HttpClientHandler();
                 innerMenu.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
@@ -544,14 +532,12 @@ namespace MagiDesk.Frontend
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in unhandled exception handler: {ex.Message}");
             }
             
             // For COM exceptions (0x8001010E), mark as handled to prevent crash
             if (e.Exception is System.Runtime.InteropServices.COMException comEx2 && comEx2.HResult == unchecked((int)0x8001010E))
             {
                 e.Handled = true; // RPC_E_SERVERCALL_RETRYLATER - usually safe to ignore
-                System.Diagnostics.Debug.WriteLine("Handled COM exception 0x8001010E (RPC_E_SERVERCALL_RETRYLATER)");
             }
             // Let other exceptions crash after logging
         }
@@ -609,11 +595,9 @@ namespace MagiDesk.Frontend
                 
                 if (activeSessions.Count > 0)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Found {activeSessions.Count} active sessions that need recovery:");
                     
                     foreach (var session in activeSessions)
                     {
-                        System.Diagnostics.Debug.WriteLine($"  - Table: {session.TableId}, Session: {session.SessionId}, Server: {session.ServerName}");
                     }
                     
                     // Show recovery dialog to user
@@ -622,7 +606,6 @@ namespace MagiDesk.Frontend
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Session recovery failed: {ex.Message}");
             }
         }
 
@@ -654,7 +637,6 @@ namespace MagiDesk.Frontend
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Session recovery dialog failed: {ex.Message}");
             }
         }
 
@@ -678,12 +660,10 @@ namespace MagiDesk.Frontend
                     // Start heartbeat for this session
                     HeartbeatService?.StartHeartbeat();
                     
-                    System.Diagnostics.Debug.WriteLine($"Resumed session: {sessionId}");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to resume session {sessionId}: {ex.Message}");
             }
         }
 
@@ -720,17 +700,14 @@ namespace MagiDesk.Frontend
 
                         await tablesHttp.PostAsync($"tables/{Uri.EscapeDataString(session.TableId)}/stop", new StringContent(""));
                         
-                        System.Diagnostics.Debug.WriteLine($"Closed session: {session.SessionId} on table {session.TableId}");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Failed to close session {session.SessionId}: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to close all sessions: {ex.Message}");
             }
         }
     }

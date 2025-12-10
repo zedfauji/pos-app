@@ -21,7 +21,6 @@ public sealed class SplitPaymentCalculator
         decimal discountAmount, 
         Dictionary<string, decimal> splitAmounts)
     {
-        Debug.WriteLine($"SplitPaymentCalculator: Calculating split payment - Total={totalAmount:C}, Tip={tipAmount:C}, Discount={discountAmount:C}");
         
         var result = new SplitPaymentResult();
         var netAmount = totalAmount + tipAmount - discountAmount;
@@ -50,7 +49,6 @@ public sealed class SplitPaymentCalculator
             };
             
             result.SplitDetails.Add(splitDetail);
-            Debug.WriteLine($"SplitPaymentCalculator: {method} - Amount={amount:C}, Tip={splitDetail.TipAmount:C}, Discount={splitDetail.DiscountAmount:C}");
         }
         
         // Adjust for rounding differences
@@ -61,7 +59,6 @@ public sealed class SplitPaymentCalculator
         result.TotalDiscount = discountAmount;
         result.NetAmount = netAmount;
         
-        Debug.WriteLine($"SplitPaymentCalculator: Final result - Net={result.NetAmount:C}, Tip={result.TotalTip:C}, Discount={result.TotalDiscount:C}");
         
         return result;
     }
@@ -82,7 +79,6 @@ public sealed class SplitPaymentCalculator
             largestSplit.DiscountAmount += discountDifference;
             largestSplit.NetAmount = largestSplit.AmountPaid - largestSplit.DiscountAmount;
             
-            Debug.WriteLine($"SplitPaymentCalculator: Adjusted {largestSplit.PaymentMethod} for rounding - Tip={largestSplit.TipAmount:C}, Discount={largestSplit.DiscountAmount:C}");
         }
     }
 }

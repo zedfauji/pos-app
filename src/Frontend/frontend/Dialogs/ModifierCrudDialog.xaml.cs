@@ -323,7 +323,6 @@ public sealed partial class ModifierCrudDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 }

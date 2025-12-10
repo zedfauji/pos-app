@@ -19,21 +19,18 @@ public static class Log
     public static void Info(string message)
     {
         var line = $"[INFO] {DateTime.Now:HH:mm:ss} {message}";
-        Debug.WriteLine(line);
         SafeAppend(line);
     }
 
     public static void Warning(string message)
     {
         var line = $"[WARNING] {DateTime.Now:HH:mm:ss} {message}";
-        Debug.WriteLine(line);
         SafeAppend(line);
     }
 
     public static void Error(string message, Exception? ex = null)
     {
         var line = $"[ERROR] {DateTime.Now:HH:mm:ss} {message} {ex}";
-        Debug.WriteLine(line);
         SafeAppend(line);
     }
 

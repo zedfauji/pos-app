@@ -48,7 +48,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading dashboard data: {ex.Message}");
             // Set default values on error
             SetDefaultValues();
         }
@@ -64,7 +63,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading stock value: {ex.Message}");
             TotalStockValue = "$0.00";
             StockValueChange = "+0%";
         }
@@ -92,7 +90,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading low stock data: {ex.Message}");
             LowStockCount = 0;
         }
     }
@@ -106,7 +103,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading pending orders: {ex.Message}");
             PendingOrdersCount = 0;
         }
     }
@@ -121,7 +117,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading fast movers: {ex.Message}");
             FastMoversCount = 0;
         }
     }
@@ -146,7 +141,6 @@ public class InventoryDashboardViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading recent transactions: {ex.Message}");
         }
     }
 

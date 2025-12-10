@@ -157,7 +157,6 @@ namespace MagiDesk.Frontend.Views
                         IsIncluded = true // Default to included
                     });
                 }
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Loaded {_orderItems.Count} items from bill");
                 return;
             }
             
@@ -166,7 +165,6 @@ namespace MagiDesk.Frontend.Views
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Items missing, fetching from BillingId {_bill.BillingId}");
                     var items = await _billingService.GetOrderItemsByBillingIdAsync(_bill.BillingId.Value);
                     
                     if (items != null && items.Count > 0)
@@ -183,7 +181,6 @@ namespace MagiDesk.Frontend.Views
                                 IsIncluded = true // Default to included
                             });
                         }
-                        System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Fetched {_orderItems.Count} items from BillingService");
                         
                         // Update the bill's Items list for future reference
                         _bill.Items = items;
@@ -192,7 +189,6 @@ namespace MagiDesk.Frontend.Views
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Error fetching items: {ex.Message}");
                 }
             }
             
@@ -200,7 +196,6 @@ namespace MagiDesk.Frontend.Views
             if (_orderItems.Count == 0 && _bill != null && (_bill.ItemsCost > 0 || _bill.TotalAmount > 0))
             {
                 var itemTotal = _bill.ItemsCost > 0 ? _bill.ItemsCost : _bill.TotalAmount;
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Creating placeholder item with total {itemTotal}");
                 
                 _orderItems.Add(new OrderItemViewModel
                 {
@@ -215,7 +210,6 @@ namespace MagiDesk.Frontend.Views
             
             if (_orderItems.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: WARNING - No items loaded. BillId: {_bill?.BillId}, BillingId: {_bill?.BillingId}, TotalAmount: {_bill?.TotalAmount}");
             }
         }
 
@@ -1154,7 +1148,6 @@ namespace MagiDesk.Frontend.Views
                     throw new InvalidOperationException("Invalid SessionId or BillingId resolved");
                 }
 
-                System.Diagnostics.Debug.WriteLine($"EphemeralPaymentPage: Resolved IDs - SessionId={sessionId}, BillingId={billingId}");
 
                 var paymentLines = new List<PaymentApiService.RegisterPaymentLineDto>();
 
@@ -1220,7 +1213,6 @@ namespace MagiDesk.Frontend.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Payment processing error: {ex.Message}");
                 throw;
             }
         }
@@ -1384,7 +1376,6 @@ namespace MagiDesk.Frontend.Views
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Customer search error: {ex.Message}");
                     sender.ItemsSource = null;
                 }
                 finally

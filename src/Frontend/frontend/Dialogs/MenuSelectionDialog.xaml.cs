@@ -81,7 +81,6 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load menu items: {ex.Message}");
         }
     }
 
@@ -120,7 +119,6 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load servers: {ex.Message}");
             // Fallback to mock data
             AvailableServers.Add(new ServerViewModel { Id = "server1", Name = "Server 1" });
             AvailableServers.Add(new ServerViewModel { Id = "server2", Name = "Server 2" });
@@ -339,7 +337,6 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to add items to order: {ex.Message}");
             await ShowErrorDialog("Order Error", $"Failed to add items to order: {ex.Message}");
         }
     }
@@ -365,7 +362,6 @@ public sealed partial class MenuSelectionDialog : ContentDialog
         catch (Exception ex)
         {
             // Fallback: Log error if dialog fails
-            System.Diagnostics.Debug.WriteLine($"Failed to show error dialog: {ex.Message}");
         }
     }
 

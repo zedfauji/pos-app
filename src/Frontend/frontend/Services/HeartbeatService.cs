@@ -31,7 +31,6 @@ public class HeartbeatService : IDisposable
         // Start heartbeat timer - send heartbeat every 30 seconds
         _heartbeatTimer = new Timer(SendHeartbeat, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         
-        Debug.WriteLine("HeartbeatService: Started heartbeat timer (30 second intervals)");
     }
 
     private async void SendHeartbeat(object? state)
@@ -43,23 +42,19 @@ public class HeartbeatService : IDisposable
             var sessionId = Services.OrderContext.CurrentSessionId;
             if (string.IsNullOrWhiteSpace(sessionId)) return;
 
-            Debug.WriteLine($"HeartbeatService: Sending heartbeat for session {sessionId}");
             
             // Send heartbeat to TablesApi
             var response = await _httpClient.PostAsync($"sessions/{Uri.EscapeDataString(sessionId)}/heartbeat", new StringContent(""));
             
             if (response.IsSuccessStatusCode)
             {
-                Debug.WriteLine($"HeartbeatService: Heartbeat successful for session {sessionId}");
             }
             else
             {
-                Debug.WriteLine($"HeartbeatService: Heartbeat failed for session {sessionId} - Status: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"HeartbeatService: Heartbeat error: {ex.Message}");
         }
     }
 
@@ -69,7 +64,6 @@ public class HeartbeatService : IDisposable
     public void StartHeartbeat()
     {
         _isHeartbeatActive = true;
-        Debug.WriteLine("HeartbeatService: Heartbeat started");
     }
 
     /// <summary>
@@ -78,7 +72,6 @@ public class HeartbeatService : IDisposable
     public void StopHeartbeat()
     {
         _isHeartbeatActive = false;
-        Debug.WriteLine("HeartbeatService: Heartbeat stopped");
     }
 
     /// <summary>
@@ -93,7 +86,6 @@ public class HeartbeatService : IDisposable
             _disposed = true;
             _heartbeatTimer?.Dispose();
             _httpClient?.Dispose();
-            Debug.WriteLine("HeartbeatService: Disposed");
         }
     }
 }

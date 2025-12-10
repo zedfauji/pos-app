@@ -147,7 +147,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading restock data: {ex.Message}");
         }
     }
 
@@ -189,7 +188,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error adding restock request: {ex.Message}");
             throw;
         }
     }
@@ -210,7 +208,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error approving request: {ex.Message}");
             throw;
         }
     }
@@ -229,7 +226,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error marking as ordered: {ex.Message}");
             throw;
         }
     }
@@ -252,7 +248,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error marking as received: {ex.Message}");
             throw;
         }
     }
@@ -271,7 +266,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error cancelling request: {ex.Message}");
             throw;
         }
     }
@@ -328,7 +322,6 @@ public class RestockViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error in auto-restock: {ex.Message}");
             throw;
         }
     }

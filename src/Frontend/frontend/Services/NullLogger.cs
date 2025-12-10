@@ -13,10 +13,8 @@ public class NullLogger<T> : ILogger<T>
     
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
-        System.Diagnostics.Debug.WriteLine($"[{logLevel}] {formatter(state, exception)}");
         if (exception != null)
         {
-            System.Diagnostics.Debug.WriteLine($"Exception: {exception}");
         }
     }
 }

@@ -36,7 +36,6 @@ public sealed partial class TableStatusDialog : ContentDialog
             var tableRepo = new Services.TableRepository();
             var ordersService = App.OrdersApi;
             
-            System.Diagnostics.Debug.WriteLine($"LoadTableStatusAsync: Starting for table '{tableLabel}'");
 
             if (tableRepo == null || ordersService == null)
             {
@@ -47,28 +46,23 @@ public sealed partial class TableStatusDialog : ContentDialog
 
             // Get active session for the table
             var (sessionId, billingId) = await tableRepo.GetActiveSessionForTableAsync(tableLabel);
-            System.Diagnostics.Debug.WriteLine($"Session retrieval: SessionId={sessionId}, BillingId={billingId}");
             
             // If no active session found, try to get recent sessions for this table
             if (!sessionId.HasValue)
             {
-                System.Diagnostics.Debug.WriteLine($"No active session found for '{tableLabel}', trying to get recent sessions");
                 try
                 {
                     var recentSessions = await tableRepo.GetSessionsAsync(limit: 10, table: tableLabel);
-                    System.Diagnostics.Debug.WriteLine($"Found {recentSessions.Count} recent sessions for table '{tableLabel}'");
                     
                     if (recentSessions.Count > 0)
                     {
                         var mostRecentSession = recentSessions.OrderByDescending(s => s.StartTime).First();
                         sessionId = mostRecentSession.SessionId;
                         billingId = mostRecentSession.BillingId;
-                        System.Diagnostics.Debug.WriteLine($"Using most recent session: SessionId={sessionId}, BillingId={billingId}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error getting recent sessions: {ex.Message}");
                 }
             }
             
@@ -108,38 +102,31 @@ public sealed partial class TableStatusDialog : ContentDialog
 
             // Get orders for this session
             var orders = await ordersService.GetOrdersBySessionAsync(sessionId.Value, includeHistory: true);
-            System.Diagnostics.Debug.WriteLine($"Found {orders.Count} orders for session {sessionId}");
             
             // If no orders found and we have a billing ID, try to get orders by billing ID
             if (orders.Count == 0 && billingId.HasValue)
             {
-                System.Diagnostics.Debug.WriteLine($"No orders found for session {sessionId}, trying billing ID {billingId}");
                 try
                 {
                     var billingOrders = await ordersService.GetOrdersByBillingIdAsync(billingId.Value);
                     if (billingOrders.Count > 0)
                     {
                         orders = billingOrders;
-                        System.Diagnostics.Debug.WriteLine($"Found {billingOrders.Count} orders by billing ID");
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"No orders found by billing ID either");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error getting orders by billing ID: {ex.Message}");
                 }
             }
             
             // Debug: Log order details
             foreach (var order in orders)
             {
-                System.Diagnostics.Debug.WriteLine($"Order {order.Id}: Status={order.Status}, Items={order.Items.Count}");
                 foreach (var item in order.Items)
                 {
-                    System.Diagnostics.Debug.WriteLine($"  Item: {item.Quantity}x MenuItemId={item.MenuItemId}, ComboId={item.ComboId}, Total={item.LineTotal:C2}");
                 }
             }
             
@@ -258,7 +245,6 @@ public sealed partial class TableStatusDialog : ContentDialog
             };
             OrdersPanel.Children.Add(errorText);
             
-            System.Diagnostics.Debug.WriteLine($"TableStatusDialog.LoadTableStatusAsync error: {ex}");
         }
     }
 

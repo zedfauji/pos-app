@@ -55,7 +55,6 @@ namespace MagiDesk.Frontend.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error refreshing data: {ex.Message}");
             }
         }
 
@@ -205,7 +204,6 @@ namespace MagiDesk.Frontend.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating analytics: {ex.Message}");
                 // Show error InfoBar instead of mock data
                 if (AnalyticsErrorBar != null)
                 {
@@ -227,7 +225,6 @@ namespace MagiDesk.Frontend.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating recent activity with real data: {ex.Message}");
                 // Do not populate mock data on error
             }
         }
@@ -249,7 +246,6 @@ namespace MagiDesk.Frontend.Views
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating recent activity: {ex.Message}");
             }
         }
 
@@ -550,14 +546,12 @@ namespace MagiDesk.Frontend.Views
     {
         // TODO: Implement delivered quantity tracking in OrderItemLineVm
         // For now, this is a placeholder
-        System.Diagnostics.Debug.WriteLine("Delivered minus clicked - feature not yet implemented");
     }
 
     private void DeliveredPlus_Click(object sender, RoutedEventArgs e)
     {
         // TODO: Implement delivered quantity tracking in OrderItemLineVm
         // For now, this is a placeholder
-        System.Diagnostics.Debug.WriteLine("Delivered plus clicked - feature not yet implemented");
     }
 
     private async void MarkWaiting_Click(object sender, RoutedEventArgs e)
@@ -576,7 +570,6 @@ namespace MagiDesk.Frontend.Views
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error marking order as waiting: {ex.Message}");
         }
     }
 
@@ -668,7 +661,6 @@ namespace MagiDesk.Frontend.Views
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error closing order: {ex.Message}");
         }
     }
 

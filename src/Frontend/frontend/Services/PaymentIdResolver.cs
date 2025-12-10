@@ -24,13 +24,11 @@ public sealed class PaymentIdResolver
     /// <exception cref="InvalidOperationException">When IDs cannot be resolved</exception>
     public async Task<(Guid SessionId, Guid BillingId)> ResolvePaymentIdsAsync(BillResult bill)
     {
-        Debug.WriteLine($"PaymentIdResolver: Starting ID resolution for BillId={bill.BillId}");
         
         // Priority 1: Use IDs directly from bill if they exist and are valid
         if (bill.SessionId.HasValue && bill.SessionId != Guid.Empty && 
             bill.BillingId.HasValue && bill.BillingId != Guid.Empty)
         {
-            Debug.WriteLine($"PaymentIdResolver: Using direct IDs - SessionId={bill.SessionId}, BillingId={bill.BillingId}");
             return (bill.SessionId.Value, bill.BillingId.Value);
         }
         
@@ -39,7 +37,6 @@ public sealed class PaymentIdResolver
         if (completeBill?.SessionId != null && completeBill.SessionId != Guid.Empty &&
             completeBill.BillingId != null && completeBill.BillingId != Guid.Empty)
         {
-            Debug.WriteLine($"PaymentIdResolver: Using complete bill IDs - SessionId={completeBill.SessionId}, BillingId={completeBill.BillingId}");
             return (completeBill.SessionId.Value, completeBill.BillingId.Value);
         }
         
@@ -50,13 +47,11 @@ public sealed class PaymentIdResolver
             if (activeSessionId != null && activeSessionId != Guid.Empty &&
                 activeBillingId != null && activeBillingId != Guid.Empty)
             {
-                Debug.WriteLine($"PaymentIdResolver: Using active session IDs - SessionId={activeSessionId}, BillingId={activeBillingId}");
                 return (activeSessionId.Value, activeBillingId.Value);
             }
         }
         
         // Priority 4: Use BillId as BillingId and generate new SessionId
-        Debug.WriteLine($"PaymentIdResolver: Using fallback - SessionId=New, BillingId={bill.BillId}");
         return (Guid.NewGuid(), bill.BillId);
     }
     
@@ -67,17 +62,14 @@ public sealed class PaymentIdResolver
     {
         if (sessionId == Guid.Empty)
         {
-            Debug.WriteLine("PaymentIdResolver: SessionId is empty");
             return false;
         }
         
         if (billingId == Guid.Empty)
         {
-            Debug.WriteLine("PaymentIdResolver: BillingId is empty");
             return false;
         }
         
-        Debug.WriteLine($"PaymentIdResolver: IDs validated - SessionId={sessionId}, BillingId={billingId}");
         return true;
     }
 }

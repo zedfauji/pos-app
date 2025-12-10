@@ -62,14 +62,12 @@ public sealed class OrderApiService
             if (!res.IsSuccessStatusCode)
             {
                 var errorContent = await res.Content.ReadAsStringAsync(ct);
-                System.Diagnostics.Debug.WriteLine($"CreateOrderAsync failed: HTTP {(int)res.StatusCode} - {errorContent}");
                 return null;
             }
             return await res.Content.ReadFromJsonAsync<OrderDto>(cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"CreateOrderAsync exception: {ex.Message}");
             return null;
         }
     }
@@ -152,7 +150,6 @@ public sealed class OrderApiService
             if (!res.IsSuccessStatusCode)
             {
                 var errorContent = await res.Content.ReadAsStringAsync(ct);
-                System.Diagnostics.Debug.WriteLine($"GetOrderAnalyticsAsync failed: HTTP {(int)res.StatusCode} - {errorContent}");
                 return null;
             }
             
@@ -160,7 +157,6 @@ public sealed class OrderApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"GetOrderAnalyticsAsync exception: {ex.Message}");
             return null;
         }
     }
@@ -175,7 +171,6 @@ public sealed class OrderApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"GetOrderStatusSummaryAsync exception: {ex.Message}");
             return Array.Empty<OrderStatusSummaryDto>();
         }
     }
@@ -191,7 +186,6 @@ public sealed class OrderApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"GetOrderTrendsAsync exception: {ex.Message}");
             return Array.Empty<OrderTrendDto>();
         }
     }
@@ -206,7 +200,6 @@ public sealed class OrderApiService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting orders by billing ID {billingId}: {ex.Message}");
             return Array.Empty<OrderDto>();
         }
     }

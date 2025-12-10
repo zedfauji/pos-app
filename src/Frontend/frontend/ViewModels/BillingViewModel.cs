@@ -258,7 +258,6 @@ namespace MagiDesk.Frontend.ViewModels
             
             foreach (var bill in bills)
             {
-                System.Diagnostics.Debug.WriteLine($"Processing bill: BillingId={bill.BillingId}, TableLabel={bill.TableLabel}, TotalAmount={bill.TotalAmount}");
                 _logger?.LogInformation("Processing bill: BillingId={BillingId}, TableLabel={TableLabel}, TotalAmount={TotalAmount}", 
                     bill.BillingId, bill.TableLabel, bill.TotalAmount);
                     
@@ -266,24 +265,20 @@ namespace MagiDesk.Frontend.ViewModels
                 {
                     try
                     {
-                        System.Diagnostics.Debug.WriteLine($"About to call BillingService.GetOrderItemsByBillingIdAsync for {bill.BillingId}");
                         _logger?.LogInformation("Calling BillingService.GetOrderItemsByBillingIdAsync for {BillingId}", bill.BillingId);
                         var orderItems = await _billingService.GetOrderItemsByBillingIdAsync(bill.BillingId.Value);
                         bill.Items = orderItems ?? new List<ItemLine>();
-                        System.Diagnostics.Debug.WriteLine($"Got {bill.Items.Count} items for billing {bill.BillingId}");
                         _logger?.LogInformation("Successfully added {ItemCount} items to billing {BillingId}. Items: {@Items}", 
                             bill.Items.Count, bill.BillingId, bill.Items.Take(3).Select(i => new { i.itemId, i.name, i.quantity, i.price }));
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ERROR getting items for billing {bill.BillingId}: {ex.Message}");
                         _logger?.LogError(ex, "Failed to get order items for billing {BillingId}: {ErrorMessage}", bill.BillingId, ex.Message);
                         bill.Items = new List<ItemLine>();
                     }
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"Bill has null or empty BillingId: {bill.TableLabel}");
                     _logger?.LogWarning("Bill has null or empty BillingId: {BillInfo}", new { bill.TableLabel, bill.TotalAmount, bill.StartTime });
                     bill.Items = new List<ItemLine>();
                 }

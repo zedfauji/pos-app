@@ -21,7 +21,6 @@ public sealed class InventoryService : IInventoryService
             
             if (!res.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine($"Inventory check failed for SKU {sku} with status {res.StatusCode}");
                 return true; // Assume available if inventory service is down
             }
             
@@ -32,7 +31,6 @@ public sealed class InventoryService : IInventoryService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Inventory check exception for SKU {sku}: {ex.Message}");
             return true; // Assume available if there's an error
         }
     }
@@ -46,7 +44,6 @@ public sealed class InventoryService : IInventoryService
             
             if (!res.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine($"Inventory quantity check failed for SKU {sku} with status {res.StatusCode}");
                 return 100m; // Return high quantity if service is down
             }
             
@@ -62,7 +59,6 @@ public sealed class InventoryService : IInventoryService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Inventory quantity check exception for SKU {sku}: {ex.Message}");
             return 100m; // Return high quantity if there's an error
         }
     }

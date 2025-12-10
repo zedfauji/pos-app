@@ -23,11 +23,9 @@ namespace MagiDesk.Frontend.Services
                 var appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MagiDesk");
                 var settingsPath = Path.Combine(appDataFolder, "receipt-format.json");
                 
-                System.Diagnostics.Debug.WriteLine($"LoadReceiptFormatSettingsAsync: Looking for settings file at: {settingsPath}");
                 
                 if (!File.Exists(settingsPath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"LoadReceiptFormatSettingsAsync: Settings file does not exist, creating default settings");
                     
                     // Create default settings file
                     var defaultSettings = new ReceiptFormatSettings
@@ -54,18 +52,15 @@ namespace MagiDesk.Frontend.Services
                     var defaultJson = JsonSerializer.Serialize(defaultSettings, new JsonSerializerOptions { WriteIndented = true });
                     await File.WriteAllTextAsync(settingsPath, defaultJson);
                     
-                    System.Diagnostics.Debug.WriteLine($"LoadReceiptFormatSettingsAsync: Created default settings file with custom business info");
                     return defaultSettings;
                 }
                 
                 var json = await File.ReadAllTextAsync(settingsPath);
                 var settings = JsonSerializer.Deserialize<ReceiptFormatSettings>(json);
-                System.Diagnostics.Debug.WriteLine($"LoadReceiptFormatSettingsAsync: Loaded settings from file - BusinessName: '{settings?.BusinessName}'");
                 return settings;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"LoadReceiptFormatSettingsAsync: Error loading settings: {ex.Message}");
                 return null;
             }
         }

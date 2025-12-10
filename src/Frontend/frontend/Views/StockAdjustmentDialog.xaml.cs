@@ -35,7 +35,6 @@ public sealed partial class StockAdjustmentDialog : ContentDialog
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading item: {ex.Message}");
             ItemInfoText.Text = "Item not found";
         }
     }

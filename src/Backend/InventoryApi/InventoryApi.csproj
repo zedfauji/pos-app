@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\..\Shared\shared\MagiDesk.Shared.csproj" />
+    <ProjectReference Include="../../Shared/shared/MagiDesk.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

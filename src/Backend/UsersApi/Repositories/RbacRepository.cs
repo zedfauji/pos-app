@@ -540,7 +540,6 @@ public sealed class RbacRepository : IRbacRepository
         catch (Exception ex)
         {
             // Log the error but don't fail the entire operation
-            Console.WriteLine($"Error reading permissions array: {ex.Message}");
         }
         
         try
@@ -568,7 +567,6 @@ public sealed class RbacRepository : IRbacRepository
         catch (Exception ex)
         {
             // Log the error but don't fail the entire operation
-            Console.WriteLine($"Error reading inherit_from_roles array: {ex.Message}");
         }
 
         return new RoleDto

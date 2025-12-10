@@ -107,18 +107,15 @@ namespace MagiDesk.Frontend.ViewModels
     public async Task InitializePrinting(Microsoft.UI.Xaml.Controls.Panel printingPanel, Microsoft.UI.Dispatching.DispatcherQueue dispatcherQueue)
     {
         _logger.LogInformation("InitializePrinting: Starting initialization");
-        System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: Starting initialization");
         
         try
         {
             await _receiptService.InitializeAsync(printingPanel, dispatcherQueue);
             _logger.LogInformation("InitializePrinting: ReceiptService initialized successfully");
-            System.Diagnostics.Debug.WriteLine("PaymentViewModel.InitializePrinting: ReceiptService initialized successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "InitializePrinting: Failed to initialize ReceiptService");
-            System.Diagnostics.Debug.WriteLine($"PaymentViewModel.InitializePrinting: Exception - {ex.Message}");
             throw;
         }
     }
@@ -337,7 +334,6 @@ namespace MagiDesk.Frontend.ViewModels
                 OnPropertyChanged(nameof(HasError));
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: Starting for Bill ID: {BillId}", BillingId);
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Starting for Bill ID: {BillingId}");
                 
                 // Check if ReceiptService is available
                 if (_receiptService == null)
@@ -346,25 +342,21 @@ namespace MagiDesk.Frontend.ViewModels
                     OnPropertyChanged(nameof(Error));
                     OnPropertyChanged(nameof(HasError));
                     _logger.LogError("ReceiptService is null");
-                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: ReceiptService is null");
                     return;
                 }
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService is available");
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: ReceiptService is available");
                 
                 Error = "Creating receipt data...";
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: Calling CreateReceiptDataAsync");
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling CreateReceiptDataAsync");
                 
                 var receiptData = await CreateReceiptDataAsync(true); // Pro forma
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: CreateReceiptDataAsync completed, receiptData is {ReceiptDataStatus}", 
                     receiptData == null ? "NULL" : "NOT NULL");
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: CreateReceiptDataAsync completed, receiptData is {(receiptData == null ? "NULL" : "NOT NULL")}");
                 
                 if (receiptData == null)
                 {
@@ -372,19 +364,16 @@ namespace MagiDesk.Frontend.ViewModels
                     OnPropertyChanged(nameof(Error));
                     OnPropertyChanged(nameof(HasError));
                     _logger.LogError("CreateReceiptDataAsync returned null");
-                    System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: CreateReceiptDataAsync returned null");
                     return;
                 }
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: Receipt data created successfully");
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Receipt data created successfully");
                 
                 Error = "Generating PDF receipt...";
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: Calling ReceiptService.GeneratePreBillAsync");
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Calling ReceiptService.GeneratePreBillAsync");
                 
                 // Convert to ReceiptService format
                 var receiptItems = receiptData.Items.Select(item => new ReceiptService.ReceiptItem
@@ -402,7 +391,6 @@ namespace MagiDesk.Frontend.ViewModels
                 );
                 
                 _logger.LogInformation("PrintProFormaReceiptAsync: ReceiptService.GeneratePreBillAsync completed with file: {FilePath}", filePath);
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: ReceiptService.GeneratePreBillAsync completed with file: {filePath}");
                 
                 // NEW: Direct print for WinUI 3 Desktop Apps (no dialog conflict)
                 Error = "Printing receipt...";
@@ -415,7 +403,6 @@ namespace MagiDesk.Frontend.ViewModels
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 _logger.LogInformation("Pro forma receipt printed successfully: {FilePath}", filePath);
-                System.Diagnostics.Debug.WriteLine("PrintProFormaReceiptAsync: Pro forma receipt printed successfully");
             }
             catch (Exception ex)
             {
@@ -423,8 +410,6 @@ namespace MagiDesk.Frontend.ViewModels
                 OnPropertyChanged(nameof(Error));
                 OnPropertyChanged(nameof(HasError));
                 _logger.LogError(ex, "Failed to print pro forma receipt");
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Exception - {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"PrintProFormaReceiptAsync: Stack trace - {ex.StackTrace}");
                 throw; // Re-throw to be caught by caller
             }
         }

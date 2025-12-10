@@ -47,7 +47,6 @@ public sealed partial class InventoryCrudPage : Page, IToolbarConsumer
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading filters: {ex.Message}");
         }
     }
 

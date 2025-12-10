@@ -185,7 +185,6 @@ namespace MagiDesk.Frontend.Views
             catch (Exception ex)
             {
                 // Handle error loading data
-                System.Diagnostics.Debug.WriteLine($"Error loading data: {ex.Message}");
             }
         }
 
