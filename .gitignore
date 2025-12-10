@@ -50,3 +50,17 @@ infra/terraform/.terraform.lock.hcl
 
 # Migration artifacts
 scripts/migration/migration-log-*.txt
+
+# Database dumps (keep instructions, ignore dumps)
+dumps/*.sql
+!dumps/DUMP_INSTRUCTIONS.txt
+!dumps/README.md
+
+# CI/CD artifacts
+.github/workflows/*.log
+*.trx
+*.coverage
+coverage/
+
+# Docker
+*.dockerignore

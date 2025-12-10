@@ -16,7 +16,7 @@
     <Platform Condition="'$(Platform)'==''">AnyCPU</Platform>
     
     <!-- Code Analysis -->
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsAsErrors />
     <WarningsNotAsErrors />
     <NoWarn>$(NoWarn);1591;1701;1702</NoWarn> <!-- XML doc, async, abstract -->
