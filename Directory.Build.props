@@ -37,14 +37,14 @@
     <Product>MagiDesk POS</Product>
   </PropertyGroup>
   
-  <!-- Backend API Projects -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' -match '.*Api$'">
+  <!-- Backend API Projects - Use explicit project names -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'TablesApi' Or '$(MSBuildProjectName)' == 'OrdersApi' Or '$(MSBuildProjectName)' == 'OrderApi' Or '$(MSBuildProjectName)' == 'PaymentApi' Or '$(MSBuildProjectName)' == 'MenuApi' Or '$(MSBuildProjectName)' == 'CustomerApi' Or '$(MSBuildProjectName)' == 'DiscountApi' Or '$(MSBuildProjectName)' == 'InventoryApi' Or '$(MSBuildProjectName)' == 'InventoryProxy' Or '$(MSBuildProjectName)' == 'SettingsApi' Or '$(MSBuildProjectName)' == 'UsersApi'">
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   
   <!-- Frontend Projects -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' -match '.*Frontend$'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MagiDesk.Frontend'">
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
@@ -53,7 +53,7 @@
   </PropertyGroup>
   
   <!-- Test Projects -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' -match '.*Tests$'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'MagiDesk.Tests'">
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
