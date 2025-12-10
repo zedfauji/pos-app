@@ -10,6 +10,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\shared\MagiDesk.Shared.csproj" />
+    <ProjectReference Include="../../Shared/shared/MagiDesk.Shared.csproj" />
   </ItemGroup>
 </Project>
