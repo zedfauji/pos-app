@@ -1,0 +1,205 @@
+# Render Blueprint for MagiDesk POS Migration
+# GCP Cloud Run → Render
+# Services: 9 ASP.NET Core APIs + PostgreSQL Database
+
+services:
+  # TablesApi Service
+  - type: web
+    name: TablesApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/TablesApi/TablesApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/TablesApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # OrderApi Service
+  - type: web
+    name: OrderApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/OrderApi/OrderApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/OrderApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # PaymentApi Service
+  - type: web
+    name: PaymentApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/PaymentApi/PaymentApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/PaymentApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # MenuApi Service
+  - type: web
+    name: MenuApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/MenuApi/MenuApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/MenuApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # CustomerApi Service
+  - type: web
+    name: CustomerApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/CustomerApi/CustomerApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/CustomerApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # DiscountApi Service
+  - type: web
+    name: DiscountApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/DiscountApi/DiscountApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/DiscountApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # InventoryApi Service
+  - type: web
+    name: InventoryApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/InventoryApi/InventoryApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/InventoryApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # SettingsApi Service
+  - type: web
+    name: SettingsApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/SettingsApi/SettingsApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/SettingsApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # UsersApi Service
+  - type: web
+    name: UsersApi
+    env: dotnet
+    plan: starter
+    region: oregon
+    buildCommand: dotnet publish src/Backend/UsersApi/UsersApi.csproj -c Release -o ./publish
+    startCommand: dotnet ./publish/UsersApi.dll
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:10000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Postgres
+        sync: false
+        fromDatabase:
+          name: magidesk-pos
+          property: connectionString
+    healthCheckPath: /health
+    autoDeploy: true
+
+databases:
+  # PostgreSQL Database
+  - name: magidesk-pos
+    databaseName: postgres
+    plan: basic-1gb
+    region: oregon
+    postgresMajorVersion: 17
+    ipAllowList: []  # Allow all IPs (configure as needed)
+    pitrEnabled: true  # Point-in-time recovery enabled
+    # Initial data import should be done via migration script
+

@@ -1,0 +1,50 @@
+{
+  "Services": {
+    "TablesApi": {
+      "Api__BaseUrl": "https://tablesapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "OrderApi": {
+      "Api__BaseUrl": "https://orderapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "PaymentApi": {
+      "Api__BaseUrl": "https://paymentapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "MenuApi": {
+      "Api__BaseUrl": "https://menuapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "CustomerApi": {
+      "Api__BaseUrl": "https://customerapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "DiscountApi": {
+      "Api__BaseUrl": "https://discountapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "InventoryApi": {
+      "Api__BaseUrl": "https://inventoryapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "SettingsApi": {
+      "Api__BaseUrl": "https://settingsapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    },
+    "UsersApi": {
+      "Api__BaseUrl": "https://usersapi.onrender.com",
+      "Logging__LogLevel__Default": "Information"
+    }
+  },
+  "Database": {
+    "ConnectionStringTemplate": "Host={host};Port={port};Username={user};Password={password};Database={database};SSL Mode=Require",
+    "Note": "Connection string will be automatically set from Render database service reference"
+  },
+  "Common": {
+    "ASPNETCORE_URLS": "http://0.0.0.0:10000",
+    "ASPNETCORE_ENVIRONMENT": "Production",
+    "ASPNETCORE_HTTP_PORTS": "10000"
+  }
+}
+
