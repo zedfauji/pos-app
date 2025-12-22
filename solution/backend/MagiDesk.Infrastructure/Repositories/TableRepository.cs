@@ -26,22 +26,34 @@ namespace MagiDesk.Infrastructure.Repositories
 
         public async Task<IEnumerable<TableStatusDto>> GetAllAsync()
         {
-            // Fixed: Query 'tables' and join 'TableSessions' for dynamic status
-            // table_type 0 = table, 1 = billiard (assumed)
             const string sql = @"
                 SELECT 
-                    t.table_name as label, 
-                    CASE WHEN t.table_type = 1 THEN 'billiard' ELSE 'table' END as type, 
-                    CASE WHEN ses.session_id IS NOT NULL THEN true ELSE false END as occupied, 
+                    t.table_name as Label, 
+                    COALESCE(tt.name, 'Bar') as TypeName,
+                    COALESCE(tt.id, 0) as TypeId,
+                    CASE WHEN t.table_type = 1 THEN 'billiard' ELSE 'table' END as Type,
+                    CASE WHEN ses.session_id IS NOT NULL THEN true ELSE false END as Occupied, 
                     ses.server_name as Server, 
                     ses.start_time as StartTime, 
-                    ses.session_id as CurrentSessionId
+                    ses.session_id as CurrentSessionId,
+                    -- Split for Config
+                    COALESCE(tt.has_timer, false) as HasTimer,
+                    COALESCE(tt.hourly_rate, 0) as HourlyRate,
+                    COALESCE(tt.allow_orders, true) as AllowOrders,
+                    COALESCE(tt.requires_server, true) as RequiresServer
                 FROM public.tables t
+                LEFT JOIN public.table_types tt ON t.type_id = tt.id
                 LEFT JOIN public.""TableSessions"" ses ON t.table_name = ses.table_label AND ses.status = 'active'
                 ORDER BY t.table_name";
             
             using var conn = CreateConnection();
-            return await conn.QueryAsync<TableStatusDto>(sql);
+            return await conn.QueryAsync<TableStatusDto, TableConfigDto, TableStatusDto>(
+                sql, 
+                (status, config) => {
+                    status.Config = config;
+                    return status;
+                },
+                splitOn: "HasTimer");
         }
 
         public async Task<IEnumerable<SessionOverview>> GetActiveSessionsAsync()
@@ -152,7 +164,7 @@ namespace MagiDesk.Infrastructure.Repositories
             return count > 0;
         }
 
-        public async Task MoveSessionAsync(Guid sessionId, string fromLabel, string toLabel)
+        public async Task<MoveSessionResult> MoveSessionAsync(Guid sessionId, string fromLabel, string toLabel, bool force)
         {
              using var conn = CreateConnection();
              await conn.OpenAsync();
@@ -160,18 +172,141 @@ namespace MagiDesk.Infrastructure.Repositories
              
              try 
              {
-                 // Update session
+                 // 1. Get Session & Lock
+                 var session = await conn.QuerySingleOrDefaultAsync<dynamic>(
+                     "SELECT * FROM public.\"TableSessions\" WHERE session_id = @Sid FOR UPDATE", 
+                     new { Sid = sessionId }, tx);
+
+                 if (session == null) throw new ArgumentException("Session not found");
+                 if (session.status != "active") throw new InvalidOperationException("Session is not active");
+
+                 // 2. Get Configs (Source & Target)
+                 const string configSql = @"
+                    SELECT t.table_name, tt.has_timer, tt.hourly_rate, tt.name as type_name 
+                    FROM public.tables t 
+                    JOIN public.table_types tt ON t.type_id = tt.id 
+                    WHERE t.table_name = @Label";
+
+                 var fromConfig = await conn.QuerySingleAsync<dynamic>(configSql, new { Label = fromLabel }, tx);
+                 var toConfig = await conn.QuerySingleAsync<dynamic>(configSql, new { Label = toLabel }, tx);
+
+                 // 3. Check Target Occupancy
+                 var occupied = await conn.ExecuteScalarAsync<int>(
+                     "SELECT COUNT(1) FROM public.\"TableSessions\" WHERE table_label = @Label AND status = 'active'", 
+                     new { Label = toLabel }, tx);
+                 
+                 if (occupied > 0) throw new InvalidOperationException($"Target table {toLabel} is occupied.");
+
+                 // 4. Calculate Logic
+                 bool fromTimer = fromConfig.has_timer;
+                 bool toTimer = toConfig.has_timer;
+                 decimal fromRate = fromConfig.hourly_rate;
+                 decimal toRate = toConfig.hourly_rate;
+                 
+                 DateTime startTime = session.start_time;
+                 DateTime now = DateTime.UtcNow;
+                 decimal costToAdd = 0;
+                 string action = "Moved";
+                 bool confirmNeeded = false;
+                 string confirmMsg = "";
+
+                 // Scenario A: Timer Stopped or Rate Changed -> Finalize current segment
+                 if (fromTimer)
+                 {
+                     if (!toTimer)
+                     {
+                         confirmNeeded = true;
+                         confirmMsg = $"Moving to {toConfig.type_name} will STOP the timer. Current time cost will be added to bill.";
+                         action = "TimerStopped";
+                     }
+                     else if (fromRate != toRate)
+                     {
+                         confirmNeeded = true;
+                         confirmMsg = $"Rate change detected (${fromRate}/hr -> ${toRate}/hr). Current segment will be billed.";
+                         action = "RateChanged";
+                     }
+                 }
+
+                 // Check Start
+                 if (!fromTimer && toTimer)
+                 {
+                     action = "TimerStarted";
+                 }
+
+                 // 5. Handle Confirmation
+                 if (confirmNeeded && !force)
+                 {
+                     return new MoveSessionResult 
+                     { 
+                         Success = false, 
+                         ConfirmationNeeded = true, 
+                         Message = confirmMsg,
+                         FromTable = fromLabel,
+                         ToTable = toLabel
+                     };
+                 }
+
+                 // 6. Execute Logic
+                 if (fromTimer && (action == "TimerStopped" || action == "RateChanged"))
+                 {
+                     // Calculate Cost
+                     var duration = now - startTime;
+                     if (duration.TotalMinutes < 0) duration = TimeSpan.Zero;
+                     
+                     decimal hours = (decimal)duration.TotalHours;
+                     costToAdd = Math.Round(hours * fromRate, 2);
+
+                     if (costToAdd > 0)
+                     {
+                         // Insert Order Item
+                         // Find active order or create new one
+                         var orderId = await conn.ExecuteScalarAsync<Guid?>("SELECT order_id FROM ord.orders WHERE session_id = @Sid AND is_deleted = false LIMIT 1", new { Sid = sessionId }, tx);
+                         
+                         if (orderId == null)
+                         {
+                             orderId = Guid.NewGuid();
+                             await conn.ExecuteAsync("INSERT INTO ord.orders(order_id, session_id, table_id, server_id, created_at) VALUES(@Oid, @Sid, @Tid, @SrvId, @Now)",
+                                 new { Oid = orderId, Sid = sessionId, Tid = sessionId, SrvId = "SYSTEM", Now = now }, tx);
+                         }
+
+                         var menuItemId = Guid.Empty; // System Item
+                         string itemName = $"Table Time ({fromLabel}): {duration.Hours}h {duration.Minutes}m";
+
+                         await conn.ExecuteAsync(@"
+                             INSERT INTO ord.order_items(order_item_id, order_id, menu_item_id, quantity, base_price, price_delta, is_deleted, created_at, snapshot_name)
+                             VALUES(@ItemId, @Oid, @MenuId, 1, @Price, 0, false, @Now, @Name)",
+                             new { ItemId = Guid.NewGuid(), Oid = orderId, MenuId = menuItemId, Price = costToAdd, Now = now, Name = itemName }, tx);
+                     }
+                     
+                     // Reset Start Time if Timer Stopped or Rate Changed (New segment starts now)
+                     // If Timer Stopped, start_time is irrelevant? Or set to NULL? 
+                     // DB Schema `start_time` is NOT NULL? Let's check. 
+                     // Assuming NOT NULL. We set it to NOW so tracking continues but from 0 if restarted.
+                     await conn.ExecuteAsync("UPDATE public.\"TableSessions\" SET start_time = @Now WHERE session_id = @Sid", new { Now = now, Sid = sessionId }, tx);
+                 }
+                 else if (!fromTimer && toTimer)
+                 {
+                     // Start Timer
+                     await conn.ExecuteAsync("UPDATE public.\"TableSessions\" SET start_time = @Now WHERE session_id = @Sid", new { Now = now, Sid = sessionId }, tx);
+                 }
+
+                 // 7. Move Table
                  await conn.ExecuteAsync("UPDATE public.\"TableSessions\" SET table_label = @To WHERE session_id = @Sid", new { To = toLabel, Sid = sessionId }, tx);
+                 
                  // Audit
                  await conn.ExecuteAsync("INSERT INTO public.table_session_moves(session_id, from_label, to_label, moved_at) VALUES(@Sid, @From, @To, now())", new { Sid = sessionId, From = fromLabel, To = toLabel }, tx);
-                 
-                 // Fetch session details for restoring status
-                 var session = await conn.QuerySingleAsync("SELECT server_name, start_time FROM public.\"TableSessions\" WHERE session_id = @Sid", new { Sid = sessionId }, tx);
-
-                 // Free old (No-op)
-                 // Occupy new (No-op, derived from session table_label)
                                            
                  await tx.CommitAsync();
+
+                 return new MoveSessionResult 
+                 { 
+                     Success = true, 
+                     Message = $"Moved to {toLabel}. {action}." + (costToAdd > 0 ? $" Added ${costToAdd}." : ""), 
+                     CostFinalized = costToAdd,
+                     ActionTaken = action,
+                     FromTable = fromLabel,
+                     ToTable = toLabel 
+                 };
              }
              catch
              {
@@ -343,6 +478,22 @@ namespace MagiDesk.Infrastructure.Repositories
                 await tx.RollbackAsync();
                 throw;
             }
+        }
+        public async Task<IEnumerable<TableTypeDto>> GetTableTypesAsync()
+        {
+            const string sql = @"
+                SELECT 
+                    id, 
+                    name, 
+                    has_timer as HasTimer, 
+                    hourly_rate as HourlyRate, 
+                    allow_orders as AllowOrders, 
+                    requires_server as RequiresServer
+                FROM public.table_types
+                ORDER BY id";
+            
+            using var conn = CreateConnection();
+            return await conn.QueryAsync<TableTypeDto>(sql);
         }
     }
 }

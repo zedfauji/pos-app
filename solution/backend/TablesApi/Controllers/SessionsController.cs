@@ -57,15 +57,23 @@ namespace TablesApi.Controllers
         }
 
         [HttpPost("{label}/move")]
-        public async Task<IActionResult> MoveSession(string label, [FromQuery] string to)
+        public async Task<IActionResult> MoveSession(string label, [FromQuery] string to, [FromQuery] bool force = false)
         {
              var session = await _repository.GetActiveSessionByTableAsync(label);
              if (session == null) return NotFound(new { message = "No active session for table" });
 
              try
              {
-                 await _repository.MoveSessionAsync(session.SessionId, label, to);
-                 return Ok(new { success = true, fromTable = label, toTable = to });
+                 var result = await _repository.MoveSessionAsync(session.SessionId, label, to, force);
+                 
+                 if (!result.Success && result.ConfirmationNeeded)
+                 {
+                     // Return 200 OK with the result object so client can see the confirmation flag
+                     // Alternatively could use 409 Conflict, but 200 simplifies generic client logic
+                     return Ok(result); 
+                 }
+
+                 return Ok(result);
              }
              catch (Exception ex)
              {

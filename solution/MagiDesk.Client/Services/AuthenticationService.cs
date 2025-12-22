@@ -9,6 +9,7 @@ namespace MagiDesk.Client.Services
     public interface IAuthenticationService
     {
         bool IsLoggedIn { get; }
+        string? CurrentUserId { get; }
         string? CurrentUsername { get; }
         string? CurrentRole { get; }
         bool IsAdmin { get; }
@@ -24,6 +25,9 @@ namespace MagiDesk.Client.Services
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsAdmin))]
         private bool _isLoggedIn;
+
+        [ObservableProperty]
+        private string? _currentUserId;
 
         [ObservableProperty]
         private string? _currentUsername;
@@ -48,6 +52,7 @@ namespace MagiDesk.Client.Services
 
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
+                    CurrentUserId = response.Content.UserId;
                     CurrentUsername = response.Content.Username;
                     CurrentRole = response.Content.Role;
                     IsLoggedIn = true;
@@ -63,6 +68,7 @@ namespace MagiDesk.Client.Services
 
         public void Logout()
         {
+            CurrentUserId = null;
             CurrentUsername = null;
             CurrentRole = null;
             IsLoggedIn = false;

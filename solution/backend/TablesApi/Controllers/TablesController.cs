@@ -16,6 +16,13 @@ namespace TablesApi.Controllers
             _repository = repository;
         }
 
+        [HttpGet("types")]
+        public async Task<ActionResult<IEnumerable<MagiDesk.Shared.DTOs.Tables.TableTypeDto>>> GetTableTypes()
+        {
+            var types = await _repository.GetTableTypesAsync();
+            return Ok(types);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetTables()
         {

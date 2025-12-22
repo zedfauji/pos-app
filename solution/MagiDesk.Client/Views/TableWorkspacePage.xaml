@@ -8,129 +8,214 @@
     xmlns:dto="using:MagiDesk.Shared.DTOs"
     xmlns:tables="using:MagiDesk.Shared.DTOs.Tables"
     xmlns:menu="using:MagiDesk.Shared.DTOs.Menu"
+    xmlns:converters="using:MagiDesk.Client.Converters"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <converters:CurrencyConverter x:Key="CurrencyConverter"/>
+        <converters:BoolNegationConverter x:Key="BoolNegation"/>
+    </Page.Resources>
+
     <Grid x:Name="RootGrid" Padding="0">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*"/> <!-- Menu & Ticket -->
-            <ColumnDefinition Width="2*"/> <!-- Session Summary -->
-        </Grid.ColumnDefinitions>
+        <!-- Main Layout (Active Session) -->
+        <Grid Visibility="{x:Bind ViewModel.IsSessionActive, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/> <!-- Menu & Ticket -->
+                <ColumnDefinition Width="2*"/> <!-- Session Summary -->
+            </Grid.ColumnDefinitions>
 
-        <!-- Left Column: Menu and Ticket Building -->
-        <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Padding="16" Orientation="Horizontal" Spacing="12">
-                 <Button Command="{Binding GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
-                    <SymbolIcon Symbol="Back"/>
-                 </Button>
-                 <TextBlock Text="{Binding TableLabel}" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
-                 <TextBlock Text="{Binding Duration}" VerticalAlignment="Center" Foreground="Gray" Margin="12,0,0,0"/>
-            </StackPanel>
-
-            <!-- Menu Grid -->
-            <GridView Grid.Row="1" ItemsSource="{Binding MenuItems}" Padding="16" SelectionMode="None">
-                <GridView.ItemTemplate>
-                    <DataTemplate x:DataType="menu:MenuItemDto">
-                        <Button Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" 
-                                CommandParameter="{Binding}"
-                                Width="140" Height="100" Padding="4" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="{x:Bind Name}" TextWrapping="Wrap" Grid.Row="0"/>
-                                <TextBlock Text="{x:Bind SellingPrice, Converter={StaticResource CurrencyConverter}}" 
-                                           FontWeight="SemiBold" Grid.Row="1" HorizontalAlignment="Right"/>
-                            </Grid>
-                        </Button>
-                    </DataTemplate>
-                </GridView.ItemTemplate>
-            </GridView>
-
-            <!-- Current Ticket (Draft) -->
-            <Grid Grid.Row="2" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Height="200">
+            <!-- Left Column: Menu and Ticket Building -->
+            <Grid Grid.Column="0" Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Text="Current Ticket" FontWeight="SemiBold" Margin="12,8"/>
+                <!-- Header / Status Bar -->
+                <Grid Grid.Row="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,0,0,1" Padding="16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Back & Title -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                         <Button Command="{Binding GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
+                            <SymbolIcon Symbol="Back"/>
+                         </Button>
+                         <TextBlock Text="{Binding TableLabel}" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Session Details -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="24" Margin="32,0,0,0" VerticalAlignment="Center">
+                        <StackPanel>
+                             <TextBlock Text="Server" FontSize="11" Foreground="Gray"/>
+                             <TextBlock Text="{Binding ServerName}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel>
+                             <TextBlock Text="Started" FontSize="11" Foreground="Gray"/>
+                             <TextBlock Text="{Binding SessionStartTime}" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel>
+                             <TextBlock Text="Duration" FontSize="11" Foreground="Gray"/>
+                             <TextBlock Text="{Binding Duration}" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <!-- Current Time -->
+                    <TextBlock Grid.Column="2" Text="{Binding CurrentTime}" VerticalAlignment="Center" FontSize="14" Foreground="Gray"/>
+                </Grid>
                 
-                <ListView Grid.Row="1" ItemsSource="{Binding TicketItems}">
+                <!-- Menu Grid -->
+                <GridView Grid.Row="1" ItemsSource="{Binding MenuItems}" Padding="16" SelectionMode="None">
+                    <GridView.ItemTemplate>
+                        <DataTemplate x:DataType="menu:MenuItemDto">
+                            <Button Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" 
+                                    CommandParameter="{Binding}"
+                                    Width="140" Height="100" Padding="4" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="{x:Bind Name}" TextWrapping="Wrap" Grid.Row="0"/>
+                                    <TextBlock Text="{x:Bind SellingPrice, Converter={StaticResource CurrencyConverter}}" 
+                                               FontWeight="SemiBold" Grid.Row="1" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+
+                <!-- Current Ticket (Draft) -->
+                <Grid Grid.Row="2" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Height="200">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Text="Current Ticket" FontWeight="SemiBold" Margin="12,8"/>
+                    
+                    <ListView Grid.Row="1" ItemsSource="{Binding TicketItems}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:OrderItemDto">
+                                 <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0" Spacing="8">
+                                        <Button Content="-" Command="{Binding ElementName=RootGrid, Path=DataContext.RemoveFromTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
+                                        <TextBlock Text="{x:Bind Quantity}" VerticalAlignment="Center"/>
+                                        <Button Content="+" Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{x:Bind ItemId}" Margin="12,0" VerticalAlignment="Center"/> 
+                                    <TextBlock Grid.Column="2" Text="{x:Bind Price, Converter={StaticResource CurrencyConverter}}" VerticalAlignment="Center"/>
+                                 </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    
+                    <Button Grid.Row="2" Content="Send Order to Kitchen" 
+                            Command="{Binding SubmitOrderCommand}" 
+                            Style="{StaticResource AccentButtonStyle}" 
+                            HorizontalAlignment="Stretch" Margin="12"/>
+                </Grid>
+            </Grid>
+
+            <!-- Right Column: Session Summary & Operations -->
+            <Grid Grid.Column="1" Padding="24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Text="Ordered Items" Style="{StaticResource SubtitleTextBlockStyle}" Grid.Row="0" Margin="0,0,0,16"/>
+                
+                <!-- Confirmed Orders List -->
+                <ListView Grid.Row="1" ItemsSource="{Binding OrderedItems}">
                     <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="dto:OrderItemDto">
-                             <Grid>
+                        <DataTemplate x:DataType="tables:ItemLine">
+                            <Grid Margin="0,4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" Grid.Column="0" Spacing="8">
-                                    <Button Content="-" Command="{Binding ElementName=RootGrid, Path=DataContext.RemoveFromTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
-                                    <TextBlock Text="{x:Bind Quantity}" VerticalAlignment="Center"/>
-                                    <Button Content="+" Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Text="{x:Bind ItemId}" Margin="12,0" VerticalAlignment="Center"/> <!-- Ideally verify name lookup -->
-                                <TextBlock Grid.Column="2" Text="{x:Bind Price, Converter={StaticResource CurrencyConverter}}" VerticalAlignment="Center"/>
-                             </Grid>
+                                <TextBlock Text="{x:Bind quantity}" FontWeight="Bold" Width="30"/>
+                                <TextBlock Text="{x:Bind name}" Grid.Column="1"/>
+                                <TextBlock Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" Grid.Column="2" Foreground="Gray"/>
+                            </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
                 
-                <Button Grid.Row="2" Content="Send Order to Kitchen" 
-                        Command="{Binding SubmitOrderCommand}" 
-                        Style="{StaticResource AccentButtonStyle}" 
-                        HorizontalAlignment="Stretch" Margin="12"/>
+                <!-- Operational Actions -->
+                <StackPanel Grid.Row="2" Spacing="12">
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="Orange" TextWrapping="Wrap"/>
+                    
+                    <Button Command="{Binding PrintBillCommand}" HorizontalAlignment="Stretch" Content="Print Pre-Settlement Bill"/>
+                    
+                    <Button Command="{Binding MoveTableCommand}" HorizontalAlignment="Stretch" Content="Move Session"/>
+                    
+                    <Button Command="{Binding GoToPaymentsCommand}" HorizontalAlignment="Stretch" Content="Go to Payments" 
+                            Style="{StaticResource AccentButtonStyle}" Background="Green"/>
+                            
+                    <Button Command="{Binding EndSessionCommand}" HorizontalAlignment="Stretch" Content="End Session (Operational Close)"
+                            Foreground="Red" BorderBrush="Red" BorderThickness="1" Background="Transparent" Margin="0,20,0,0"/> 
+                </StackPanel>
             </Grid>
         </Grid>
 
-        <!-- Right Column: Session Summary & Operations -->
-        <Grid Grid.Column="1" Padding="24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <TextBlock Text="Ordered Items" Style="{StaticResource SubtitleTextBlockStyle}" Grid.Row="0" Margin="0,0,0,16"/>
-            
-            <!-- Confirmed Orders List -->
-            <ListView Grid.Row="1" ItemsSource="{Binding OrderedItems}">
-                <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="tables:ItemLine">
-                        <Grid Margin="0,4">
+        <!-- Pre-Session Overlay -->
+        <Grid Visibility="{x:Bind ViewModel.IsPreSession, Mode=OneWay, Converter={StaticResource BoolToVis}}" 
+              Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Width="400">
+                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                    <Button Command="{Binding GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
+                        <SymbolIcon Symbol="Back"/>
+                     </Button>
+                    <TextBlock Text="Start New Session" Style="{StaticResource TitleTextBlockStyle}"/>
+                </StackPanel>
+                
+                <TextBlock Text="{Binding TableLabel}" HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="Gray"/>
+                
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Configuration" FontWeight="SemiBold"/>
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Bind quantity}" FontWeight="Bold" Width="30"/>
-                            <TextBlock Text="{x:Bind name}" Grid.Column="1"/>
-                            <TextBlock Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" Grid.Column="2" Foreground="Gray"/>
+                            <TextBlock Text="Timer Rate"/>
+                            <TextBlock Grid.Column="1" Text="{Binding TableConfig.HourlyRate, Converter={StaticResource CurrencyConverter}}" FontWeight="Bold"/>
                         </Grid>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-            
-            <!-- Operational Actions -->
-            <StackPanel Grid.Row="2" Spacing="12">
-                <TextBlock Text="{Binding StatusMessage}" Foreground="Orange" TextWrapping="Wrap"/>
-                
-                <Button Command="{Binding PrintBillCommand}" HorizontalAlignment="Stretch" Content="Print Pre-Settlement Bill"/>
-                
-                <Button Command="{Binding GoToPaymentsCommand}" HorizontalAlignment="Stretch" Content="Go to Payments" 
-                        Style="{StaticResource AccentButtonStyle}" Background="Green"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Allow Orders"/>
+                            <TextBlock Grid.Column="1" Text="{Binding TableConfig.AllowOrders}" FontWeight="Bold"/>
+                        </Grid>
                         
-                <Button Command="{Binding EndSessionCommand}" HorizontalAlignment="Stretch" Content="End Session (Operational Close)"
-                        Foreground="Red" BorderBrush="Red" BorderThickness="1" Background="Transparent" Margin="0,20,0,0"/> 
+                        <MenuFlyoutSeparator/>
+                        
+                        <TextBox Header="Server Name (Required)" Text="{Binding ServerName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Enter server name..."/>
+                    </StackPanel>
+                </Border>
+                
+                <TextBlock Text="{Binding StatusMessage}" Foreground="Red" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+
+                <Button Content="START SESSION" Command="{Binding StartSessionCommand}" 
+                        Style="{StaticResource AccentButtonStyle}" Height="40" HorizontalAlignment="Stretch"/>
             </StackPanel>
         </Grid>
     </Grid>

@@ -106,41 +106,12 @@ public partial class TableViewModel : ObservableObject, IDisposable
     public async Task SelectTableAsync(TableStatusDto table)
     {
         if (table == null) return;
-
-        if (table.Occupied)
-        {
-            // Navigate to Order
-            _shellViewModel.NavigateToOrder(table.Label);
-            return;
-        }
-
-        // Start Session Logic
-        var pin = await _dialogService.RequestPinAsync();
-        if (string.IsNullOrEmpty(pin)) return;
-
-        try
-        {
-            // Note: StartSessionRequest in Shared expects (ServerId, ServerName).
-            // We use PIN as ServerId for now.
-            var request = new StartSessionRequest(pin, "Waiter"); 
-            var result = await _tableApi.StartSessionAsync(table.Label, request);
-            
-            if (!result.IsSuccessStatusCode)
-            {
-                await _dialogService.ShowMessageAsync("Error", "Failed to start session.");
-            }
-            else
-            {
-                await LoadTablesAsync();
-                // Optionally navigate immediately? User flows usually stay on map or go to order.
-                // Let's go to Order immediately for convenience.
-                _shellViewModel.NavigateToOrder(table.Label);
-            }
-        }
-        catch (Exception ex)
-        {
-            await _dialogService.ShowMessageAsync("Error", ex.Message);
-        }
+        
+        // Always navigate to the Table Workspace.
+        // The Workspace handles both Active (Order) and Inactive (Pre-Session) states.
+        _shellViewModel.NavigateToOrder(table.Label);
+        
+        await Task.CompletedTask;
     }
 
     [RelayCommand]

@@ -13,12 +13,15 @@ namespace MagiDesk.Core.Interfaces
         Task<Guid> StartSessionAsync(string tableLabel, string serverId, string serverName);
         Task StopSessionAsync(Guid sessionId, DateTime endTime);
         Task<bool> IsTableOccupiedAsync(string tableLabel);
-        Task MoveSessionAsync(Guid sessionId, string fromLabel, string toLabel);
+        Task<MoveSessionResult> MoveSessionAsync(Guid sessionId, string fromLabel, string toLabel, bool force);
         // Additional methods needed for logic
         Task<BillPreviewDto> GetBillPreviewAsync(string tableLabel);
         Task<SessionOverview?> GetSessionByIdAsync(Guid sessionId);
         
         // Operational End Session
         Task EndSessionAsync(Guid sessionId);
+        
+        // Configuration
+        Task<IEnumerable<TableTypeDto>> GetTableTypesAsync();
     }
 }

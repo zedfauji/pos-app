@@ -10,6 +10,9 @@ namespace MagiDesk.Client.Services;
 
 public interface ITableApi
 {
+    [Get("/tables/types")]
+    Task<List<TableTypeDto>> GetTableTypesAsync(CancellationToken ct = default);
+
     [Get("/tables")]
     Task<List<TableStatusDto>> GetTablesAsync(CancellationToken ct = default);
 
@@ -24,7 +27,7 @@ public interface ITableApi
     Task<ApiResponse<BillResult>> StopSessionAsync(Guid sessionId, [Body] StopSessionRequest request, CancellationToken ct = default);
 
     [Post("/tables/{label}/move")]
-    Task<IApiResponse<MoveResult>> MoveSessionAsync(string label, [Query] string to, CancellationToken ct = default);
+    Task<IApiResponse<MoveSessionResult>> MoveSessionAsync(string label, [Query] string to, [Query] bool force = false, CancellationToken ct = default);
 
     [Get("/tables/{label}/items")]
     Task<List<ItemLine>> GetItemsAsync(string label, CancellationToken ct = default);

@@ -37,6 +37,27 @@ public partial class TableWorkspaceViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = string.Empty;
 
+    // New Properties for Flexible Tables
+    [ObservableProperty]
+    private bool _isPreSession = true; // Default to true to show overlay while loading/if empty
+
+    [ObservableProperty]
+    private bool _isSessionActive;
+
+    [ObservableProperty]
+    private TableConfigDto _tableConfig = new();
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartSessionCommand))]
+    private string _serverName = string.Empty;
+
+    // Status Bar Properties
+    [ObservableProperty]
+    private string _sessionStartTime = string.Empty;
+
+    [ObservableProperty]
+    private string _currentTime = DateTime.Now.ToString("t");
+
     // Timer placeholders (could be implemented with DispatcherTimer)
     [ObservableProperty]
     private string _duration = "00:00";
@@ -53,6 +74,9 @@ public partial class TableWorkspaceViewModel : ObservableObject
         _dialogService = dialogService;
         _printerService = printerService;
         _shell = shell;
+        
+        // Timer for Current Time update (optional but nice)
+        // For simplicity, just set it on load.
     }
 
     public async Task InitializeAsync(string label)
@@ -61,9 +85,12 @@ public partial class TableWorkspaceViewModel : ObservableObject
         TicketItems.Clear();
         OrderedItems.Clear();
         StatusMessage = string.Empty;
+        IsPreSession = true; // Reset state
+        IsSessionActive = false;
         
-        await LoadMenuAsync();
         await LoadSessionDataAsync();
+        // Load menu only if we are active or just pre-loading (optional)
+        if (IsSessionActive) await LoadMenuAsync();
     }
 
     private async Task LoadSessionDataAsync()
@@ -74,14 +101,48 @@ public partial class TableWorkspaceViewModel : ObservableObject
             var table = tables.FirstOrDefault(t => t.Label == TableLabel);
             if (table != null)
             {
+                // Update Config
+                TableConfig = table.Config ?? new TableConfigDto();
+                
+                // Determine State
                 SessionId = table.CurrentSessionId; 
-                
-                // Load existing orders
-                var items = await _tableApi.GetItemsAsync(TableLabel);
-                OrderedItems.Clear();
-                foreach(var item in items) OrderedItems.Add(item);
-                
-                // TODO: Calculate duration from table.StartTime
+                IsSessionActive = SessionId.HasValue;
+                IsPreSession = !IsSessionActive;
+
+                if (IsSessionActive)
+                {
+                    // Active State
+                    ServerName = table.Server ?? string.Empty; // Read only
+                    var startTime = table.StartTime; 
+                    if (startTime.HasValue)
+                    {
+                        SessionStartTime = startTime.Value.ToLocalTime().ToString("t");
+                        var diff = DateTime.UtcNow - startTime.Value;
+                        Duration = $"{(int)diff.TotalHours}h {diff.Minutes}m";
+                    }
+                    else
+                    {
+                         SessionStartTime = "--";
+                         Duration = "0h 0m";
+                    }
+
+                    var items = await _tableApi.GetItemsAsync(TableLabel);
+                    OrderedItems.Clear();
+                    foreach(var item in items) OrderedItems.Add(item);
+                }
+                else
+                {
+                    // Pre-Session State
+                    OrderedItems.Clear(); // Clear any old items
+                    // Pre-fill server name from logged in user if available
+                    // We access Shell's AuthService via reflection or if available directly?
+                    // ShellViewModel exposes AuthService public property
+                    /* 
+                       Note: AuthService might return null/empty if not logged in.
+                    */
+                    // Using dynamic check or direct property if allowed
+                     ServerName = _shell.AuthService?.CurrentUsername ?? string.Empty;
+                }
             }
         }
         catch (Exception ex)
@@ -107,9 +168,54 @@ public partial class TableWorkspaceViewModel : ObservableObject
         catch { }
     }
 
+    [RelayCommand(CanExecute = nameof(CanStartSession))]
+    public async Task StartSessionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ServerName) && TableConfig.RequiresServer)
+        {
+            await _dialogService.ShowMessageAsync("Validation Error", "Server Name is required to start this table.");
+            return;
+        }
+
+        try
+        {
+            // We need a Server ID too. For now, use ServerName as ID or generate one.
+            // Ideally use Current User ID.
+            string serverId = _shell.AuthService?.CurrentUserId ?? Guid.NewGuid().ToString();
+
+            var request = new StartSessionRequest(serverId, ServerName);
+            var result = await _tableApi.StartSessionAsync(TableLabel, request);
+            
+            if (result.IsSuccessStatusCode)
+            {
+                await LoadSessionDataAsync(); // Refresh to Active State
+                await LoadMenuAsync();
+            }
+            else
+            {
+                await _dialogService.ShowMessageAsync("Error", "Failed to start session.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowMessageAsync("Error", ex.Message);
+        }
+    }
+
+    private bool CanStartSession()
+    {
+        if (TableConfig?.RequiresServer == true)
+        {
+            return !string.IsNullOrWhiteSpace(ServerName);
+        }
+        return true;
+    }
+
     [RelayCommand]
     public void AddToTicket(MenuItemDto item)
     {
+        if (!IsSessionActive) return; // Guard
+
         var existing = TicketItems.FirstOrDefault(x => x.ItemId == item.Id.ToString());
         if (existing != null)
         {
@@ -152,6 +258,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
     [RelayCommand]
     public async Task SubmitOrderAsync()
     {
+        if (!IsSessionActive) return;
         if (!TicketItems.Any()) return;
 
         try
@@ -212,6 +319,75 @@ public partial class TableWorkspaceViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task MoveTableAsync()
+    {
+        if (!SessionId.HasValue) return;
+
+        try
+        {
+            // 1. Get Empty Tables
+            var tables = await _tableApi.GetTablesAsync();
+            var emptyTables = tables.Where(t => t.CurrentSessionId == null && t.Label != TableLabel)
+                                    .Select(t => t.Label)
+                                    .OrderBy(x => x)
+                                    .ToList();
+
+            if (!emptyTables.Any())
+            {
+                await _dialogService.ShowMessageAsync("Move Failed", "No empty tables available.");
+                return;
+            }
+
+            // 2. Select Target
+            var target = await _dialogService.RequestSelectionAsync("Move Session To...", emptyTables);
+            if (string.IsNullOrEmpty(target)) return;
+
+            // 3. Attempt Move (Check Mode)
+            var response = await _tableApi.MoveSessionAsync(TableLabel, target, false);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                await _dialogService.ShowMessageAsync("Error", "Failed to initiate move.");
+                return;
+            }
+
+            var result = response.Content;
+
+            // 4. Handle Confirmation
+            if (!result.Success && result.ConfirmationNeeded)
+            {
+                var confirm = await _dialogService.RequestConfirmationAsync("Billing Change Required", result.Message + "\n\nProceed?");
+                if (confirm)
+                {
+                     var forceResponse = await _tableApi.MoveSessionAsync(TableLabel, target, true);
+                     if (forceResponse.IsSuccessStatusCode && forceResponse.Content.Success)
+                     {
+                         await _dialogService.ShowMessageAsync("Move Complete", forceResponse.Content.Message);
+                         _shell.NavigateToTables();
+                     }
+                     else
+                     {
+                         await _dialogService.ShowMessageAsync("Error", forceResponse.Content?.Message ?? "Force move failed.");
+                     }
+                }
+            }
+            else if (result.Success)
+            {
+                await _dialogService.ShowMessageAsync("Success", result.Message);
+                _shell.NavigateToTables();
+            }
+            else
+            {
+                 await _dialogService.ShowMessageAsync("Error", result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowMessageAsync("Error", ex.Message);
+        }
+    }
+
+    [RelayCommand]
     public async Task EndSessionAsync()
     {
         if (!SessionId.HasValue) return;
@@ -224,33 +400,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
 
         try
         {
-            // Call Operational End Session endpoint
-            // Since EndSessionAsync isn't in Refit interface yet (GAP-07 impl on backend, need to ensure Client has it), 
-            // wait... GAP-06 verified ITableApi. 
-            // Let's check ITableApi again. If it was missing in GAP-06 verify, we need to add it.
-            // Assuming it might be missing from the interface definition if I only checked SessionOverview.
-            // I will implement assuming standard Refit pattern or use HttpClient if needed, 
-            // but the plan said "Calls ITableApi.EndSession".
-            
-            // NOTE: The Refit interface needs to support this. I will assume it exists or I might have to add it purely for this file 
-            // but strict rules say I can change TableWorkspace files. 
-            // If ITableApi needs change, I verified ITableApi in GAP-06, it should be there. 
-            // Wait, checking GAP-07 verification... "Added [HttpPost]... to SessionsController". 
-            // Did I add it to ITableApi? GAP-06 checked GetActiveSessionsAsync. 
-            // I should check ITableApi.cs content again to be safe. 
-            // For now, I'll write the code assuming it is there or I'll fix it if compile fails.
-            
-            // To be safe, I'll use a dynamic workaround or assume the method exists `EndSessionAsync`.
-            // The file `ITableApi.cs` was viewed in step 231. 
-            // It did NOT show EndSessionAsync. It had StopSessionAsync.
-            // I need to add EndSessionAsync to ITableApi.cs as well to support this.
-            // GAP-08 rules say "FILES ALLOWED TO CHANGE / CREATE: TableWorkspace...".
-            // It doesn't explicitly allow ITableApi. 
-            // However, the *Implementation Plan* didn't list ITableApi, but it's a prerequisite for the command.
-            // I will assume I can edit ITableApi as it is a client definition of the backend GAP-07 feature.
-            
             await _tableApi.EndSessionAsync(SessionId.Value); 
-            
             _shell.NavigateToTables();
         }
         catch (Exception ex)
