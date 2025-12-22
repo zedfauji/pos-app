@@ -163,13 +163,13 @@ public sealed partial class OrderRepository : IOrderRepository
     public async Task<IReadOnlyList<OrderItemDto>> GetOrderItemsByBillingIdAsync(Guid billingId, CancellationToken ct)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        // NOTE: Cannot join menu.menu_items because menu_item_id types differ (bigint vs uuid).
         await using var cmd = new NpgsqlCommand(@"
             SELECT oi.order_item_id, oi.menu_item_id, oi.combo_id, oi.quantity, oi.base_price, oi.vendor_price, 
                    oi.price_delta, oi.line_discount, oi.line_total, oi.profit,
-                   COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as item_name
+                   COALESCE(oi.snapshot_name, 'Item #' || oi.menu_item_id::text) as item_name
             FROM ord.order_items oi
             INNER JOIN ord.orders o ON oi.order_id = o.order_id
-            LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
             WHERE o.billing_id = @billingId AND oi.is_deleted = false
             ORDER BY oi.created_at", conn);
         cmd.Parameters.AddWithValue("@billingId", billingId);

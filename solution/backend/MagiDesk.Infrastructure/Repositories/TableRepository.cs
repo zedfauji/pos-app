@@ -26,12 +26,19 @@ namespace MagiDesk.Infrastructure.Repositories
 
         public async Task<IEnumerable<TableStatusDto>> GetAllAsync()
         {
-            // Join with active sessions to get SessionId
+            // Fixed: Query 'tables' and join 'TableSessions' for dynamic status
+            // table_type 0 = table, 1 = billiard (assumed)
             const string sql = @"
-                SELECT ts.label, ts.type, ts.occupied, ts.server as Server, ts.start_time as StartTime, ses.session_id as CurrentSessionId
-                FROM public.table_status ts
-                LEFT JOIN public.table_sessions ses ON ts.label = ses.table_label AND ses.status = 'active'
-                ORDER BY ts.label";
+                SELECT 
+                    t.table_name as label, 
+                    CASE WHEN t.table_type = 1 THEN 'billiard' ELSE 'table' END as type, 
+                    CASE WHEN ses.session_id IS NOT NULL THEN true ELSE false END as occupied, 
+                    ses.server_name as Server, 
+                    ses.start_time as StartTime, 
+                    ses.session_id as CurrentSessionId
+                FROM public.tables t
+                LEFT JOIN public.""TableSessions"" ses ON t.table_name = ses.table_label AND ses.status = 'active'
+                ORDER BY t.table_name";
             
             using var conn = CreateConnection();
             return await conn.QueryAsync<TableStatusDto>(sql);
@@ -48,7 +55,7 @@ namespace MagiDesk.Infrastructure.Repositories
                                       s.status as Status,
                                       COALESCE(item_stats.ItemsCount, 0) as ItemsCount,
                                       COALESCE(item_stats.Total, 0) as Total
-                                  FROM public.table_sessions s
+                                  FROM public.""TableSessions"" s
                                   LEFT JOIN (
                                       SELECT o.session_id, 
                                              COUNT(*) as ItemsCount, 
@@ -68,7 +75,7 @@ namespace MagiDesk.Infrastructure.Repositories
         {
             // Adjusted SQL to map to SessionOverview properties
             const string sql = @"SELECT s.session_id as SessionId, s.billing_id as BillingId, s.table_label as TableId, s.server_name as ServerName, s.start_time as StartTime, s.status as Status, s.items as ItemsJson
-                                 FROM public.table_sessions s
+                                 FROM public.""TableSessions"" s
                                  WHERE s.table_label = @Label AND s.status = 'active'
                                  ORDER BY s.start_time DESC LIMIT 1";
             using var conn = CreateConnection();
@@ -95,17 +102,12 @@ namespace MagiDesk.Infrastructure.Repositories
             try
             {
                 // Check if active
-                var exists = await conn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM public.table_sessions WHERE table_label = @Label AND status = 'active'", new { Label = tableLabel }, tx);
+                var exists = await conn.ExecuteScalarAsync<int>("SELECT COUNT(1) FROM public.\"TableSessions\" WHERE table_label = @Label AND status = 'active'", new { Label = tableLabel }, tx);
                 if (exists > 0) throw new InvalidOperationException("Active session already exists.");
 
-                const string insertSql = @"INSERT INTO public.table_sessions(session_id, table_label, server_id, server_name, start_time, status, billing_id)
+                const string insertSql = @"INSERT INTO public.""TableSessions""(session_id, table_label, server_id, server_name, start_time, status, billing_id)
                                            VALUES(@Sid, @Label, @SrvId, @SrvName, @Start, 'active', @Bid)";
                 await conn.ExecuteAsync(insertSql, new { Sid = sessionId, Label = tableLabel, SrvId = serverId, SrvName = serverName, Start = now, Bid = billingId }, tx);
-
-                const string updateStatus = @"INSERT INTO public.table_status(label, type, occupied, start_time, server)
-                                              VALUES(@Label, 'billiard', true, @Start, @SrvName)
-                                              ON CONFLICT (label) DO UPDATE SET occupied = true, start_time = @Start, server = @SrvName, updated_at = now()";
-                 await conn.ExecuteAsync(updateStatus, new { Label = tableLabel, Start = now, SrvName = serverName }, tx);
 
                 await tx.CommitAsync();
                 return sessionId;
@@ -126,16 +128,12 @@ namespace MagiDesk.Infrastructure.Repositories
             try 
             {
                 // 1. Get Table Label for this session
-                var label = await conn.ExecuteScalarAsync<string>("SELECT table_label FROM public.table_sessions WHERE session_id = @Sid", new { Sid = sessionId }, tx);
+                var label = await conn.ExecuteScalarAsync<string>("SELECT table_label FROM public.\"TableSessions\" WHERE session_id = @Sid", new { Sid = sessionId }, tx);
                 
                 // 2. Close Session
-                await conn.ExecuteAsync("UPDATE public.table_sessions SET end_time = @End, status = 'closed' WHERE session_id = @Sid", new { End = endTime, Sid = sessionId }, tx);
+                await conn.ExecuteAsync("UPDATE public.\"TableSessions\" SET end_time = @End, status = 'closed' WHERE session_id = @Sid", new { End = endTime, Sid = sessionId }, tx);
                 
-                // 3. Free Table
-                if (!string.IsNullOrEmpty(label))
-                {
-                    await conn.ExecuteAsync("UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL WHERE label = @Label", new { Label = label }, tx);
-                }
+                // 3. Free Table (No-op, derived from session status)
                 
                 await tx.CommitAsync();
             }
@@ -149,7 +147,9 @@ namespace MagiDesk.Infrastructure.Repositories
         public async Task<bool> IsTableOccupiedAsync(string tableLabel)
         {
             using var conn = CreateConnection();
-            return await conn.ExecuteScalarAsync<bool>("SELECT occupied FROM public.table_status WHERE label = @Label", new { Label = tableLabel });
+            const string sql = "SELECT COUNT(1) FROM public.\"TableSessions\" WHERE table_label = @Label AND status = 'active'";
+            var count = await conn.ExecuteScalarAsync<int>(sql, new { Label = tableLabel });
+            return count > 0;
         }
 
         public async Task MoveSessionAsync(Guid sessionId, string fromLabel, string toLabel)
@@ -161,29 +161,15 @@ namespace MagiDesk.Infrastructure.Repositories
              try 
              {
                  // Update session
-                 await conn.ExecuteAsync("UPDATE public.table_sessions SET table_label = @To WHERE session_id = @Sid", new { To = toLabel, Sid = sessionId }, tx);
+                 await conn.ExecuteAsync("UPDATE public.\"TableSessions\" SET table_label = @To WHERE session_id = @Sid", new { To = toLabel, Sid = sessionId }, tx);
                  // Audit
                  await conn.ExecuteAsync("INSERT INTO public.table_session_moves(session_id, from_label, to_label, moved_at) VALUES(@Sid, @From, @To, now())", new { Sid = sessionId, From = fromLabel, To = toLabel }, tx);
                  
                  // Fetch session details for restoring status
-                 var session = await conn.QuerySingleAsync("SELECT server_name, start_time FROM public.table_sessions WHERE session_id = @Sid", new { Sid = sessionId }, tx);
+                 var session = await conn.QuerySingleAsync("SELECT server_name, start_time FROM public.\"TableSessions\" WHERE session_id = @Sid", new { Sid = sessionId }, tx);
 
-                 // Free old
-                 await conn.ExecuteAsync("UPDATE public.table_status SET occupied = false, start_time = NULL, server = NULL WHERE label = @From", new { From = fromLabel }, tx);
-                 
-                 // Occupy new - Use UPDATE only, as target table must exist
-                 var affected = await conn.ExecuteAsync(@"UPDATE public.table_status 
-                                           SET occupied = true, start_time = @Start, server = @Srv 
-                                           WHERE label = @To", 
-                                           new { To = toLabel, Start = session.start_time, Srv = session.server_name }, tx);
-                                           
-                 if (affected == 0)
-                 {
-                     // Fallback: If table really doesn't exist (dynamic?), insert with default type 'table'
-                      await conn.ExecuteAsync(@"INSERT INTO public.table_status(label, type, occupied, start_time, server) 
-                                                VALUES(@To, 'table', true, @Start, @Srv)", 
-                                                new { To = toLabel, Start = session.start_time, Srv = session.server_name }, tx);
-                 }
+                 // Free old (No-op)
+                 // Occupy new (No-op, derived from session table_label)
                                            
                  await tx.CommitAsync();
              }
@@ -197,7 +183,7 @@ namespace MagiDesk.Infrastructure.Repositories
         public async Task<SessionOverview?> GetSessionByIdAsync(Guid sessionId)
         {
              const string sql = @"SELECT s.session_id as SessionId, s.billing_id as BillingId, s.table_label as TableId, s.server_name as ServerName, s.start_time as StartTime, s.status as Status
-                                  FROM public.table_sessions s
+                                  FROM public.""TableSessions"" s
                                   WHERE s.session_id = @Sid";
              using var conn = CreateConnection();
              return await conn.QueryFirstOrDefaultAsync<SessionOverview>(sql, new { Sid = sessionId });
@@ -208,7 +194,7 @@ namespace MagiDesk.Infrastructure.Repositories
             using var conn = CreateConnection();
             
             // 1. Get Session
-            const string sessionSql = @"SELECT session_id, start_time, items FROM public.table_sessions WHERE table_label = @Label AND status = 'active'";
+            const string sessionSql = @"SELECT session_id, start_time, items FROM public.""TableSessions"" WHERE table_label = @Label AND status = 'active'";
             var session = await conn.QueryFirstOrDefaultAsync<dynamic>(sessionSql, new { Label = tableLabel });
 
             if (session == null) return new BillPreviewDto();
@@ -216,15 +202,15 @@ namespace MagiDesk.Infrastructure.Repositories
             Guid sessionId = session.session_id;
 
             // 2. Fetch Items from SQL (ord schema)
+            // NOTE: Cannot join menu.menu_items because menu_item_id types differ (bigint vs uuid).
             const string itemsSql = @"
                 SELECT 
-                    COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as name,
+                    COALESCE(oi.snapshot_name, 'Item #' || oi.menu_item_id::text) as name,
                     oi.quantity,
                     (oi.base_price + oi.price_delta) as price,
                     oi.menu_item_id::text as itemId
                 FROM ord.order_items oi
                 JOIN ord.orders o ON oi.order_id = o.order_id
-                LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
                 WHERE o.session_id = @Sid AND oi.is_deleted = false AND o.is_deleted = false";
 
             var rawItems = await conn.QueryAsync(itemsSql, new { Sid = sessionId });
@@ -276,6 +262,87 @@ namespace MagiDesk.Infrastructure.Repositories
                 TotalAmount = (subtotal + timeCost) + taxCtx,
                 Currency = "USD"
             };
+        }
+
+        public async Task EndSessionAsync(Guid sessionId)
+        {
+            var now = DateTime.UtcNow;
+            using var conn = CreateConnection();
+            await conn.OpenAsync();
+            using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1. Get Session Details & Total
+                const string sessionSql = @"
+                    SELECT s.table_label, s.billing_id, s.status
+                    FROM public.""TableSessions"" s
+                    WHERE s.session_id = @Sid";
+                
+                var session = await conn.QueryFirstOrDefaultAsync<dynamic>(sessionSql, new { Sid = sessionId }, tx);
+                
+                if (session == null) throw new ArgumentException("Session not found");
+                if (session.status != "active") throw new InvalidOperationException("Session is not active");
+
+                Guid billingId = session.billing_id;
+                string label = session.table_label;
+
+                // 2. Calculate Total (Simplified vs GetBillPreview)
+                const string totalSql = @"
+                    SELECT SUM((oi.base_price + oi.price_delta) * oi.quantity)
+                    FROM ord.orders o
+                    JOIN ord.order_items oi ON oi.order_id = o.order_id
+                    WHERE o.session_id = @Sid AND o.is_deleted = false AND oi.is_deleted = false";
+                
+                var subtotal = await conn.ExecuteScalarAsync<decimal?>(totalSql, new { Sid = sessionId }, tx) ?? 0;
+                
+                // Constants for MVP
+                decimal taxRate = 0.10m;
+                decimal taxAmount = subtotal * taxRate;
+                decimal totalAmount = subtotal + taxAmount;
+
+                // Use billing.bills table which has proper UUID session_id
+                // Include table_label and server_name for Payment Hub display
+                const string insertBill = @"
+                    INSERT INTO billing.bills (
+                        bill_id, billing_id, session_id, table_id,
+                        table_label, server_name,
+                        items_total, time_total, subtotal, discounts, tax, total_amount,
+                        time_minutes, status, created_at, updated_at
+                    ) VALUES (
+                        @Bid, @Bid, @Sid, @Sid,
+                        @TableLabel, @ServerName,
+                        @Subtotal, 0, @Subtotal, 0, @Tax, @Total,
+                        0, 'AwaitingPayment', @Now, @Now
+                    ) ON CONFLICT (bill_id) DO NOTHING"; // Idempotency safety
+
+                await conn.ExecuteAsync(insertBill, new { 
+                    Bid = billingId, 
+                    Sid = sessionId,
+                    TableLabel = label,
+                    ServerName = session.server_name ?? "Unknown",
+                    Subtotal = subtotal,
+                    Tax = taxAmount,
+                    Total = totalAmount, 
+                    Now = now 
+                }, tx);
+
+                // 4. End Session (Status -> ended)
+                const string updateSession = @"
+                    UPDATE public.""TableSessions"" 
+                    SET status = 'ended', end_time = @Now 
+                    WHERE session_id = @Sid";
+                await conn.ExecuteAsync(updateSession, new { Sid = sessionId, Now = now }, tx);
+
+                // 5. Free Table (No-op)
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         }
     }
 }

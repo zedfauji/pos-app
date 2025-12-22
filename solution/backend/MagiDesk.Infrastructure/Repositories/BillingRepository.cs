@@ -57,7 +57,7 @@ namespace MagiDesk.Infrastructure.Repositories
                     COALESCE(SUM(total_amount), 0) as TotalSalesToday,
                     COUNT(1) as ClosedSessionsToday
                 FROM public.bills
-                WHERE created_at >= CURRENT_DATE OR end_time >= CURRENT_DATE";
+                WHERE created_at >= CURRENT_DATE";
              
              const string sqlOpen = "SELECT COUNT(1) FROM public.table_sessions WHERE status = 'active'";
 

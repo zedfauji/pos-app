@@ -62,6 +62,12 @@ namespace MagiDesk.Client
                 .AddHttpMessageHandler<LoggingHandler>()
                 .AddTransientHttpErrorPolicy(builder => builder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
+            services.AddRefitClient<IShiftApi>()
+                .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:53503"))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true })
+                .AddHttpMessageHandler<LoggingHandler>()
+                .AddTransientHttpErrorPolicy(builder => builder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+
             services.AddRefitClient<IMenuApi>()
                 .ConfigureHttpClient(c => c.BaseAddress = new Uri("http://localhost:5227"))
                 .AddHttpMessageHandler<LoggingHandler>()
@@ -92,6 +98,8 @@ namespace MagiDesk.Client
             services.AddTransient<DayCloseViewModel>(); // Phase 2: Reporting
             services.AddTransient<PaymentHubViewModel>(); // Payment Workspace Redesign Phase 1
             services.AddTransient<PaymentWorkspaceViewModel>(); // Payment Workspace Redesign Phase 2
+            services.AddTransient<TableWorkspaceViewModel>(); // GAP-08: Operational ViewModel
+            services.AddTransient<ShiftControllerViewModel>(); // Shift Controller
 
             services.AddRefitClient<IReportingApi>()
                  .ConfigureHttpClient(c => c.BaseAddress = new Uri("http://localhost:5228"))
@@ -108,10 +116,19 @@ namespace MagiDesk.Client
             services.AddTransient<SettingsPage>(); // New Phase 17
             services.AddTransient<PaymentHubPage>(); // Payment Workspace Redesign Phase 1
             services.AddTransient<PaymentWorkspacePage>(); // Payment Workspace Redesign Phase 2
+            services.AddTransient<TableWorkspacePage>(); // GAP-08: Operational Page
         }
+
+
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
+            // Register Converters globally in Resources (if not done in XAML)
+            // Or better yet, ensure they are in App.xaml resources.
+            // Since I cannot easily edit App.xaml resources block blindly without replacing it all,
+            // I will check if I can rely on them being there or add them to the Page resources.
+            // Actually, let's just make sure the converters exist in the project first.
+            
             m_window = new Window();
             m_window.Title = "MagiDesk POS";
 

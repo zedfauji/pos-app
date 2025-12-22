@@ -43,6 +43,20 @@ public interface ITableApi
 
     [Post("/tables/{label}/calculate-split")]
     Task<CalculateSplitResult> CalculateSplitAsync(string label, [Body] CalculateSplitRequest request, CancellationToken ct = default);
+
+    [Post("/tables/{sessionId}/end")]
+    Task<IApiResponse> EndSessionAsync(Guid sessionId, CancellationToken ct = default);
+
+    // Payment Hub - Bills endpoints
+    [Get("/bills/unsettled")]
+    Task<List<BillDto>> GetUnsettledBillsAsync(CancellationToken ct = default);
+
+    [Get("/bills/{billId}")]
+    Task<BillDto> GetBillAsync(Guid billId, CancellationToken ct = default);
+
+    // Settle an unsettled bill (mark as Paid)
+    [Post("/bills/{billId}/settle")]
+    Task<IApiResponse> SettleBillAsync(Guid billId, [Body] SettleBillRequest request, CancellationToken ct = default);
 }
 
 // Defining local wrapper DTOs if they aren't in Shared (or assuming they are consistent)

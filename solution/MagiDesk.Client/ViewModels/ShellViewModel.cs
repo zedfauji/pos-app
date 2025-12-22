@@ -22,10 +22,15 @@ public partial class ShellViewModel : ObservableObject
     public bool IsLoggedIn => AuthService.IsLoggedIn;
     public bool IsAdmin => AuthService.IsAdmin;
 
-    public ShellViewModel(IServiceProvider serviceProvider, IAuthenticationService authService)
+    private readonly IShiftApi _shiftApi;
+    private readonly IDialogService _dialogService;
+
+    public ShellViewModel(IServiceProvider serviceProvider, IAuthenticationService authService, IShiftApi shiftApi, IDialogService dialogService)
     {
         _serviceProvider = serviceProvider;
         AuthService = authService;
+        _shiftApi = shiftApi;
+        _dialogService = dialogService;
 
         if (AuthService is System.ComponentModel.INotifyPropertyChanged notifyService)
         {
@@ -49,7 +54,16 @@ public partial class ShellViewModel : ObservableObject
     public void NavigateToLogin() => NavigateTo<LoginViewModel>();
 
     [RelayCommand]
-    public void NavigateToTables() => NavigateTo<TableViewModel>();
+    public void NavigateToShiftController() => NavigateTo<ShiftControllerViewModel>();
+
+    [RelayCommand]
+    public async void NavigateToTables()
+    {
+        if (await EnsureShiftOpenAsync())
+        {
+            NavigateTo<TableViewModel>();
+        }
+    }
 
     [RelayCommand]
     public void NavigateToMenu() => NavigateTo<MenuViewModel>();
@@ -67,7 +81,13 @@ public partial class ShellViewModel : ObservableObject
     public void NavigateToSettings() => NavigateTo<SettingsViewModel>();
 
     [RelayCommand]
-    public void NavigateToPaymentHub() => NavigateTo<PaymentHubViewModel>();
+    public async void NavigateToPaymentHub()
+    {
+        if (await EnsureShiftOpenAsync())
+        {
+            NavigateTo<PaymentHubViewModel>();
+        }
+    }
 
     [RelayCommand]
     public void Logout()
@@ -76,15 +96,49 @@ public partial class ShellViewModel : ObservableObject
         NavigateToLogin();
     }
 
-    public void OnLoginSuccess()
+    public async void OnLoginSuccess()
     {
-        // Go to default page
-        NavigateToTables();
+        // Check shift status on login
+        // If shift is closed, go to Shift Controller
+        var validation = await _shiftApi.ValidateAsync();
+        if (!validation.CanOperate)
+        {
+             NavigateToShiftController();
+             _dialogService.ShowMessageAsync("Shift Required", "A valid shift must be open to perform operations.");
+        }
+        else
+        {
+             NavigateToTables();
+        }
     }
+
+    private async Task<bool> EnsureShiftOpenAsync()
+    {
+        try
+        {
+            var validation = await _shiftApi.ValidateAsync();
+            if (!validation.CanOperate)
+            {
+                await _dialogService.ShowMessageAsync("Shift Closed", "You must open a shift to access this feature.");
+                NavigateToShiftController();
+                return false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // If API fails, default to closed for safety, but log it
+            Log.Error(ex, "Failed to validate shift status");
+            await _dialogService.ShowMessageAsync("Connection Error", "Could not verify shift status. Please check connection.");
+            NavigateToShiftController(); 
+            return false;
+        }
+    }
+
 
     public async void NavigateToOrder(string tableLabel)
     {
-        var vm = _serviceProvider.GetRequiredService<OrderViewModel>();
+        var vm = _serviceProvider.GetRequiredService<TableWorkspaceViewModel>();
         await vm.InitializeAsync(tableLabel);
         CurrentViewModel = vm;
     }

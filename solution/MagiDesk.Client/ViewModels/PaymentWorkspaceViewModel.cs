@@ -224,27 +224,24 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 
     private async Task ProcessFullPaymentAsync()
     {
-        // Build stop session request
-        var request = new StopSessionRequest
+        // Build settle bill request for unsettled bills
+        var request = new Services.Dtos.SettleBillRequest
         {
-            PaymentMethod = SelectedPaymentMethod,
+            PaymentMethod = SelectedPaymentMethod.ToString().ToLower(),
             AmountTendered = SelectedPaymentMethod == PaymentMethod.Cash ? (decimal)AmountTendered : 0,
             TipAmount = SelectedPaymentMethod == PaymentMethod.Card ? (decimal)TipAmount : 0,
-            DiscountAmount = (decimal)DiscountAmount,
-            CustomerEmail = CustomerEmail
+            DiscountAmount = (decimal)DiscountAmount
         };
 
-        // Call backend to stop session (which processes payment)
-        var result = await _tableApi.StopSessionAsync(SessionId, request);
+        // Call backend to settle the bill (not stop session - session already ended)
+        var result = await _tableApi.SettleBillAsync(BillingId, request);
 
-        if (result.IsSuccessStatusCode && result.Content != null)
+        if (result.IsSuccessStatusCode)
         {
-            var bill = result.Content;
-            
             var app = (App)Microsoft.UI.Xaml.Application.Current;
             app.MainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
-                StatusMessage = $"Payment successful! Total: {bill.TotalAmount:C}";
+                StatusMessage = $"Payment successful! Bill settled.";
                 
                 // Wait a moment for user to see success
                 await Task.Delay(1500);
@@ -255,7 +252,8 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
         }
         else
         {
-            ErrorMessage = "Payment failed. Please try again.";
+            var errorContent = result.Error?.Content ?? "Payment failed";
+            ErrorMessage = $"Payment failed: {errorContent}";
         }
     }
 

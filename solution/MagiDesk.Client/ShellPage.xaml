@@ -39,6 +39,12 @@
         <DataTemplate x:Key="PaymentWorkspaceTemplate" x:DataType="vm:PaymentWorkspaceViewModel">
             <views:PaymentWorkspacePage />
         </DataTemplate>
+        <DataTemplate x:Key="TableWorkspaceTemplate" x:DataType="vm:TableWorkspaceViewModel">
+            <views:TableWorkspacePage />
+        </DataTemplate>
+        <DataTemplate x:Key="ShiftControllerTemplate" x:DataType="vm:ShiftControllerViewModel">
+            <views:ShiftControllerPage />
+        </DataTemplate>
         
         <views:ViewModelTemplateSelector x:Key="ViewModelTemplateSelector"
                                          TableTemplate="{StaticResource TableTemplate}"
@@ -50,7 +56,9 @@
                                          MenuEditorTemplate="{StaticResource MenuEditorTemplate}"
                                          SettingsTemplate="{StaticResource SettingsTemplate}"
                                          PaymentHubTemplate="{StaticResource PaymentHubTemplate}"
-                                         PaymentWorkspaceTemplate="{StaticResource PaymentWorkspaceTemplate}"/>
+                                         PaymentWorkspaceTemplate="{StaticResource PaymentWorkspaceTemplate}"
+                                         TableWorkspaceTemplate="{StaticResource TableWorkspaceTemplate}"
+                                         ShiftControllerTemplate="{StaticResource ShiftControllerTemplate}"/>
     </Page.Resources>
 
     <NavigationView x:Name="NavView" 
@@ -60,6 +68,7 @@
                     ItemInvoked="OnItemInvoked"
                     IsPaneVisible="{x:Bind ViewModel.IsLoggedIn, Mode=OneWay}">
         <NavigationView.MenuItems>
+            <NavigationViewItem Content="Shift Control" Icon="Clock" Tag="ShiftController" />
             <NavigationViewItem Content="Tables" Icon="Map" Tag="Tables" />
             <NavigationViewItem Icon="List" Content="Menu Catalog" Tag="Menu" />
             <NavigationViewItem Icon="Edit" Content="Menu Management" Tag="MenuEditor" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />

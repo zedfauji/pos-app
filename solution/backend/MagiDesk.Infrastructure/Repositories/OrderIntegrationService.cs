@@ -119,15 +119,16 @@ namespace MagiDesk.Infrastructure.Repositories
              _logger.LogInformation("GetOrderItemsForSessionAsync called for Session {SessionId}", sessionId);
              using var conn = CreateConnection();
              // 1. Fetch SQL Items (ord.order_items)
+             // NOTE: Cannot join menu.menu_items because menu_item_id types differ (bigint vs uuid).
+             // Using snapshot_name as the fallback for item names.
              const string sql = @"
                 SELECT 
-                    COALESCE(oi.snapshot_name, mi.name, 'Unknown Item') as name,
+                    COALESCE(oi.snapshot_name, 'Item #' || oi.menu_item_id::text) as name,
                     oi.quantity,
                     (oi.base_price + oi.price_delta) as price,
                     oi.menu_item_id::text as itemId
                 FROM ord.order_items oi
                 JOIN ord.orders o ON oi.order_id = o.order_id
-                LEFT JOIN menu.menu_items mi ON oi.menu_item_id = mi.menu_item_id
                 WHERE o.session_id = @Sid AND oi.is_deleted = false AND o.is_deleted = false
                 ORDER BY oi.created_at";
 
@@ -135,7 +136,7 @@ namespace MagiDesk.Infrastructure.Repositories
              _logger.LogInformation("Fetched {Count} items from SQL for Session {SessionId}", rawSqlItems.Count(), sessionId);
 
              // 2. Fetch Legacy JSON Items
-             const string jsonSql = "SELECT items FROM public.table_sessions WHERE session_id = @Sid";
+             const string jsonSql = "SELECT items FROM public.\"TableSessions\" WHERE session_id = @Sid";
              var jsonString = await conn.ExecuteScalarAsync<string>(jsonSql, new { Sid = sessionId });
              
              var legacyItems = new List<ItemLine>();

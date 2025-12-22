@@ -61,6 +61,9 @@ namespace MagiDesk.Client
                     case "PaymentHub":
                         ViewModel.NavigateToPaymentHub();
                         break;
+                    case "ShiftController":
+                        ViewModel.NavigateToShiftController();
+                        break;
                     case "Logout":
                         ViewModel.LogoutCommand.Execute(null);
                         break;

@@ -25,6 +25,9 @@
             <converters:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter" />
             <converters:StringEqualsToVisibilityConverter x:Key="StringEqualsToVisibilityConverter" />
             <converters:StringEqualsToBoolConverter x:Key="StringEqualsToBoolConverter" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityInverseConverter" Reverse="True" />
+            <converters:StatusColorConverter x:Key="StatusColorConverter" />
             
             <Color x:Key="Primary">#512BD4</Color>
 

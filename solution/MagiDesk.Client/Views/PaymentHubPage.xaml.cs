@@ -1,4 +1,5 @@
 using MagiDesk.Client.ViewModels;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 
@@ -21,7 +22,13 @@ public sealed partial class PaymentHubPage : Page
     {
         base.OnNavigatedTo(e);
         
-        // Load sessions when navigating to this page
-        await ViewModel.LoadSessionsCommand.ExecuteAsync(null);
+        // Load bills when navigating to this page
+        await ViewModel.LoadBillsCommand.ExecuteAsync(null);
+    }
+
+    private async void Page_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Refresh bills on page load
+        await ViewModel.LoadBillsCommand.ExecuteAsync(null);
     }
 }

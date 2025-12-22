@@ -31,6 +31,7 @@ namespace TablesApi.Controllers
         }
 
         [HttpPost("{label}/start")]
+        [TablesApi.Filters.RequireOpenShift]
         public async Task<IActionResult> StartSession(string label, [FromBody] StartSessionRequest request)
         {
             try 
@@ -45,6 +46,7 @@ namespace TablesApi.Controllers
         }
         
         [HttpPost("{label}/order")]
+        [TablesApi.Filters.RequireOpenShift]
         public async Task<IActionResult> PostOrder(string label, [FromBody] MagiDesk.Shared.DTOs.Tables.OrderRequest request)
         {
              var session = await _repository.GetActiveSessionByTableAsync(label);
@@ -86,6 +88,7 @@ namespace TablesApi.Controllers
         }
 
         [HttpPost("{sessionId}/stop")]
+        [TablesApi.Filters.RequireOpenShift]
         public async Task<IActionResult> StopSession(Guid sessionId, [FromBody] StopSessionRequest request)
         {
              try 
@@ -105,6 +108,25 @@ namespace TablesApi.Controllers
              catch(ArgumentException ex) { return NotFound(ex.Message); }
              catch(InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
              catch(Exception ex) { return StatusCode(500, ex.Message); }
+        }
+        
+        [HttpPost("{sessionId}/end")]
+        [TablesApi.Filters.RequireOpenShift]
+        public async Task<IActionResult> EndSession(Guid sessionId)
+        {
+            try
+            {
+                await _repository.EndSessionAsync(sessionId);
+                return Ok(new { success = true, sessionId = sessionId, status = "ended", message = "Session ended, bill created." });
+            }
+            catch (ArgumentException)
+            {
+                return NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         [HttpGet("stats")]

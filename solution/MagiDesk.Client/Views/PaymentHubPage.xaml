@@ -5,91 +5,148 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:MagiDesk.Client.ViewModels"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    Loaded="Page_Loaded">
 
-    <Grid x:Name="RootGrid" Padding="20">
+    <Grid x:Name="RootGrid" Padding="24" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Spacing="10" Margin="0,0,0,20">
-            <TextBlock Text="Payment Hub" Style="{StaticResource TitleTextBlockStyle}"/>
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Content="Refresh" Command="{Binding LoadSessionsCommand}">
-                    <Button.KeyboardAccelerators>
-                        <KeyboardAccelerator Key="F5"/>
-                    </Button.KeyboardAccelerators>
-                </Button>
-                <ProgressRing IsActive="{Binding IsLoading}" Width="24" Height="24"/>
-                <TextBlock Text="{Binding ErrorMessage}" 
-                           Foreground="Red" 
-                           VerticalAlignment="Center"
-                           Visibility="{Binding ErrorMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
-            </StackPanel>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="0,0,0,16">
+            <TextBlock Text="💳 Payment Hub" Style="{StaticResource TitleTextBlockStyle}" FontSize="28"/>
+            <Button Content="↻ Refresh" Command="{Binding LoadBillsCommand}">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="F5"/>
+                </Button.KeyboardAccelerators>
+            </Button>
+            <ProgressRing IsActive="{Binding IsLoading}" Width="24" Height="24"/>
         </StackPanel>
 
-        <!-- Active Sessions Grid -->
-        <ScrollViewer Grid.Row="1">
-            <ItemsControl ItemsSource="{Binding ActiveSessions}">
+        <!-- Summary Bar -->
+        <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
+                CornerRadius="8" Padding="16" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="24">
+                <TextBlock VerticalAlignment="Center">
+                    <Run Text="📊 Summary: " FontWeight="SemiBold"/>
+                    <Run Text="{Binding UnsettledCount}" FontWeight="Bold" Foreground="Orange"/>
+                    <Run Text=" unsettled bills totaling $"/>
+                    <Run Text="{Binding TotalUnsettledAmount}" FontWeight="Bold"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter Tabs -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+            <Button Content="All" Command="{Binding SelectFilterCommand}" CommandParameter="All"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Button Command="{Binding SelectFilterCommand}" CommandParameter="Unsettled"
+                    Background="Orange">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="⚠️ Unsettled" Foreground="White"/>
+                    <TextBlock Text="(" Foreground="White"/>
+                    <TextBlock Text="{Binding UnsettledCount}" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text=")" Foreground="White"/>
+                </StackPanel>
+            </Button>
+            <Button Command="{Binding SelectFilterCommand}" CommandParameter="Partial"
+                    Background="DodgerBlue">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="💰 Partial" Foreground="White"/>
+                    <TextBlock Text="(" Foreground="White"/>
+                    <TextBlock Text="{Binding PartialCount}" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text=")" Foreground="White"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Bills Grid -->
+        <ScrollViewer Grid.Row="3">
+            <ItemsControl ItemsSource="{Binding FilteredBills}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="3"/>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="4" 
+                                       HorizontalAlignment="Left"/>
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:SessionCardViewModel">
-                        <Button Width="300" Height="180" 
-                                Margin="10"
+                    <DataTemplate x:DataType="vm:BillCardViewModel">
+                        <Button Width="280" Height="200" 
+                                Margin="8"
                                 Padding="0"
                                 HorizontalContentAlignment="Stretch" 
                                 VerticalContentAlignment="Stretch"
                                 Command="{Binding DataContext.NavigateToPaymentCommand, ElementName=RootGrid}"
                                 CommandParameter="{x:Bind}">
-                            <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                  CornerRadius="8" 
-                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                  BorderThickness="1"
+                            <Grid CornerRadius="12" 
+                                  BorderThickness="2"
+                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                   Padding="16">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <!-- Table Label -->
-                                <TextBlock Grid.Row="0" 
-                                           Text="{x:Bind TableLabel}" 
-                                           Style="{StaticResource SubtitleTextBlockStyle}"
-                                           FontWeight="Bold"/>
+                                <!-- Table Label & Status Badge -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" 
+                                               Text="{x:Bind TableLabel}" 
+                                               Style="{StaticResource SubtitleTextBlockStyle}"
+                                               FontWeight="Bold"
+                                               FontSize="18"/>
+                                    <!-- Status Badge -->
+                                    <Border Grid.Column="1" 
+                                            Background="Orange" 
+                                            CornerRadius="12" 
+                                            Padding="8,4">
+                                        <TextBlock Text="{x:Bind StatusBadge}" 
+                                                   FontSize="10" 
+                                                   Foreground="White"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+                                </Grid>
 
-                                <!-- Server & Time -->
-                                <StackPanel Grid.Row="1" Spacing="4" Margin="0,8,0,0">
-                                    <TextBlock>
+                                <!-- Server & Time Info -->
+                                <StackPanel Grid.Row="1" Spacing="2" Margin="0,8,0,0">
+                                    <TextBlock Foreground="Gray" FontSize="12">
                                         <Run Text="Server: "/>
                                         <Run Text="{x:Bind ServerName}" FontWeight="SemiBold"/>
                                     </TextBlock>
-                                    <TextBlock>
-                                        <Run Text="Open: "/>
-                                        <Run Text="{x:Bind DisplayTime}" Foreground="Gray"/>
-                                    </TextBlock>
+                                    <TextBlock Text="{x:Bind DisplayTime}" 
+                                               Foreground="Gray"
+                                               FontSize="12"/>
                                 </StackPanel>
 
                                 <!-- Spacer -->
                                 <Border Grid.Row="2"/>
 
                                 <!-- Total Amount -->
-                                <StackPanel Grid.Row="3" Spacing="4">
-                                    <TextBlock Text="Current Total" 
-                                               FontSize="12" 
-                                               Foreground="Gray"/>
-                                    <TextBlock Text="{x:Bind CurrentTotal, Converter={StaticResource CurrencyConverter}}" 
-                                               Style="{StaticResource SubtitleTextBlockStyle}"
+                                <StackPanel Grid.Row="3" Spacing="2">
+                                    <TextBlock Text="TOTAL" FontSize="11" Foreground="Gray" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{x:Bind DisplayAmount}" 
+                                               FontSize="24"
                                                FontWeight="Bold"
                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 </StackPanel>
+
+                                <!-- Pay Now Button -->
+                                <Button Grid.Row="4" 
+                                        Content="💳 Pay Now" 
+                                        HorizontalAlignment="Stretch"
+                                        Margin="0,8,0,0"
+                                        Style="{StaticResource AccentButtonStyle}"/>
                             </Grid>
                         </Button>
                     </DataTemplate>
@@ -98,18 +155,35 @@
         </ScrollViewer>
 
         <!-- Empty State -->
-        <StackPanel Grid.Row="1" 
+        <StackPanel Grid.Row="3" 
                     HorizontalAlignment="Center" 
                     VerticalAlignment="Center"
-                    Visibility="{Binding ActiveSessions.Count, Converter={StaticResource ZeroToVisibleConverter}}"
-                    Spacing="10">
-            <FontIcon Glyph="&#xE73C;" FontSize="48" Foreground="Gray"/>
-            <TextBlock Text="No active sessions" 
+                    Visibility="{Binding FilteredBills.Count, Converter={StaticResource ZeroToVisibleConverter}}"
+                    Spacing="12">
+            <FontIcon Glyph="&#xE73C;" FontSize="64" Foreground="Gray"/>
+            <TextBlock Text="No bills to display" 
                        Style="{StaticResource SubtitleTextBlockStyle}"
-                       Foreground="Gray"/>
-            <TextBlock Text="Active table sessions will appear here" 
                        Foreground="Gray"
                        HorizontalAlignment="Center"/>
+            <TextBlock Text="Bills from ended sessions will appear here for settlement" 
+                       Foreground="Gray"
+                       FontSize="13"
+                       HorizontalAlignment="Center"/>
         </StackPanel>
+
+        <!-- Error Banner -->
+        <Border Grid.Row="0" Grid.RowSpan="4"
+                VerticalAlignment="Top"
+                Background="#FFEBE9"
+                CornerRadius="8"
+                Padding="16"
+                Margin="0,80,0,0"
+                Visibility="{Binding ErrorMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⚠️" FontSize="16"/>
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="DarkRed"/>
+                <Button Content="Retry" Command="{Binding LoadBillsCommand}" Margin="16,0,0,0"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

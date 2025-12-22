@@ -17,5 +17,8 @@ namespace MagiDesk.Core.Interfaces
         // Additional methods needed for logic
         Task<BillPreviewDto> GetBillPreviewAsync(string tableLabel);
         Task<SessionOverview?> GetSessionByIdAsync(Guid sessionId);
+        
+        // Operational End Session
+        Task EndSessionAsync(Guid sessionId);
     }
 }
