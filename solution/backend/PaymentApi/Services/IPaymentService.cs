@@ -4,7 +4,7 @@ namespace PaymentApi.Services;
 
 public interface IPaymentService
 {
-    Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct);
+    Task<PaymentTransactionResult> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct);
     Task<BillLedgerDto> ApplyDiscountAsync(Guid billingId, Guid sessionId, decimal discountAmount, string? discountReason, string? serverId, CancellationToken ct);
     Task<BillLedgerDto?> GetLedgerAsync(Guid billingId, CancellationToken ct);
     Task<IReadOnlyList<PaymentDto>> ListPaymentsAsync(Guid billingId, CancellationToken ct);

@@ -62,6 +62,13 @@ create table if not exists menu.menu_items (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
+
+-- Migration: Ensure inventory_item_id exists (if restored from legacy dump)
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_schema='menu' and table_name='menu_items' and column_name='inventory_item_id') then
+    alter table menu.menu_items add column inventory_item_id uuid null;
+  end if;
+end $$;
 -- Drop any legacy unique constraint or index on sku_id to allow partial unique index
 do $$ begin
   if exists (

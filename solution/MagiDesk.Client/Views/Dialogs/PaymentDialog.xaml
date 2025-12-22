@@ -1,0 +1,59 @@
+<ContentDialog
+    x:Class="MagiDesk.Client.Views.Dialogs.PaymentDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Payment"
+    PrimaryButtonText="Pay &amp; Close"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <Grid>
+        <StackPanel Spacing="15" Width="400">
+            <!-- Totals -->
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Subtotal" FontWeight="SemiBold"/>
+                <TextBlock Text="{x:Bind TotalAmountString, Mode=OneWay}" FontWeight="SemiBold" Grid.Column="1"/>
+            </Grid>
+            
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <NumberBox Header="Discount ($)" Value="{x:Bind DiscountAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="150" ValueChanged="OnValuesChanged" />
+                <TextBlock VerticalAlignment="Bottom" Margin="0,0,0,6">
+                    <Run Text="Final Total: "/>
+                    <Run Text="{x:Bind FinalTotalString, Mode=OneWay}" FontWeight="Bold" Foreground="{ThemeResource SystemAccentColor}"/>
+                </TextBlock>
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="{ThemeResource TextControlBorderBrush}" Opacity="0.5" />
+
+            <!-- Payment Method -->
+            <TextBlock Text="Payment Method" Style="{StaticResource SubtitleTextBlockStyle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <RadioButton x:Name="CashOption" Content="Cash" GroupName="Method" Tag="Cash" Checked="OnMethodChanged"/>
+                <RadioButton Content="Card" GroupName="Method" Tag="Card" Checked="OnMethodChanged"/>
+            </StackPanel>
+
+            <!-- Cash Section -->
+            <StackPanel x:Name="CashPanel" Spacing="10" Visibility="Visible">
+                <NumberBox Header="Amount Tendered ($)" Value="{x:Bind AmountTendered, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ValueChanged="OnValuesChanged" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Change Due:" FontSize="16"/>
+                    <TextBlock Text="{x:Bind ChangeDueString, Mode=OneWay}" FontSize="16" FontWeight="Bold" Grid.Column="1"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Card Section -->
+            <StackPanel x:Name="CardPanel" Spacing="10" Visibility="Collapsed">
+                 <NumberBox Header="Tip Amount ($)" Value="{x:Bind TipAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
+            <Rectangle Height="1" Fill="{ThemeResource TextControlBorderBrush}" Opacity="0.5" />
+
+            <!-- Receipt -->
+            <TextBox Header="Email Receipt To (Optional)" Text="{x:Bind CustomerEmail, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="customer@email.com"/>
+
+        </StackPanel>
+    </Grid>
+</ContentDialog>

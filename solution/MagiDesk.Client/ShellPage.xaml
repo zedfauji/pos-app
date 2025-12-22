@@ -1,0 +1,84 @@
+<Page
+    x:Class="MagiDesk.Client.ShellPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:MagiDesk.Client.ViewModels"
+    xmlns:views="using:MagiDesk.Client.Views"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <DataTemplate x:Key="TableTemplate" x:DataType="vm:TableViewModel">
+            <views:TableMapPage />
+        </DataTemplate>
+        <DataTemplate x:Key="MenuTemplate" x:DataType="vm:MenuViewModel">
+            <views:MenuPage />
+        </DataTemplate>
+        <DataTemplate x:Key="OrderTemplate" x:DataType="vm:OrderViewModel">
+            <views:OrderPage />
+        </DataTemplate>
+        <DataTemplate x:Key="InventoryTemplate" x:DataType="vm:InventoryViewModel">
+            <views:InventoryPage />
+        </DataTemplate>
+        <DataTemplate x:Key="ReportsTemplate" x:DataType="vm:ReportsViewModel">
+            <views:ReportsPage />
+        </DataTemplate>
+        <DataTemplate x:Key="LoginTemplate" x:DataType="vm:LoginViewModel">
+            <views:LoginPage />
+        </DataTemplate>
+        <DataTemplate x:Key="MenuEditorTemplate" x:DataType="vm:MenuEditorViewModel">
+            <views:MenuEditorPage />
+        </DataTemplate>
+        <DataTemplate x:Key="SettingsTemplate" x:DataType="vm:SettingsViewModel">
+            <views:SettingsPage />
+        </DataTemplate>
+        <DataTemplate x:Key="PaymentHubTemplate" x:DataType="vm:PaymentHubViewModel">
+            <views:PaymentHubPage />
+        </DataTemplate>
+        <DataTemplate x:Key="PaymentWorkspaceTemplate" x:DataType="vm:PaymentWorkspaceViewModel">
+            <views:PaymentWorkspacePage />
+        </DataTemplate>
+        
+        <views:ViewModelTemplateSelector x:Key="ViewModelTemplateSelector"
+                                         TableTemplate="{StaticResource TableTemplate}"
+                                         MenuTemplate="{StaticResource MenuTemplate}"
+                                         OrderTemplate="{StaticResource OrderTemplate}"
+                                         InventoryTemplate="{StaticResource InventoryTemplate}"
+                                         ReportsTemplate="{StaticResource ReportsTemplate}"
+                                         LoginTemplate="{StaticResource LoginTemplate}"
+                                         MenuEditorTemplate="{StaticResource MenuEditorTemplate}"
+                                         SettingsTemplate="{StaticResource SettingsTemplate}"
+                                         PaymentHubTemplate="{StaticResource PaymentHubTemplate}"
+                                         PaymentWorkspaceTemplate="{StaticResource PaymentWorkspaceTemplate}"/>
+    </Page.Resources>
+
+    <NavigationView x:Name="NavView" 
+                    IsBackButtonVisible="Collapsed" 
+                    PaneDisplayMode="Top" 
+                    IsSettingsVisible="False" 
+                    ItemInvoked="OnItemInvoked"
+                    IsPaneVisible="{x:Bind ViewModel.IsLoggedIn, Mode=OneWay}">
+        <NavigationView.MenuItems>
+            <NavigationViewItem Content="Tables" Icon="Map" Tag="Tables" />
+            <NavigationViewItem Icon="List" Content="Menu Catalog" Tag="Menu" />
+            <NavigationViewItem Icon="Edit" Content="Menu Management" Tag="MenuEditor" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+            <NavigationViewItem Icon="Library" Content="Inventory" Tag="Inventory" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+            <NavigationViewItem Icon="GoToStart" Content="Reports" Tag="Reports" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+            <NavigationViewItem Icon="Calculator" Content="Payments" Tag="PaymentHub" />
+        </NavigationView.MenuItems>
+        
+        <NavigationView.FooterMenuItems>
+             <NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+             <NavigationViewItem Icon="Cancel" Content="Logout" Tag="Logout" SelectsOnInvoked="False" />
+        </NavigationView.FooterMenuItems>
+
+        <Grid>
+            <ContentControl x:Name="MainContent"
+                            Content="{Binding CurrentViewModel, Mode=OneWay}"
+                            ContentTemplateSelector="{StaticResource ViewModelTemplateSelector}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"/>
+        </Grid>
+    </NavigationView>
+</Page>

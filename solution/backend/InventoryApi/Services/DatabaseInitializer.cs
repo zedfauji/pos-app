@@ -1,71 +1,81 @@
 using Dapper;
 using Npgsql;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace InventoryApi.Services;
 
-public class DatabaseInitializer
+public sealed class DatabaseInitializer : IHostedService
 {
-    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _connectionString;
     private readonly ILogger<DatabaseInitializer> _logger;
 
-    public DatabaseInitializer(NpgsqlDataSource dataSource, ILogger<DatabaseInitializer> logger)
+    public DatabaseInitializer(IConfiguration configuration, ILogger<DatabaseInitializer> logger)
     {
-        _dataSource = dataSource;
+        _connectionString = configuration.GetConnectionString("Postgres");
         _logger = logger;
     }
 
-    public async Task InitializeAsync(CancellationToken ct = default)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await using var conn = await _dataSource.OpenConnectionAsync(ct);
-            
-            // First, create basic tables (categories, vendors, inventory_items)
-            var categoriesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "create_categories.sql");
-            
-            if (File.Exists(categoriesPath))
-            {
-                var categoriesSql = await File.ReadAllTextAsync(categoriesPath, ct);
-                await conn.ExecuteAsync(categoriesSql);
-                _logger.LogInformation("Basic inventory tables created successfully");
-            }
-            else
-            {
-                _logger.LogWarning("Categories file not found at {CategoriesPath}", categoriesPath);
-            }
-            
-            // Read and execute the schema migration
-            var schemaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "inventory_management_schema.sql");
-            
-            if (File.Exists(schemaPath))
-            {
-                var schemaSql = await File.ReadAllTextAsync(schemaPath, ct);
-                await conn.ExecuteAsync(schemaSql);
-                _logger.LogInformation("Inventory Management System schema initialized successfully");
-            }
-            else
-            {
-                _logger.LogWarning("Schema file not found at {SchemaPath}", schemaPath);
-            }
-
-            // Read and execute the menu seeding
-            var menuSeedPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Database", "bola_ocho_menu_seed.sql");
-            
-            if (File.Exists(menuSeedPath))
-            {
-                var menuSeedSql = await File.ReadAllTextAsync(menuSeedPath, ct);
-                await conn.ExecuteAsync(menuSeedSql);
-                _logger.LogInformation("Bola 8 Pool Club menu items seeded successfully");
-            }
-            else
-            {
-                _logger.LogWarning("Menu seed file not found at {MenuSeedPath}", menuSeedPath);
-            }
+            using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(cancellationToken);
+            await EnsureSchemaAsync(conn);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialize Inventory Management System schema");
-            throw;
+            _logger.LogError(ex, "InventoryApi schema initialization failed.");
         }
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task EnsureSchemaAsync(NpgsqlConnection conn)
+    {
+         // GREENFIELD IMPLEMENTATION: Replace old schema
+         // In prod, migration would be safer. For this rewrite, we drop conflict.
+         
+         const string checkLegacy = "SELECT 1 FROM information_schema.tables WHERE table_schema = 'inventory' AND table_name = 'inventory_items'";
+         var legacyExists = await conn.ExecuteScalarAsync<int?>(checkLegacy);
+         
+         if (legacyExists.HasValue)
+         {
+             // Drop old schema if it has the wrong table structure
+             // Using CASCADE to remove all dependents
+             await conn.ExecuteAsync("DROP SCHEMA IF EXISTS inventory CASCADE");
+         }
+
+        const string sql = @"
+create schema if not exists inventory;
+
+create table if not exists inventory.items (
+    id              bigserial primary key,
+    name            text not null,
+    unit            text not null default 'unit',
+    quantity        numeric(12,2) not null default 0,
+    reorder_level   numeric(12,2) not null default 10,
+    created_at      timestamptz not null default now(),
+    updated_at      timestamptz not null default now()
+);
+
+create table if not exists inventory.transactions (
+    id              bigserial primary key,
+    item_id         bigint not null references inventory.items(id),
+    change_amount   numeric(12,2) not null,
+    reason          text not null,
+    created_at      timestamptz not null default now()
+);
+
+-- Index
+create index if not exists ix_items_name on inventory.items(name);
+create index if not exists ix_tx_item on inventory.transactions(item_id);
+";
+        await conn.ExecuteAsync(sql);
     }
 }

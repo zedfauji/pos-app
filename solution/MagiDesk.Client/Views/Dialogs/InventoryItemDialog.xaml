@@ -1,0 +1,19 @@
+<ContentDialog
+    x:Class="MagiDesk.Client.Views.Dialogs.InventoryItemDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Add Inventory Item"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel">
+
+    <StackPanel Spacing="10" MinWidth="350">
+        <TextBox x:Name="NameBox" Header="Item Name" PlaceholderText="e.g. Cheese" />
+        <TextBox x:Name="UnitBox" Header="Unit" PlaceholderText="e.g. kg, pcs, box" />
+        
+        <NumberBox x:Name="QuantityBox" Header="Initial Quantity" Value="0" SpinButtonPlacementMode="Inline" />
+        <NumberBox x:Name="ReorderBox" Header="Reorder Level" Value="10" SpinButtonPlacementMode="Inline" />
+    </StackPanel>
+</ContentDialog>

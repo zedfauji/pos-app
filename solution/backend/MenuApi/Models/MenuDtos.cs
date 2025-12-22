@@ -1,6 +1,7 @@
-namespace MenuApi.Models;
+using MagiDesk.Shared.DTOs.Menu;
+using MagiDesk.Shared.DTOs.Common;
 
-public sealed record MenuItemDto(long Id, string Sku, string Name, string? Description, string Category, string? GroupName, decimal SellingPrice, decimal? Price, string? PictureUrl, bool IsDiscountable, bool IsPartOfCombo, bool IsAvailable, int Version);
+namespace MenuApi.Models;
 
 public sealed record MenuItemDetailsDto(MenuItemDto Item, IReadOnlyList<ModifierDto> Modifiers);
 
@@ -8,38 +9,8 @@ public sealed record ModifierDto(long Id, string Name, bool IsRequired, bool All
 
 public sealed record ModifierOptionDto(long Id, string Name, decimal PriceDelta, bool IsAvailable, int SortOrder);
 
-public sealed record MenuItemQueryDto(string? Q, string? Category, string? Group, bool? AvailableOnly, int Page = 1, int PageSize = 50);
+// MenuItemQueryDto is now in MagiDesk.Shared.DTOs.Menu
 
-public sealed record CreateMenuItemDto(
-    string Sku,
-    string Name,
-    string? Description,
-    string Category,
-    string? GroupName,
-    decimal VendorPrice,
-    decimal SellingPrice,
-    decimal? Price,
-    string? PictureUrl,
-    bool IsDiscountable = true,
-    bool IsPartOfCombo = false,
-    bool IsAvailable = true
-);
-
-public sealed record UpdateMenuItemDto(
-    string? Name,
-    string? Description,
-    string? Category,
-    string? GroupName,
-    decimal? VendorPrice,
-    decimal? SellingPrice,
-    decimal? Price,
-    string? PictureUrl,
-    bool? IsDiscountable,
-    bool? IsPartOfCombo,
-    bool? IsAvailable
-);
-
-public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
 
 // Combo DTOs
 public sealed record ComboItemLinkDto(long MenuItemId, int Quantity, bool IsRequired);

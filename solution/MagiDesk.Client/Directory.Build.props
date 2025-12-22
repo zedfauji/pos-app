@@ -1,0 +1,9 @@
+<Project>
+  <Target Name="BanNpgsql" BeforeTargets="Build">
+    <ItemGroup>
+        <BannedPackage Include="@(PackageReference)" Condition="'%(Identity)' == 'Npgsql'" />
+        <BannedPackage Include="@(PackageReference)" Condition="'%(Identity)' == 'System.Data.SqlClient'" />
+    </ItemGroup>
+    <Error Condition="'@(BannedPackage)' != ''" Text="%(BannedPackage.Identity) is BANNED in this project. Use Refit API Clients only." />
+  </Target>
+</Project>

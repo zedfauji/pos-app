@@ -16,7 +16,7 @@ public sealed class PaymentService : IPaymentService
         _idService = idService;
     }
 
-    public async Task<BillLedgerDto> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
+    public async Task<PaymentTransactionResult> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
     {
         if (req.Lines is null || req.Lines.Count == 0)
             throw new InvalidOperationException("NO_PAYMENT_LINES");
@@ -177,8 +177,30 @@ public sealed class PaymentService : IPaymentService
             System.Diagnostics.Debug.WriteLine($"PaymentService: Exception while notifying TablesApi: {ex.Message}");
         }
 
-        return ledger!;
+        // Calculate transaction-specific context
+        var amountPaid = req.Lines.Sum(l => l.AmountPaid);
+        var remainingBalance = ledger!.TotalDue - ledger.TotalPaid - ledger.TotalDiscount;
+        var changeDue = 0m;
+        
+        // Calculate change due if AmountTendered is provided (cash transactions)
+        if (req.AmountTendered.HasValue && req.AmountTendered.Value > amountPaid)
+        {
+            changeDue = req.AmountTendered.Value - amountPaid;
+        }
+
+        var message = ledger.Status?.Equals("paid", StringComparison.OrdinalIgnoreCase) == true
+            ? "Payment successful - Bill fully paid"
+            : $"Partial payment accepted - Remaining: {remainingBalance:C}";
+
+        return new PaymentTransactionResult
+        {
+            Ledger = ledger,
+            ChangeDue = changeDue,
+            RemainingBalance = Math.Max(0, remainingBalance),
+            Message = message
+        };
     }
+
 
     public async Task<BillLedgerDto> CloseBillAsync(Guid billingId, string? serverId, CancellationToken ct)
     {
@@ -227,3 +249,4 @@ public sealed class PaymentService : IPaymentService
     public Task<IReadOnlyList<PaymentDto>> GetAllPaymentsAsync(int limit, CancellationToken ct)
         => _repo.GetAllPaymentsAsync(limit, ct);
 }
+

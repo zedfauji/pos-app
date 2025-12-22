@@ -1,0 +1,313 @@
+<Page
+    x:Class="MagiDesk.Client.Views.PaymentWorkspacePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:MagiDesk.Client.ViewModels"
+    xmlns:dto="using:MagiDesk.Shared.DTOs.Tables"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Padding="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="3*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Column: Payment Controls -->
+        <Grid Grid.Column="0" Padding="0,0,20,0">
+            <ScrollViewer>
+                <StackPanel Spacing="20">
+                    <!-- Header -->
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Process Payment" Style="{StaticResource TitleTextBlockStyle}"/>
+                        <TextBlock>
+                            <Run Text="Table:"/>
+                            <Run Text="{Binding TableLabel}" FontWeight="Bold"/>
+                        </TextBlock>
+                        <Button Content="← Back to Hub" Command="{Binding CancelCommand}" 
+                                Style="{StaticResource AccentButtonStyle}"/>
+                    </StackPanel>
+
+                    <!-- Split Payment Toggle -->
+                    <StackPanel Spacing="12" 
+                                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                Padding="16"
+                                CornerRadius="8"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1">
+                        <ToggleSwitch Header="Split Payment" 
+                                      IsOn="{Binding IsSplitPayment, Mode=TwoWay}"
+                                      OnContent="Split Mode Active"
+                                      OffContent="Full Payment"/>
+                        
+                        <!-- Split Mode Selection (only visible when split is enabled) -->
+                        <StackPanel Spacing="12" Visibility="{Binding IsSplitPayment}">
+                            <TextBlock Text="Split Mode" FontWeight="SemiBold"/>
+                            <StackPanel Spacing="8">
+                                <RadioButton Content="By Amount" 
+                                             IsChecked="{Binding SplitMode, Mode=TwoWay, Converter={StaticResource StringEqualsToBoolConverter}, ConverterParameter=ByAmount}"
+                                             GroupName="SplitMode"/>
+                                <RadioButton Content="By Percentage" 
+                                             IsChecked="{Binding SplitMode, Mode=TwoWay, Converter={StaticResource StringEqualsToBoolConverter}, ConverterParameter=ByPercentage}"
+                                             GroupName="SplitMode"/>
+                                <RadioButton Content="By Item" 
+                                             IsChecked="{Binding SplitMode, Mode=TwoWay, Converter={StaticResource StringEqualsToBoolConverter}, ConverterParameter=ByItem}"
+                                             GroupName="SplitMode"/>
+                            </StackPanel>
+
+                            <!-- By Amount Input -->
+                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByAmount}">
+                                <TextBlock Text="Amount to Pay"/>
+                                <NumberBox Value="{Binding SplitAmount, Mode=TwoWay}"
+                                           SpinButtonPlacementMode="Inline"
+                                           Minimum="0"
+                                           Maximum="{Binding TotalDue}"
+                                           LargeChange="10"
+                                           SmallChange="1"/>
+                            </StackPanel>
+
+                            <!-- By Percentage Input -->
+                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByPercentage}">
+                                <TextBlock Text="Percentage to Pay"/>
+                                <NumberBox Value="{Binding SplitPercentage, Mode=TwoWay}"
+                                           SpinButtonPlacementMode="Inline"
+                                           Minimum="1"
+                                           Maximum="100"
+                                           LargeChange="10"
+                                           SmallChange="5"/>
+                                <TextBlock FontWeight="SemiBold"
+                                           Foreground="{ThemeResource SystemAccentColor}">
+                                    <Run Text="{Binding SplitPercentage}"/><Run Text="%"/>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <!-- By Item Selection -->
+                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByItem}">
+                                <TextBlock Text="Select Items"/>
+                                <ListView ItemsSource="{Binding BillItems}"
+                                          SelectionChanged="ListView_SelectionChanged"
+                                          SelectionMode="Multiple"
+                                          MaxHeight="150">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate x:DataType="dto:ItemLine">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{x:Bind name}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" 
+                                                           Foreground="Gray"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </StackPanel>
+
+                            <!-- Calculate Button -->
+                            <Button Content="Calculate Split Amount" 
+                                    Command="{Binding CalculateSplitCommand}"
+                                    HorizontalAlignment="Stretch"/>
+
+                            <!-- Calculated Amount Display -->
+                            <StackPanel Spacing="4" Visibility="{Binding CalculatedSplitAmount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                                <TextBlock Text="Amount to Pay:"  FontSize="14" Foreground="Gray"/>
+                                <TextBlock Text="{Binding CalculatedSplitAmount, Converter={StaticResource CurrencyConverter}}"
+                                           FontSize="24"
+                                           FontWeight="Bold"
+                                           Foreground="{ThemeResource SystemAccentColor}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Payment Method Selection -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Payment Method" FontWeight="SemiBold" FontSize="16"/>
+                        <StackPanel Spacing="8">
+                            <RadioButton Content="Cash" 
+                                         IsChecked="{Binding SelectedPaymentMethod, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Cash}"
+                                         GroupName="PaymentMethod"/>
+                            <RadioButton Content="Card" 
+                                         IsChecked="{Binding SelectedPaymentMethod, Mode=TwoWay, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=Card}"
+                                         GroupName="PaymentMethod"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Cash Payment Section -->
+                    <StackPanel Spacing="12" x:Name="CashPanel">
+                        <TextBlock Text="Cash Payment" FontWeight="SemiBold" FontSize="16"/>
+                        <TextBlock Text="Amount Tendered"/>
+                        <NumberBox Value="{Binding AmountTendered, Mode=TwoWay}" 
+                                   SpinButtonPlacementMode="Inline"
+                                   Minimum="0"
+                                   LargeChange="10"
+                                   SmallChange="1"/>
+                        <TextBlock>
+                            <Run Text="Change Due:"/>
+                            <Run Text="{Binding ChangeDue, Converter={StaticResource CurrencyConverter}}" 
+                                 FontWeight="Bold" 
+                                 Foreground="{ThemeResource SystemAccentColor}" 
+                                 FontSize="20"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <!-- Card Payment Section -->
+                    <StackPanel Spacing="12" Visibility="{Binding SelectedPaymentMethod, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=Card}">
+                        <TextBlock Text="Card Payment" FontWeight="SemiBold" FontSize="16"/>
+                        <TextBlock Text="Tip Amount (Optional)"/>
+                        <NumberBox Value="{Binding TipAmount, Mode=TwoWay}" 
+                                   SpinButtonPlacementMode="Inline"
+                                   Minimum="0"
+                                   LargeChange="5"
+                                   SmallChange="1"/>
+                    </StackPanel>
+
+                    <!-- Discount -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Discount (Optional)" FontWeight="SemiBold" FontSize="16"/>
+                        <NumberBox Value="{Binding DiscountAmount, Mode=TwoWay}" 
+                                   SpinButtonPlacementMode="Inline"
+                                   Minimum="0"
+                                   Maximum="{Binding TotalDue}"/>
+                    </StackPanel>
+
+                    <!-- Customer Email -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Customer Email (Optional)" FontWeight="SemiBold" FontSize="16"/>
+                        <TextBox Text="{Binding CustomerEmail, Mode=TwoWay}" 
+                                 PlaceholderText="customer@example.com"/>
+                    </StackPanel>
+
+                    <!-- Process Button -->
+                    <StackPanel Spacing="12">
+                        <Button Command="{Binding ProcessPaymentCommand}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                HorizontalAlignment="Stretch"
+                                Height="56"
+                                FontSize="18"
+                                IsEnabled="{Binding IsProcessing, Converter={StaticResource InvertBoolConverter}}">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ProgressRing IsActive="{Binding IsProcessing}" Width="20" Height="20" Visibility="{Binding IsProcessing}"/>
+                                    <TextBlock Text="Process Payment" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                        </Button>
+
+                        <!-- Status Messages -->
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   Foreground="Green" 
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding StatusMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
+                        <TextBlock Text="{Binding ErrorMessage}" 
+                                   Foreground="Red" 
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding ErrorMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Right Column: Bill View -->
+        <Grid Grid.Column="1" 
+              Background="{ThemeResource LayerFillColorDefaultBrush}"
+              CornerRadius="8"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+              BorderThickness="1"
+              Padding="24">
+            <ScrollViewer>
+                <StackPanel Spacing="16">
+                    <!-- Bill Header -->
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Bill Summary" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TableLabel}" FontSize="20" Foreground="Gray"/>
+                    </StackPanel>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                    <!-- Items List -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Items" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding BillItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="dto:ItemLine">
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{x:Bind name}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Margin="8,0">
+                                            <Run Text="×"/>
+                                            <Run Text="{x:Bind quantity}"/>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="2" 
+                                                   Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" 
+                                                   FontWeight="SemiBold"
+                                                   MinWidth="80"
+                                                   TextAlignment="Right"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                    <!-- Totals -->
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Subtotal"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Subtotal, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Tax"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Tax, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
+                        </Grid>
+                        <Grid Visibility="{Binding DiscountAmount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Discount" Foreground="Green"/>
+                            <TextBlock Grid.Column="1" Foreground="Green">
+                                <Run Text="-"/>
+                                <Run Text="{Binding DiscountAmount, Converter={StaticResource CurrencyConverter}}"/>
+                            </TextBlock>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border Height="2" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                    <!-- Final Total -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" 
+                                   Text="Total Due" 
+                                   FontSize="20" 
+                                   FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" 
+                                   Text="{Binding FinalTotal, Converter={StaticResource CurrencyConverter}}" 
+                                   FontSize="24" 
+                                   FontWeight="Bold"
+                                   Foreground="{ThemeResource SystemAccentColor}"
+                                   MinWidth="120"
+                                   TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Page>

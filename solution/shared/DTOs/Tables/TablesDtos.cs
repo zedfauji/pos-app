@@ -15,6 +15,7 @@ public class TableStatusDto
     public string Type { get; set; } = "billiard"; // billiard | bar
     public bool Occupied { get; set; }
     public string? OrderId { get; set; }
+    public Guid? CurrentSessionId { get; set; } // Explicit Session ID
     public DateTimeOffset? StartTime { get; set; }
     public string? Server { get; set; }
 }
@@ -35,6 +36,14 @@ public class BillResult
     public decimal TimeCost { get; set; }
     public decimal ItemsCost { get; set; }
     public decimal TotalAmount { get; set; }
+    
+    // Payment Details
+    public MagiDesk.Shared.Enums.PaymentMethod PaymentMethod { get; set; }
+    public decimal AmountTendered { get; set; }
+    public decimal ChangeDue { get; set; }
+    public decimal TipAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public string? CustomerEmail { get; set; }
 }
 
 public class ItemLine

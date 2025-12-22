@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MagiDesk.Client (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "MagiDesk.Client (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

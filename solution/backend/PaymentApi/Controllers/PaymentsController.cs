@@ -16,13 +16,13 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<BillLedgerDto>> RegisterAsync([FromBody] RegisterPaymentRequestDto req, CancellationToken ct)
+    public async Task<ActionResult<PaymentTransactionResult>> RegisterAsync([FromBody] RegisterPaymentRequestDto req, CancellationToken ct)
     {
         try
         {
-            var ledger = await _service.RegisterPaymentAsync(req, ct);
+            var result = await _service.RegisterPaymentAsync(req, ct);
             // Avoid route link-generation issues across hosting environments
-            return Created($"/api/payments/{req.BillingId}/ledger", ledger);
+            return Created($"/api/payments/{req.BillingId}/ledger", result);
         }
         catch (InvalidOperationException ex) when (ex.Message.StartsWith("INVALID_BILLING_ID_FORMAT"))
         {

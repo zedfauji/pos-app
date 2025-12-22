@@ -11,5 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\shared\MagiDesk.Shared.csproj" />
+    <ProjectReference Include="..\MagiDesk.Core\MagiDesk.Core.csproj" />
+    <ProjectReference Include="..\MagiDesk.Infrastructure\MagiDesk.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
