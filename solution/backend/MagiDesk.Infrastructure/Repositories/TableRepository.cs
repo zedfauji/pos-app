@@ -495,5 +495,87 @@ namespace MagiDesk.Infrastructure.Repositories
             using var conn = CreateConnection();
             return await conn.QueryAsync<TableTypeDto>(sql);
         }
+        public async Task<TableStatusDto> AddTableAsync(CreateTableRequest request)
+        {
+            const string sql = @"
+                INSERT INTO public.tables (table_id, table_name, type_id, capacity, is_active)
+                VALUES (@Id, @Name, @TypeId, @Capacity, true)
+                RETURNING table_id";
+            
+            var id = Guid.NewGuid();
+            using var conn = CreateConnection();
+            await conn.ExecuteAsync(sql, new { Id = id, request.Name, request.TypeId, request.Capacity });
+            
+            // Return full DTO
+            var all = await GetAllAsync(); 
+            return all.FirstOrDefault(t => t.Label == request.Name) ?? new TableStatusDto();
+        }
+
+        public async Task<TableStatusDto> UpdateTableAsync(Guid tableId, UpdateTableRequest request)
+        {
+             using var conn = CreateConnection();
+             
+             // Check Occupancy if deactivating
+             if (!request.IsActive)
+             {
+                 var occupied = await conn.ExecuteScalarAsync<int>(
+                     @"SELECT COUNT(1) FROM public.""TableSessions"" s 
+                       JOIN public.tables t ON s.table_label = t.table_name 
+                       WHERE t.table_id = @Id AND s.status = 'active'", 
+                     new { Id = tableId });
+                 if (occupied > 0) throw new InvalidOperationException("Cannot deactivate occupied table.");
+             }
+
+             const string sql = @"
+                UPDATE public.tables
+                SET table_name = @Name, type_id = @TypeId, capacity = @Capacity, is_active = @IsActive, updated_at = now()
+                WHERE table_id = @Id";
+             
+             await conn.ExecuteAsync(sql, new { Id = tableId, request.Name, request.TypeId, request.Capacity, request.IsActive });
+             
+             // Note: Returning via GetAllAsync is inefficient but ensures consistent DTO mapping
+             var all = await GetAllAsync();
+             return all.FirstOrDefault(t => t.Label == request.Name) ?? new TableStatusDto();
+        }
+
+        public async Task DeleteTableAsync(Guid tableId)
+        {
+             using var conn = CreateConnection();
+             // Check Occupancy
+             var occupied = await conn.ExecuteScalarAsync<int>(
+                 @"SELECT COUNT(1) FROM public.""TableSessions"" s 
+                   JOIN public.tables t ON s.table_label = t.table_name 
+                   WHERE t.table_id = @Id AND s.status = 'active'", 
+                 new { Id = tableId });
+             if (occupied > 0) throw new InvalidOperationException("Cannot delete occupied table.");
+
+             // Soft Delete
+             await conn.ExecuteAsync("UPDATE public.tables SET is_active = false WHERE table_id = @Id", new { Id = tableId });
+        }
+
+        public async Task<TableTypeDto> UpdateTableTypeAsync(int typeId, UpdateTableTypeRequest request)
+        {
+            const string sql = @"
+                UPDATE public.table_types
+                SET name = @Name, hourly_rate = @Rate, has_timer = @Timer, requires_server = @ReqServer, allow_orders = @Orders
+                WHERE id = @Id
+                RETURNING 
+                    id, 
+                    name, 
+                    has_timer as HasTimer, 
+                    hourly_rate as HourlyRate, 
+                    allow_orders as AllowOrders, 
+                    requires_server as RequiresServer";
+            
+            using var conn = CreateConnection();
+            return await conn.QuerySingleAsync<TableTypeDto>(sql, new { 
+                Id = typeId, 
+                request.Name, 
+                Rate = request.HourlyRate, 
+                Timer = request.HasTimer, 
+                ReqServer = request.RequiresServer, 
+                Orders = request.AllowOrders 
+            });
+        }
     }
 }

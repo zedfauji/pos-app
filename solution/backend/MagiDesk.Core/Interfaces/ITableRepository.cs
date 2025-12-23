@@ -23,5 +23,11 @@ namespace MagiDesk.Core.Interfaces
         
         // Configuration
         Task<IEnumerable<TableTypeDto>> GetTableTypesAsync();
+
+        // Admin Methods
+        Task<TableStatusDto> AddTableAsync(CreateTableRequest request);
+        Task<TableStatusDto> UpdateTableAsync(Guid tableId, UpdateTableRequest request);
+        Task DeleteTableAsync(Guid tableId);
+        Task<TableTypeDto> UpdateTableTypeAsync(int typeId, UpdateTableTypeRequest request);
     }
 }

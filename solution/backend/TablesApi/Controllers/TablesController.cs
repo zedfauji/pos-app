@@ -36,5 +36,72 @@ namespace TablesApi.Controllers
             var preview = await _repository.GetBillPreviewAsync(label);
             return Ok(preview);
         }
+
+        [HttpPost]
+        public async Task<ActionResult<TableStatusDto>> CreateTable([FromBody] CreateTableRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _repository.AddTableAsync(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<TableStatusDto>> UpdateTable(Guid id, [FromBody] UpdateTableRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _repository.UpdateTableAsync(id, request);
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTable(Guid id)
+        {
+            try
+            {
+                await _repository.DeleteTableAsync(id);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("types/{id}")]
+        public async Task<ActionResult<TableTypeDto>> UpdateTableType(int id, [FromBody] UpdateTableTypeRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                var result = await _repository.UpdateTableTypeAsync(id, request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

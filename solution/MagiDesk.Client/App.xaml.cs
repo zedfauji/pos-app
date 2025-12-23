@@ -100,6 +100,7 @@ namespace MagiDesk.Client
             services.AddTransient<PaymentWorkspaceViewModel>(); // Payment Workspace Redesign Phase 2
             services.AddTransient<TableWorkspaceViewModel>(); // GAP-08: Operational ViewModel
             services.AddTransient<ShiftControllerViewModel>(); // Shift Controller
+            services.AddTransient<TableManagementViewModel>(); // Admin Table CRUD
 
             services.AddRefitClient<IReportingApi>()
                  .ConfigureHttpClient(c => c.BaseAddress = new Uri("http://localhost:5228"))
@@ -117,6 +118,7 @@ namespace MagiDesk.Client
             services.AddTransient<PaymentHubPage>(); // Payment Workspace Redesign Phase 1
             services.AddTransient<PaymentWorkspacePage>(); // Payment Workspace Redesign Phase 2
             services.AddTransient<TableWorkspacePage>(); // GAP-08: Operational Page
+            services.AddTransient<TableManagementPage>(); // Admin Table CRUD Page
         }
 
 

@@ -13,6 +13,19 @@ public interface ITableApi
     [Get("/tables/types")]
     Task<List<TableTypeDto>> GetTableTypesAsync(CancellationToken ct = default);
 
+    // Admin Endpoints
+    [Post("/tables")]
+    Task<IApiResponse<TableStatusDto>> AddTableAsync([Body] MagiDesk.Shared.DTOs.Tables.CreateTableRequest request, CancellationToken ct = default);
+
+    [Put("/tables/{id}")]
+    Task<IApiResponse<TableStatusDto>> UpdateTableAsync(Guid id, [Body] MagiDesk.Shared.DTOs.Tables.UpdateTableRequest request, CancellationToken ct = default);
+
+    [Delete("/tables/{id}")]
+    Task<IApiResponse> DeleteTableAsync(Guid id, CancellationToken ct = default);
+
+    [Put("/tables/types/{id}")]
+    Task<IApiResponse<TableTypeDto>> UpdateTableTypeAsync(int id, [Body] MagiDesk.Shared.DTOs.Tables.UpdateTableTypeRequest request, CancellationToken ct = default);
+
     [Get("/tables")]
     Task<List<TableStatusDto>> GetTablesAsync(CancellationToken ct = default);
 

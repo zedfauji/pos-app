@@ -12,7 +12,7 @@ public partial class ShellViewModel : ObservableObject
     private readonly IServiceProvider _serviceProvider;
 
     [ObservableProperty]
-    private ObservableObject _currentViewModel;
+    private ObservableObject? _currentViewModel;
 
     [ObservableProperty]
     private string _title = "MagiDesk";
@@ -79,6 +79,9 @@ public partial class ShellViewModel : ObservableObject
 
     [RelayCommand]
     public void NavigateToSettings() => NavigateTo<SettingsViewModel>();
+
+    [RelayCommand]
+    public void NavigateToTableManagement() => NavigateTo<TableManagementViewModel>();
 
     [RelayCommand]
     public async void NavigateToPaymentHub()

@@ -45,6 +45,9 @@
         <DataTemplate x:Key="ShiftControllerTemplate" x:DataType="vm:ShiftControllerViewModel">
             <views:ShiftControllerPage />
         </DataTemplate>
+        <DataTemplate x:Key="TableManagementTemplate" x:DataType="vm:TableManagementViewModel">
+            <views:TableManagementPage />
+        </DataTemplate>
         
         <views:ViewModelTemplateSelector x:Key="ViewModelTemplateSelector"
                                          TableTemplate="{StaticResource TableTemplate}"
@@ -58,7 +61,8 @@
                                          PaymentHubTemplate="{StaticResource PaymentHubTemplate}"
                                          PaymentWorkspaceTemplate="{StaticResource PaymentWorkspaceTemplate}"
                                          TableWorkspaceTemplate="{StaticResource TableWorkspaceTemplate}"
-                                         ShiftControllerTemplate="{StaticResource ShiftControllerTemplate}"/>
+                                         ShiftControllerTemplate="{StaticResource ShiftControllerTemplate}"
+                                         TableManagementTemplate="{StaticResource TableManagementTemplate}"/>
     </Page.Resources>
 
     <NavigationView x:Name="NavView" 
@@ -78,6 +82,7 @@
         </NavigationView.MenuItems>
         
         <NavigationView.FooterMenuItems>
+             <NavigationViewItem Icon="Setting" Content="Table Admin" Tag="TableManagement" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
              <NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
              <NavigationViewItem Icon="Cancel" Content="Logout" Tag="Logout" SelectsOnInvoked="False" />
         </NavigationView.FooterMenuItems>

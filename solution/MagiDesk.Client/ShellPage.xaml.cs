@@ -64,6 +64,9 @@ namespace MagiDesk.Client
                     case "ShiftController":
                         ViewModel.NavigateToShiftController();
                         break;
+                    case "TableManagement":
+                        ViewModel.NavigateToTableManagement();
+                        break;
                     case "Logout":
                         ViewModel.LogoutCommand.Execute(null);
                         break;

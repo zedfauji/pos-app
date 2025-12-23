@@ -22,12 +22,16 @@ public class MoveSessionResult
 
 public class TableStatusDto
 {
+    public Guid TableId { get; set; }
     public string Label { get; set; } = string.Empty;
     public string Type { get; set; } = "billiard"; // Legacy string for compatibility
     public int TypeId { get; set; }
     public string TypeName { get; set; } = string.Empty;
     public TableConfigDto Config { get; set; } = new();
     
+    public int Capacity { get; set; } = 4;
+    public bool? IsActive { get; set; } = true;
+
     public bool Occupied { get; set; }
     public string? OrderId { get; set; }
     public Guid? CurrentSessionId { get; set; } // Explicit Session ID

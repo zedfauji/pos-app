@@ -18,6 +18,7 @@ namespace MagiDesk.Client.Views
         public DataTemplate PaymentWorkspaceTemplate { get; set; } = null!;
         public DataTemplate TableWorkspaceTemplate { get; set; } = null!;
         public DataTemplate ShiftControllerTemplate { get; set; } = null!;
+        public DataTemplate TableManagementTemplate { get; set; } = null!;
 
         protected override DataTemplate SelectTemplateCore(object item)
         {
@@ -45,6 +46,7 @@ namespace MagiDesk.Client.Views
                 PaymentWorkspaceViewModel => PaymentWorkspaceTemplate,
                 TableWorkspaceViewModel => TableWorkspaceTemplate,
                 ShiftControllerViewModel => ShiftControllerTemplate,
+                TableManagementViewModel => TableManagementTemplate,
                 _ => null
             };
         }
