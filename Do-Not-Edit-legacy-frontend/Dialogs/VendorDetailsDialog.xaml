@@ -1,0 +1,221 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.VendorDetailsDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    Title="Vendor Details"
+    PrimaryButtonText="Close"
+    DefaultButton="Primary">
+    <ContentDialog.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </ContentDialog.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header with Vendor Name and Status -->
+        <Border Grid.Row="0" 
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Padding="16"
+                Margin="0,0,0,12">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="VendorNameText" 
+                               FontSize="24" 
+                               FontWeight="SemiBold"
+                               Text="{x:Bind Vendor.Name, Mode=OneWay}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                        <Border CornerRadius="4" Padding="6,2">
+                            <Border.Background>
+                                <SolidColorBrush Color="{x:Bind Vendor.StatusColor, Mode=OneWay}"/>
+                            </Border.Background>
+                            <TextBlock Text="{x:Bind Vendor.StatusDisplay, Mode=OneWay}" 
+                                       FontSize="10" 
+                                       Foreground="White"/>
+                        </Border>
+                        <TextBlock Text="{x:Bind Vendor.ContactInfo, Mode=OneWay}" 
+                                   FontSize="12" 
+                                   Opacity="0.7"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" 
+                        Content="Edit" 
+                        Click="EditButton_Click"
+                        HorizontalAlignment="Right"/>
+            </Grid>
+        </Border>
+
+        <!-- TabView for Details -->
+        <TabView Grid.Row="1" x:Name="DetailsTabView" TabWidthMode="SizeToContent">
+            <!-- Overview Tab -->
+            <TabViewItem Header="Overview" Tag="OverviewTab">
+                <ScrollViewer VerticalScrollMode="Auto" HorizontalScrollMode="Auto">
+                    <StackPanel Spacing="16" Padding="16">
+                        <!-- Basic Information -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="16">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Basic Information" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Budget:" FontWeight="SemiBold" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="0" Text="{x:Bind Vendor.BudgetDisplay, Mode=OneWay}" Margin="0,0,0,8"/>
+                                    
+                                    <TextBlock Grid.Column="0" Grid.Row="1" Text="Reminder:" FontWeight="SemiBold" Margin="0,0,8,8" 
+                                               Visibility="{x:Bind Vendor.ReminderVisibility, Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="1" Text="{x:Bind Vendor.Reminder, Mode=OneWay}" 
+                                               Margin="0,0,0,8"
+                                               Visibility="{x:Bind Vendor.ReminderVisibility, Mode=OneWay}"/>
+                                    
+                                    <TextBlock Grid.Column="0" Grid.Row="2" Text="Created:" FontWeight="SemiBold" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="2" Text="{x:Bind Vendor.CreatedAtDisplay, Mode=OneWay}" Margin="0,0,0,8"/>
+                                    
+                                    <TextBlock Grid.Column="0" Grid.Row="3" Text="Last Updated:" FontWeight="SemiBold" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="3" Text="{x:Bind Vendor.UpdatedAtDisplay, Mode=OneWay}" Margin="0,0,0,8"/>
+                                    
+                                    <TextBlock Grid.Column="0" Grid.Row="4" Text="Notes:" FontWeight="SemiBold" Margin="0,0,8,0" 
+                                               Visibility="{x:Bind Vendor.HasNotes, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    <TextBlock Grid.Column="1" Grid.Row="4" Text="{x:Bind Vendor.Notes, Mode=OneWay}" 
+                                               TextWrapping="Wrap"
+                                               Visibility="{x:Bind Vendor.HasNotes, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Order Summary -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="16"
+                                Visibility="{x:Bind Vendor.HasOrders, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Order Summary" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto">
+                                    <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,8">
+                                        <TextBlock Text="Total Orders" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.TotalOrders, Mode=OneWay}" 
+                                                   FontSize="20" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="0" Margin="8,0,8,8">
+                                        <TextBlock Text="Pending" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.PendingOrders, Mode=OneWay}" 
+                                                   FontSize="20" 
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource SystemAccentColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Grid.Row="0" Margin="8,0,8,8">
+                                        <TextBlock Text="Total Value" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.TotalOrderValueDisplay, Mode=OneWay}" 
+                                                   FontSize="20" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Grid.Row="0" Margin="8,0,0,8">
+                                        <TextBlock Text="Last Order" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.LastOrderDateDisplay, Mode=OneWay}" 
+                                                   FontSize="20" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Performance Metrics -->
+                        <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="4"
+                                Padding="16"
+                                Visibility="{x:Bind Vendor.HasOrders, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Performance Metrics" 
+                                           FontSize="16" 
+                                           FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                                    <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,8,8">
+                                        <TextBlock Text="On-Time Delivery Rate" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.OnTimeDeliveryRateDisplay, Mode=OneWay}" 
+                                                   FontSize="18" 
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource SystemAccentColor}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="0" Margin="8,0,0,8">
+                                        <TextBlock Text="Average Delivery Days" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.AverageDeliveryDaysDisplay, Mode=OneWay}" 
+                                                   FontSize="18" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,8,8,0">
+                                        <TextBlock Text="Monthly Spend" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.MonthlySpendDisplay, Mode=OneWay}" 
+                                                   FontSize="18" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Grid.Row="1" Margin="8,8,0,0">
+                                        <TextBlock Text="Orders This Month" FontSize="11" Opacity="0.7"/>
+                                        <TextBlock Text="{x:Bind Vendor.OrdersThisMonth, Mode=OneWay}" 
+                                                   FontSize="18" 
+                                                   FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- Items Tab -->
+            <TabViewItem Header="Items" Tag="ItemsTab">
+                <ScrollViewer>
+                    <StackPanel x:Name="ItemsContent" Spacing="12" Padding="16">
+                        <TextBlock Text="Loading items..." 
+                                   x:Name="ItemsLoadingText"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,20"/>
+                        <TextBlock Text="No items found for this vendor." 
+                                   x:Name="ItemsEmptyText"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,20"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- Orders Tab -->
+            <TabViewItem Header="Orders" Tag="OrdersTab">
+                <ScrollViewer>
+                    <StackPanel x:Name="OrdersContent" Spacing="12" Padding="16">
+                        <TextBlock Text="Loading orders..." 
+                                   x:Name="OrdersLoadingText"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,20"/>
+                        <TextBlock Text="No orders found for this vendor." 
+                                   x:Name="OrdersEmptyText"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,20"
+                                   Visibility="Collapsed"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- Analytics Tab -->
+            <TabViewItem Header="Analytics" Tag="AnalyticsTab">
+                <ScrollViewer>
+                    <StackPanel Spacing="16" Padding="16">
+                        <TextBlock Text="Analytics Dashboard" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"/>
+                        <TextBlock Text="Advanced analytics and charts coming soon." 
+                                   Opacity="0.7"
+                                   TextAlignment="Center"
+                                   Margin="0,40"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
+        </TabView>
+    </Grid>
+</ContentDialog>
+

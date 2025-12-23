@@ -1,0 +1,241 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.BillSummaryDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:converters="using:MagiDesk.Frontend.Converters"
+    mc:Ignorable="d"
+    Title="Bill Summary"
+    PrimaryButtonText="Print Pre-Payment Receipt"
+    SecondaryButtonText="Close"
+    CloseButtonText="Cancel"
+    DefaultButton="Primary">
+
+    <ContentDialog.Resources>
+        <!-- Converters -->
+        <converters:StringToBrushConverter x:Key="StringToBrushConverter"/>
+        
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#0078D4"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#107C10"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#D13438"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#404040"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#CCCCCC"/>
+
+        <!-- Card Style -->
+        <Style x:Key="SummaryCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="8"/>
+        </Style>
+
+        <!-- Header Text Style -->
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Label Text Style -->
+        <Style x:Key="LabelTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        </Style>
+
+        <!-- Value Text Style -->
+        <Style x:Key="ValueTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Item Row Style -->
+        <Style x:Key="ItemRowStyle" TargetType="Grid">
+            <Setter Property="Margin" Value="0,4"/>
+        </Style>
+    </ContentDialog.Resources>
+
+    <ScrollViewer MaxHeight="600" VerticalScrollMode="Auto">
+        <StackPanel Spacing="16">
+            <!-- Bill Header -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Bill ID -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding BillId}" 
+                             Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <!-- Status Badge -->
+                    <Border Grid.Row="0" Grid.Column="1" 
+                            Background="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}"
+                            CornerRadius="12" Padding="12,6">
+                        <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="Bold" 
+                                 Foreground="White"/>
+                    </Border>
+
+                    <!-- Table and Server -->
+                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Table" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{Binding TableLabel}" Style="{StaticResource ValueTextStyle}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Server" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{Binding ServerName}" Style="{StaticResource ValueTextStyle}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Session Duration -->
+                    <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Start Time" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{Binding StartTimeFormatted}" Style="{StaticResource ValueTextStyle}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Duration" Style="{StaticResource LabelTextStyle}"/>
+                            <TextBlock Text="{Binding DurationText}" Style="{StaticResource ValueTextStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Items Summary -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Items Summary" Style="{StaticResource HeaderTextStyle}" Margin="0,0,0,12"/>
+                    
+                    <!-- Items List -->
+                    <ListView ItemsSource="{Binding Items}" IsHitTestVisible="False" 
+                              Background="Transparent" BorderThickness="0">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Style="{StaticResource ItemRowStyle}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Item Name -->
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" 
+                                             Style="{StaticResource ValueTextStyle}" 
+                                             TextWrapping="Wrap"/>
+
+                                    <!-- Quantity -->
+                                    <TextBlock Grid.Column="1" Text="{Binding Quantity}" 
+                                             Style="{StaticResource ValueTextStyle}" 
+                                             HorizontalAlignment="Center" Margin="8,0"/>
+
+                                    <!-- Unit Price -->
+                                    <TextBlock Grid.Column="2" Text="{Binding UnitPriceFormatted}" 
+                                             Style="{StaticResource ValueTextStyle}" 
+                                             HorizontalAlignment="Right" Margin="8,0"/>
+
+                                    <!-- Total Price -->
+                                    <TextBlock Grid.Column="3" Text="{Binding TotalPriceFormatted}" 
+                                             Style="{StaticResource ValueTextStyle}" 
+                                             FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Border>
+
+            <!-- Financial Summary -->
+            <Border Style="{StaticResource SummaryCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Financial Summary" Style="{StaticResource HeaderTextStyle}" Margin="0,0,0,12"/>
+                    
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Items Cost -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Items Cost" Style="{StaticResource LabelTextStyle}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SubtotalFormatted}" 
+                                 Style="{StaticResource ValueTextStyle}" FontWeight="SemiBold"/>
+
+                        <!-- Tax -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tax" Style="{StaticResource LabelTextStyle}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TaxFormatted}" 
+                                 Style="{StaticResource ValueTextStyle}" FontWeight="SemiBold"/>
+
+                        <!-- Time Cost -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Time Cost" Style="{StaticResource LabelTextStyle}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ServiceChargeFormatted}" 
+                                 Style="{StaticResource ValueTextStyle}" FontWeight="SemiBold"/>
+
+                        <!-- Total -->
+                        <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" 
+                                Background="{StaticResource PrimaryBrush}" 
+                                CornerRadius="8" Padding="12,8" Margin="0,8,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <TextBlock Grid.Column="0" Text="TOTAL AMOUNT" 
+                                         FontSize="16" FontWeight="Bold" Foreground="White"/>
+                                <TextBlock Grid.Column="1" Text="{Binding TotalAmountFormatted}" 
+                                         FontSize="18" FontWeight="Bold" Foreground="White"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Pre-Payment Notice -->
+            <Border Style="{StaticResource SummaryCardStyle}" 
+                    Background="{StaticResource WarningBrush}" 
+                    Opacity="0.1">
+                <StackPanel>
+                    <TextBlock Text="Pre-Payment Receipt" Style="{StaticResource HeaderTextStyle}" 
+                             Foreground="{StaticResource WarningBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="This is a pre-payment receipt showing the bill details before payment is processed. The actual payment receipt will be generated after payment completion."
+                             FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" 
+                             TextWrapping="Wrap" LineHeight="16"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

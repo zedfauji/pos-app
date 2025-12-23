@@ -1,0 +1,472 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.PrinterSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Spacing="24" Margin="0,0,0,24">
+
+            <!-- Receipt Format Designer -->
+            <Expander x:Name="ReceiptDesignerExpander" Header="Receipt Format Designer" IsExpanded="False">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8A5;" FontSize="16"/>
+                            <TextBlock Text="Receipt Format Designer" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                    <TextBlock Text="Customize receipt layout, business information, and preview formats" 
+                               Opacity="0.7" TextWrapping="Wrap"/>
+                    
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button x:Name="OpenDesignerButton" Content="Open Receipt Designer" 
+                                Click="OpenReceiptDesigner_Click" 
+                                Style="{StaticResource AccentButtonStyle}"/>
+                        <Button Content="Preview Current Format" Click="PreviewFormat_Click"/>
+                    </StackPanel>
+                    
+                    <!-- Quick Settings -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Receipt Width" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="ReceiptWidthCombo" Margin="8,0">
+                                <ComboBoxItem Content="58mm (Small)" Tag="58"/>
+                                <ComboBoxItem Content="80mm (Standard)" Tag="80" IsSelected="True"/>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Include Logo" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <CheckBox Grid.Row="1" Grid.Column="1" x:Name="IncludeLogoCheck" IsChecked="True" Margin="8,0"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Show QR Code" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <CheckBox Grid.Row="2" Grid.Column="1" x:Name="ShowQRCodeCheck" IsChecked="False" Margin="8,0"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- Receipt Printer Settings -->
+            <Expander x:Name="ReceiptPrinterExpander" Header="Receipt Printer Settings" IsExpanded="True">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE749;" FontSize="16"/>
+                            <TextBlock Text="Receipt Printer Settings" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Default Printer -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Default Printer" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="DefaultPrinterCombo" 
+                                  PlaceholderText="Select printer..." Margin="8,0"/>
+                        <Button Grid.Row="0" Grid.Column="2" Content="Refresh" Click="RefreshPrinters_Click" Margin="8,0,0,0"/>
+
+                        <!-- Fallback Printer -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Fallback Printer" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="FallbackPrinterCombo" 
+                                  PlaceholderText="Select fallback printer..." Margin="8,0"/>
+                        <Button Grid.Row="1" Grid.Column="2" Content="Test" Click="TestPrinter_Click" Margin="8,0,0,0"/>
+
+                        <!-- Paper Size -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Paper Size" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="PaperSizeCombo" SelectedIndex="1" Margin="8,0">
+                            <ComboBoxItem Content="58mm" Tag="58mm"/>
+                            <ComboBoxItem Content="80mm" Tag="80mm"/>
+                            <ComboBoxItem Content="A4" Tag="A4"/>
+                        </ComboBox>
+
+                        <!-- Print Copies -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Final Receipt Copies" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <NumberBox Grid.Row="3" Grid.Column="1" x:Name="CopiesNumberBox" 
+                                   Value="2" Minimum="1" Maximum="5" Margin="8,0"/>
+
+                        <!-- Print Options -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Print Options" VerticalAlignment="Top" FontWeight="SemiBold" Margin="0,8,0,0"/>
+                        <StackPanel Grid.Row="4" Grid.Column="1" Spacing="8" Margin="8,0">
+                            <CheckBox x:Name="AutoPrintCheck" Content="Auto print on payment" IsChecked="True"/>
+                            <CheckBox x:Name="PreviewBeforePrintCheck" Content="Preview before printing" IsChecked="True"/>
+                            <CheckBox x:Name="PrintProFormaCheck" Content="Print pro forma receipts" IsChecked="True"/>
+                            <CheckBox x:Name="PrintFinalReceiptCheck" Content="Print final receipts" IsChecked="True"/>
+                            <CheckBox x:Name="PrintCustomerCopyCheck" Content="Print customer copy" IsChecked="True"/>
+                            <CheckBox x:Name="PrintMerchantCopyCheck" Content="Print merchant copy" IsChecked="True"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Receipt Template Settings -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="Receipt Template" FontWeight="SemiBold" FontSize="16"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="200"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Template Options -->
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Template Elements" VerticalAlignment="Top" FontWeight="SemiBold"/>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6" Margin="8,0">
+                                    <CheckBox x:Name="ShowLogoCheck" Content="Show business logo" IsChecked="True"/>
+                                    <CheckBox x:Name="ShowBusinessInfoCheck" Content="Show business information" IsChecked="True"/>
+                                    <CheckBox x:Name="ShowItemDetailsCheck" Content="Show item details" IsChecked="True"/>
+                                    <CheckBox x:Name="ShowTaxBreakdownCheck" Content="Show tax breakdown" IsChecked="True"/>
+                                    <CheckBox x:Name="ShowPaymentMethodCheck" Content="Show payment method" IsChecked="True"/>
+                                </StackPanel>
+
+                                <!-- Header Message -->
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Header Message" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="HeaderMessageText" 
+                                         PlaceholderText="Optional header message..." Margin="8,0"/>
+
+                                <!-- Footer Message -->
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Footer Message" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" x:Name="FooterMessageText" 
+                                         Text="Thank you for your business!" Margin="8,0"/>
+
+                                <!-- Margins -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Margins (mm)" VerticalAlignment="Top" FontWeight="SemiBold"/>
+                                <Grid Grid.Row="3" Grid.Column="1" Margin="8,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,8,0">
+                                        <TextBlock Text="Top" FontSize="12"/>
+                                        <NumberBox x:Name="TopMarginNumber" Value="5" Minimum="0" Maximum="20"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,8,0">
+                                        <TextBlock Text="Bottom" FontSize="12"/>
+                                        <NumberBox x:Name="BottomMarginNumber" Value="5" Minimum="0" Maximum="20"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Spacing="4" Margin="0,0,8,0">
+                                        <TextBlock Text="Left" FontSize="12"/>
+                                        <NumberBox x:Name="LeftMarginNumber" Value="2" Minimum="0" Maximum="20"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" Spacing="4">
+                                        <TextBlock Text="Right" FontSize="12"/>
+                                        <NumberBox x:Name="RightMarginNumber" Value="2" Minimum="0" Maximum="20"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- Kitchen Printer Settings -->
+            <Expander x:Name="KitchenPrinterExpander" Header="Kitchen Printer Settings">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8EA;" FontSize="16"/>
+                            <TextBlock Text="Kitchen Printer Settings" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                    <!-- Kitchen Printer Options -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Kitchen Print Options" VerticalAlignment="Top" FontWeight="SemiBold"/>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="6" Margin="8,0">
+                            <CheckBox x:Name="PrintOrderNumbersCheck" Content="Print order numbers" IsChecked="True"/>
+                            <CheckBox x:Name="PrintTimestampsCheck" Content="Print timestamps" IsChecked="True"/>
+                            <CheckBox x:Name="PrintSpecialInstructionsCheck" Content="Print special instructions" IsChecked="True"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Copies Per Order" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <NumberBox Grid.Row="1" Grid.Column="1" x:Name="KitchenCopiesNumber" 
+                                   Value="1" Minimum="1" Maximum="5" Margin="8,0"/>
+                    </Grid>
+
+                    <!-- Kitchen Printers List -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <TextBlock Text="Kitchen Printers" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
+                                <Button Content="Add Printer" Click="AddKitchenPrinter_Click" HorizontalAlignment="Right"/>
+                            </Grid>
+                            
+                            <ListView x:Name="KitchenPrintersList" MaxHeight="200">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Padding="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding PrinterName}" VerticalAlignment="Center"/>
+                                            <ToggleSwitch Grid.Column="2" IsOn="{Binding IsEnabled}" Margin="8,0"/>
+                                            <Button Grid.Column="3" Content="Remove" Click="RemoveKitchenPrinter_Click" 
+                                                    Tag="{Binding}" Margin="8,0,0,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- Device Management -->
+            <Expander x:Name="DeviceManagementExpander" Header="Device Management">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8B7;" FontSize="16"/>
+                            <TextBlock Text="Device Management" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                    <!-- Device Settings -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Auto-detect Printers" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AutoDetectPrintersCheck" 
+                                  IsChecked="True" Margin="8,0"/>
+                        <Button Grid.Row="0" Grid.Column="2" Content="Scan Now" Click="ScanPrinters_Click" Margin="8,0,0,0"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Default COM Port" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="DefaultComPortCombo" 
+                                  SelectedIndex="0" Margin="8,0">
+                            <ComboBoxItem Content="COM1"/>
+                            <ComboBoxItem Content="COM2"/>
+                            <ComboBoxItem Content="COM3"/>
+                            <ComboBoxItem Content="COM4"/>
+                            <ComboBoxItem Content="COM5"/>
+                            <ComboBoxItem Content="COM6"/>
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Default Baud Rate" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="DefaultBaudRateCombo" 
+                                  SelectedIndex="3" Margin="8,0">
+                            <ComboBoxItem Content="1200" Tag="1200"/>
+                            <ComboBoxItem Content="2400" Tag="2400"/>
+                            <ComboBoxItem Content="4800" Tag="4800"/>
+                            <ComboBoxItem Content="9600" Tag="9600"/>
+                            <ComboBoxItem Content="19200" Tag="19200"/>
+                            <ComboBoxItem Content="38400" Tag="38400"/>
+                            <ComboBoxItem Content="57600" Tag="57600"/>
+                            <ComboBoxItem Content="115200" Tag="115200"/>
+                        </ComboBox>
+                    </Grid>
+
+                    <!-- Available Printers -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <TextBlock Text="Available Printers" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button Content="Add Manual" Click="AddManualPrinter_Click"/>
+                                    <Button Content="Refresh" Click="RefreshDevices_Click"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <ListView x:Name="AvailablePrintersList" MaxHeight="300">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Padding="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding ConnectionString}" FontSize="12" Opacity="0.7"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding Type}" VerticalAlignment="Center"/>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <Ellipse Width="8" Height="8" 
+                                                         Fill="{Binding IsOnline, Converter={StaticResource BoolToColorConverter}}"/>
+                                                <TextBlock Text="{Binding IsOnline, Converter={StaticResource BoolToStatusConverter}}" 
+                                                           FontSize="12"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="3" Content="Test" Click="TestDevice_Click" 
+                                                    Tag="{Binding}" Margin="8,0"/>
+                                            <Button Grid.Column="4" Content="Configure" Click="ConfigureDevice_Click" 
+                                                    Tag="{Binding}" Margin="8,0"/>
+                                            <Button Grid.Column="5" Content="Remove" Click="RemoveDevice_Click" 
+                                                    Tag="{Binding}" Margin="8,0"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- Print Job Settings -->
+            <Expander x:Name="PrintJobExpander" Header="Print Job Settings">
+                <Expander.HeaderTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8F4;" FontSize="16"/>
+                            <TextBlock Text="Print Job Settings" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </Expander.HeaderTemplate>
+                
+                <StackPanel Spacing="16" Margin="0,16,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max Retries" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <NumberBox Grid.Row="0" Grid.Column="1" x:Name="MaxRetriesNumber" 
+                                   Value="3" Minimum="1" Maximum="10" Margin="8,0"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Timeout (ms)" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <NumberBox Grid.Row="1" Grid.Column="1" x:Name="TimeoutMsNumber" 
+                                   Value="5000" Minimum="1000" Maximum="30000" Margin="8,0"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Max Queue Size" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        <NumberBox Grid.Row="2" Grid.Column="1" x:Name="MaxQueueSizeNumber" 
+                                   Value="50" Minimum="1" Maximum="100" Margin="8,0"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Job Options" VerticalAlignment="Top" FontWeight="SemiBold"/>
+                        <StackPanel Grid.Row="3" Grid.Column="1" Spacing="6" Margin="8,0">
+                            <CheckBox x:Name="LogPrintJobsCheck" Content="Log print jobs" IsChecked="True"/>
+                            <CheckBox x:Name="QueueFailedJobsCheck" Content="Queue failed jobs for retry" IsChecked="True"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Print Queue Status -->
+                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                            BorderThickness="1" CornerRadius="8" Padding="16">
+                        <StackPanel Spacing="12">
+                            <Grid>
+                                <TextBlock Text="Print Queue Status" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                    <Button Content="Clear Queue" Click="ClearQueue_Click"/>
+                                    <Button Content="Retry Failed" Click="RetryFailed_Click"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0" Spacing="4">
+                                    <TextBlock Text="Pending" FontSize="12" Opacity="0.7"/>
+                                    <TextBlock x:Name="PendingJobsText" Text="0" FontSize="20" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Text="Processing" FontSize="12" Opacity="0.7"/>
+                                    <TextBlock x:Name="ProcessingJobsText" Text="0" FontSize="20" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Text="Completed" FontSize="12" Opacity="0.7"/>
+                                    <TextBlock x:Name="CompletedJobsText" Text="0" FontSize="20" FontWeight="SemiBold" 
+                                               Foreground="Green"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" Spacing="4">
+                                    <TextBlock Text="Failed" FontSize="12" Opacity="0.7"/>
+                                    <TextBlock x:Name="FailedJobsText" Text="0" FontSize="20" FontWeight="SemiBold" 
+                                               Foreground="Red"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,139 @@
+<Page
+    x:Class="MagiDesk.Frontend.Views.InventorySettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="24">
+            <!-- Header -->
+            <StackPanel Style="{StaticResource FluentPageHeaderStyle}">
+                <TextBlock Text="Inventory Settings" Style="{StaticResource TitleTextStyle}"/>
+                <TextBlock Text="Configure stock thresholds, reorder settings, and vendor defaults" 
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Stock Management Settings -->
+            <Border Style="{StaticResource FluentCardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Stock Management" Style="{StaticResource SubtitleTextStyle}"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Low Stock Threshold"/>
+                            <NumberBox x:Name="LowStockThresholdBox" PlaceholderText="10" 
+                                       Minimum="1" Maximum="1000"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Critical Stock Threshold"/>
+                            <NumberBox x:Name="CriticalStockThresholdBox" PlaceholderText="5" 
+                                       Minimum="1" Maximum="1000"/>
+                        </StackPanel>
+
+                        <CheckBox x:Name="EnableStockAlertsCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Enable stock alerts" Margin="0,16,12,0"/>
+                        <CheckBox x:Name="AutoDeductStockCheck" Grid.Row="1" Grid.Column="1" 
+                                  Content="Auto-deduct stock on sale" Margin="12,16,0,0"/>
+
+                        <CheckBox x:Name="AllowNegativeStockCheck" Grid.Row="2" Grid.Column="0" 
+                                  Content="Allow negative stock" Margin="0,16,12,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Reorder Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Reorder Settings" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <CheckBox x:Name="EnableAutoReorderCheck" Grid.Row="0" Grid.Column="0" 
+                                  Content="Enable auto-reorder" Margin="0,0,12,0"/>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Reorder Lead Time (days)"/>
+                            <NumberBox x:Name="ReorderLeadTimeDaysBox" PlaceholderText="7" 
+                                       Minimum="1" Maximum="365"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Spacing="4" Margin="0,16,12,0">
+                            <TextBlock Text="Safety Stock Multiplier"/>
+                            <NumberBox x:Name="SafetyStockMultiplierBox" PlaceholderText="1.5" 
+                                       Minimum="1.0" Maximum="10.0" SmallChange="0.1" LargeChange="0.5"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Vendor Settings -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="24">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Vendor Defaults" FontSize="18" FontWeight="SemiBold"/>
+                    
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                            <TextBlock Text="Default Payment Terms (days)"/>
+                            <NumberBox x:Name="DefaultPaymentTermsBox" PlaceholderText="30" 
+                                       Minimum="1" Maximum="90"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Spacing="4" Margin="12,0,0,0">
+                            <TextBlock Text="Default Currency"/>
+                            <ComboBox x:Name="DefaultCurrencyCombo" PlaceholderText="Select currency">
+                                <ComboBoxItem Content="USD - US Dollar"/>
+                                <ComboBoxItem Content="CAD - Canadian Dollar"/>
+                                <ComboBoxItem Content="EUR - Euro"/>
+                                <ComboBoxItem Content="GBP - British Pound"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <CheckBox x:Name="RequireApprovalForOrdersCheck" Grid.Row="1" Grid.Column="0" 
+                                  Content="Require approval for orders" Margin="0,16,12,0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <Button Content="Reset to Defaults"/>
+                <Button Content="Save Changes" Style="{StaticResource AccentButtonStyle}"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

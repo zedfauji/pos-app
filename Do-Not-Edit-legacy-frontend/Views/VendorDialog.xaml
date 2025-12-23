@@ -1,0 +1,74 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Views.VendorDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:services="using:MagiDesk.Frontend.Services"
+    mc:Ignorable="d"
+    Title="{x:Bind ViewModel.Title, Mode=OneWay}"
+    PrimaryButtonText="Save"
+    CloseButtonText="Cancel"
+    PrimaryButtonCommand="{x:Bind ViewModel.SaveCommand}"
+    DefaultButton="Primary">
+
+    <Grid RowSpacing="12" ColumnSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Company Name -->
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Company Name" Style="{StaticResource SubtitleTextStyle}" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="1" Grid.Column="0" x:Name="NameBox" Text="{x:Bind ViewModel.Vendor.Name, Mode=TwoWay}"/>
+
+        <!-- Contact Person -->
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="Contact Person" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="1" Grid.Column="1" x:Name="ContactPersonBox" Text="{x:Bind ViewModel.Vendor.ContactPerson, Mode=TwoWay}"/>
+
+        <!-- Phone -->
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Phone" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="3" Grid.Column="0" x:Name="PhoneBox" Text="{x:Bind ViewModel.Vendor.Phone, Mode=TwoWay}"/>
+
+        <!-- Email -->
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="Email" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="EmailBox" Text="{x:Bind ViewModel.Vendor.Email, Mode=TwoWay}"/>
+
+        <!-- Address -->
+        <TextBlock Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Text="Address" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="AddressBox" Text="{x:Bind ViewModel.Vendor.Address, Mode=TwoWay}" Height="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+
+        <!-- Status -->
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Status" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <ComboBox Grid.Row="7" Grid.Column="0" x:Name="StatusBox" SelectedValue="{x:Bind ViewModel.Vendor.Status, Mode=TwoWay}">
+            <ComboBoxItem Content="Active" Tag="Active"/>
+            <ComboBoxItem Content="Inactive" Tag="Inactive"/>
+            <ComboBoxItem Content="Suspended" Tag="Suspended"/>
+        </ComboBox>
+
+        <!-- Payment Terms -->
+        <TextBlock Grid.Row="6" Grid.Column="1" Text="Payment Terms" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <ComboBox Grid.Row="7" Grid.Column="1" x:Name="PaymentTermsBox" SelectedValue="{x:Bind ViewModel.Vendor.PaymentTerms, Mode=TwoWay}">
+            <ComboBoxItem Content="Net 7" Tag="Net 7"/>
+            <ComboBoxItem Content="Net 15" Tag="Net 15"/>
+            <ComboBoxItem Content="Net 30" Tag="Net 30"/>
+            <ComboBoxItem Content="Net 45" Tag="Net 45"/>
+        </ComboBox>
+
+        <!-- Credit Limit -->
+        <TextBlock Grid.Row="8" Grid.Column="0" Text="Credit Limit" FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <NumberBox Grid.Row="9" Grid.Column="0" x:Name="CreditLimitBox" Minimum="0" Maximum="1000000"/>
+    </Grid>
+</ContentDialog>

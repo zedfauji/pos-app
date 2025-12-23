@@ -1,0 +1,102 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.ModifierCrudDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Modifier"
+    PrimaryButtonText="Save"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick">
+
+    <ScrollViewer MaxHeight="600">
+        <StackPanel Spacing="16" Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Name -->
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Margin="8,0,0,0"/>
+
+                <!-- Description -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Description:" VerticalAlignment="Top" Margin="0,8,0,0"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Description}" 
+                         TextWrapping="Wrap" AcceptsReturn="True" Height="60" Margin="8,0,0,0"/>
+
+                <!-- Checkboxes -->
+                <CheckBox Grid.Row="2" Grid.Column="0" Content="Required" IsChecked="{Binding IsRequired}"/>
+                <CheckBox Grid.Row="2" Grid.Column="1" Content="Allow Multiple Selections" IsChecked="{Binding AllowMultiple}" Margin="8,0,0,0"/>
+
+                <!-- Max Selections -->
+                <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                    <TextBlock Text="Max Selections (leave empty for unlimited)" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <NumberBox Value="{Binding MaxSelections}" 
+                               Minimum="1"
+                               Maximum="10"
+                               HorizontalAlignment="Left"/>
+                </StackPanel>
+
+                <!-- Options Section -->
+                <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,16,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="Options" FontWeight="SemiBold"/>
+                        <Button Content="Add Option" 
+                                Click="AddOption_Click" 
+                                Margin="16,0,0,0"/>
+                    </StackPanel>
+
+                    <ListView ItemsSource="{Binding Options}" 
+                              Height="200"
+                              x:Name="OptionsListView">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8" Margin="0,0,0,4" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" CornerRadius="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBox Text="{Binding Name}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <NumberBox Value="{Binding PriceDelta}" 
+                                                   Header="Price Delta" 
+                                                   Minimum="-999"
+                                                   Maximum="999"
+                                                   SmallChange="0.25"
+                                                   LargeChange="1"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1" 
+                                            Content="↑" 
+                                            Click="MoveOptionUp_Click" 
+                                            Margin="4,0,0,0"
+                                            Width="30"/>
+                                    <Button Grid.Column="2" 
+                                            Content="↓" 
+                                            Click="MoveOptionDown_Click" 
+                                            Margin="4,0,0,0"
+                                            Width="30"/>
+                                    <Button Grid.Column="3" 
+                                            Content="Delete" 
+                                            Click="DeleteOption_Click" 
+                                            Margin="4,0,0,0"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</ContentDialog>

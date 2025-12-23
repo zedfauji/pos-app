@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Page
+    x:Class="MagiDesk.Frontend.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:local="using:MagiDesk.Frontend.Views"
+    xmlns:controls="using:MagiDesk.Frontend.Views.Controls"
+    mc:Ignorable="d"
+    Background="Transparent">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Section: CommandBar, InfoBar, Caja Banner -->
+        <StackPanel Grid.Row="0" Orientation="Vertical">
+            <!-- Fluent CommandBar with proper styling -->
+            <CommandBar x:Name="TopCommandBar"
+                        Style="{StaticResource FluentCommandBarStyle}"
+                        DefaultLabelPosition="Right">
+                <CommandBar.Content>
+                    <AutoSuggestBox x:Name="SearchBox" 
+                                   PlaceholderText="Search..."
+                                   Width="300"
+                                   Margin="8,0,0,0"/>
+                </CommandBar.Content>
+                
+                <AppBarButton x:Name="AddBtn" 
+                             Icon="Add" 
+                             Label="Add" 
+                             Click="Add_Click"/>
+                <AppBarButton x:Name="EditBtn" 
+                             Icon="Edit" 
+                             Label="Edit" 
+                             Click="Edit_Click"/>
+                <AppBarButton x:Name="DeleteBtn" 
+                             Icon="Delete" 
+                             Label="Delete" 
+                             Click="Delete_Click"/>
+                <AppBarButton x:Name="RefreshBtn" 
+                             Icon="Refresh" 
+                             Label="Refresh" 
+                             Click="Refresh_Click"/>
+                <AppBarSeparator/>
+                <AppBarToggleButton x:Name="DarkToggle" 
+                                   Label="Theme" 
+                                   Click="ThemeToggle_Click">
+                    <AppBarToggleButton.Icon>
+                        <SymbolIcon Symbol="Setting"/>
+                    </AppBarToggleButton.Icon>
+                </AppBarToggleButton>
+                <AppBarButton x:Name="SettingsBtn" 
+                             Icon="Setting" 
+                             Label="Settings"/>
+                <AppBarButton x:Name="LogoutBtn" 
+                             Icon="LeaveChat" 
+                             Label="Logout" 
+                             Click="Logout_Click"/>
+            </CommandBar>
+
+            <!-- Backend connectivity InfoBar -->
+            <InfoBar x:Name="BackendInfo"
+                     IsOpen="False"
+                     Severity="Warning"
+                     Style="{StaticResource FluentInfoBarStyle}"
+                     Message="Backend is unavailable. Features may be limited until connectivity is restored."
+                     Margin="16,0,16,8"/>
+            
+            <!-- Caja Status Banner -->
+            <controls:CajaStatusBanner x:Name="CajaStatusBanner"
+                                       Margin="16,0,16,8"
+                                       HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
+        <!-- Fluent NavigationView -->
+        <NavigationView Grid.Row="1" 
+                       x:Name="NavView"
+                       Style="{StaticResource FluentNavigationViewStyle}"
+                       ItemInvoked="NavView_ItemInvoked">
+            <NavigationView.MenuItems>
+                <!-- Always on top -->
+                <NavigationViewItem Content="Dashboard" Tag="DashboardPage" Icon="Home"/>
+                <NavigationViewItemSeparator/>
+
+                <!-- Top-level operations -->
+                <NavigationViewItem Content="Tables" Tag="TablesPage" Icon="Map"/>
+                <NavigationViewItem Content="Orders Management" Tag="OrdersManagementPage" Icon="Document"/>
+                <NavigationViewItem Content="Billing" Tag="BillingPage" Icon="Calendar"/>
+                <NavigationViewItem Content="Payments" Tag="PaymentPage" Icon="Shop">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="All Payments" Tag="AllPaymentsPage" Icon="List"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+
+                <NavigationViewItemSeparator/>
+
+                <!-- Management Group -->
+                <NavigationViewItemHeader Content="Management"/>
+                <NavigationViewItem Content="Menu" Tag="MenuManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Enhanced Menu" Tag="EnhancedMenuManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Inventory" Tag="InventoryManagementPage" Icon="Shop"/>
+                <NavigationViewItem Content="Customers" Tag="CustomerManagementPage" Icon="Contact">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="Customer Management" Tag="CustomerManagementPage" Icon="Contact"/>
+                        <NavigationViewItem Content="Customer Dashboard" Tag="CustomerDashboardPage" Icon="ContactInfo"/>
+                        <NavigationViewItem Content="Campaign Management" Tag="CampaignManagementPage" Icon="Flag"/>
+                        <NavigationViewItem Content="Customer Segments" Tag="SegmentDashboardPage" Icon="People"/>
+                        <NavigationViewItemSeparator/>
+                        <NavigationViewItem Content="Discount Management" Tag="DiscountManagementPage" Icon="Shop"/>
+                        <NavigationViewItem Content="Discount System Demo" Tag="DiscountDemoPage" Icon="Play"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Cash Flow" Tag="CashFlowPage" Icon="Calculator"/>
+                <NavigationViewItem Content="Sessions" Tag="SessionsPage" Icon="Sync"/>
+                <NavigationViewItem Content="Orders Analytics" Tag="OrdersPage" Icon="Document"/>
+
+                <NavigationViewItemSeparator/>
+
+                <!-- Administration Group -->
+                <NavigationViewItemHeader Content="Administration"/>
+                <NavigationViewItem x:Name="UsersItem" Content="Users" Tag="UsersPage" Icon="Contact"/>
+                <NavigationViewItem Content="Settings" Tag="HierarchicalSettingsPage" Icon="Setting">
+                    <NavigationViewItem.MenuItems>
+                        <NavigationViewItem Content="General" Tag="HierarchicalSettingsPage?category=general" Icon="Home"/>
+                        <NavigationViewItem Content="Point of Sale" Tag="HierarchicalSettingsPage?category=pos" Icon="Calculator"/>
+                        <NavigationViewItem Content="Inventory" Tag="HierarchicalSettingsPage?category=inventory" Icon="List"/>
+                        <NavigationViewItem Content="Customers" Tag="HierarchicalSettingsPage?category=customers" Icon="Contact"/>
+                        <NavigationViewItem Content="Payments" Tag="HierarchicalSettingsPage?category=payments" Icon="Calculator"/>
+                        <NavigationViewItem Content="Printers and Devices" Tag="HierarchicalSettingsPage?category=printers" Icon="Print"/>
+                        <NavigationViewItem Content="Notifications" Tag="HierarchicalSettingsPage?category=notifications" Icon="Mail"/>
+                        <NavigationViewItem Content="Security and Roles" Tag="HierarchicalSettingsPage?category=security" Icon="Contact"/>
+                        <NavigationViewItem Content="Integrations" Tag="HierarchicalSettingsPage?category=integrations" Icon="Setting"/>
+                        <NavigationViewItem Content="System" Tag="HierarchicalSettingsPage?category=system" Icon="Setting"/>
+                    </NavigationViewItem.MenuItems>
+                </NavigationViewItem>
+                
+                <NavigationViewItemSeparator/>
+                
+                <!-- Development/Testing Group -->
+                <NavigationViewItemHeader Content="Development"/>
+                <!-- PaymentPaneTestPage removed - no longer using panes -->
+            </NavigationView.MenuItems>
+            <!-- Content Frame with proper Fluent styling -->
+            <Frame x:Name="ContentFrame" 
+                   Background="Transparent"/>
+        </NavigationView>
+
+        <!-- Invisible printing panel for CommunityToolkit PrintHelper -->
+        <Grid x:Name="PrintingContainer" 
+              Opacity="0" 
+              IsHitTestVisible="False"
+              Grid.RowSpan="2"/>
+    </Grid>
+</Page>

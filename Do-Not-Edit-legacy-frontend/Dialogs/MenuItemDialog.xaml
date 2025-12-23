@@ -1,0 +1,61 @@
+<ContentDialog
+    x:Class="MagiDesk.Frontend.Dialogs.MenuItemDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Item Details"
+    PrimaryButtonText="Add to Order"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary"
+    PrimaryButtonClick="ContentDialog_PrimaryButtonClick">
+    <Grid MinWidth="520" Padding="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="12">
+                <Image Source="{Binding PictureUrl}" Height="140" Stretch="UniformToFill"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="Price:"/>
+                    <TextBlock Text="{Binding Price}"/>
+                </StackPanel>
+
+                <TextBlock Text="Modifiers" FontWeight="SemiBold"/>
+                <ItemsControl ItemsSource="{Binding Modifiers}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                <ItemsControl ItemsSource="{Binding Options}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding Name}"
+                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+            <TextBlock Text="Qty" VerticalAlignment="Center"/>
+            <NumberBox Value="{Binding Quantity, Mode=TwoWay}" Minimum="1" SpinButtonPlacementMode="Inline"/>
+            <InfoBar IsOpen="{Binding HasError}" Severity="Error" Message="{Binding Error}"/>
+        </StackPanel>
+    </Grid>
+</ContentDialog>
