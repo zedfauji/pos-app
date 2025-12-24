@@ -22,11 +22,24 @@ public class RequireOpenShiftAttribute : ActionFilterAttribute
         var openShift = await shiftService.GetCurrentOpenShiftAsync();
         if (openShift == null)
         {
-            context.Result = new ObjectResult(new { error = "NO_SHIFT_OPEN", message = "Operation requires an open shift." })
+            // Auto-open shift for Legacy Parity
+            var userId = context.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                         ?? context.HttpContext.User.FindFirst("sub")?.Value
+                         ?? "system";
+            var userName = context.HttpContext.User.Identity?.Name ?? "System Auto-Shift";
+            
+            try 
             {
-                StatusCode = 423 // Locked
-            };
-            return;
+               openShift = await shiftService.OpenSystemShiftAsync(userId, userName);
+            }
+            catch (Exception ex) 
+            {
+                 context.Result = new ObjectResult(new { error = "SHIFT_AUTO_OPEN_FAILED", message = $"Failed to auto-open legacy shift: {ex.Message}" }) 
+                 { 
+                     StatusCode = 500 
+                 };
+                 return;
+            }
         }
 
         // Optional: Inject current shift ID into items if needed for auditing

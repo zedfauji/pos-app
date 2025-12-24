@@ -4,7 +4,7 @@ namespace MenuApi.Models;
 
 public sealed record MenuAnalyticsDto
 {
-    public long MenuItemId { get; init; }
+    public Guid MenuItemId { get; init; }
     public string Name { get; init; } = "";
     public string Category { get; init; } = "";
     public decimal TotalRevenue { get; init; }
@@ -85,7 +85,7 @@ public sealed record MenuItemTemplateDto
 public sealed record BulkOperationDto
 {
     public string Operation { get; init; } = ""; // "UpdatePrices", "ChangeCategory", "ToggleAvailability", "UpdateImages"
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public Dictionary<string, object> Parameters { get; init; } = new();
     public string User { get; init; } = "";
 }
@@ -117,7 +117,7 @@ public sealed record MenuVersionDto
 
 public sealed record MenuItemVersionDto
 {
-    public long MenuItemId { get; init; }
+    public Guid MenuItemId { get; init; }
     public string Name { get; init; } = "";
     public string Description { get; init; } = "";
     public string Category { get; init; } = "";

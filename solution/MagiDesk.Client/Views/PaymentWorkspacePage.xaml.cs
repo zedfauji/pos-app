@@ -7,35 +7,15 @@ namespace MagiDesk.Client.Views;
 
 public sealed partial class PaymentWorkspacePage : Page
 {
-    public PaymentWorkspaceViewModel ViewModel { get; }
-    
-    // Static workaround for passing navigation parameters via ViewModel-based navigation
-    public static PaymentWorkspaceNavParams? PendingNavParams { get; set; }
+    private PaymentWorkspaceViewModel? _viewModel;
+    public PaymentWorkspaceViewModel ViewModel => _viewModel ??= App.GetService<PaymentWorkspaceViewModel>()
+        ?? throw new InvalidOperationException("PaymentWorkspaceViewModel could not be resolved from DI container");
 
     public PaymentWorkspacePage()
     {
         this.InitializeComponent();
-        
-        // Get ViewModel from DI container
-        ViewModel = App.GetService<PaymentWorkspaceViewModel>();
-        DataContext = ViewModel;
-        
-        this.Loaded += PaymentWorkspacePage_Loaded;
-    }
-
-    private async void PaymentWorkspacePage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
-    {
-        // Check for pending nav params
-        if (PendingNavParams != null)
-        {
-            await ViewModel.InitializeAsync(
-                PendingNavParams.SessionId,
-                PendingNavParams.BillingId,
-                PendingNavParams.TableLabel);
-            
-            // Clear pending params
-            PendingNavParams = null;
-        }
+        // ViewModel will be resolved lazily when DataContext is set or ViewModel is accessed
+        this.Loaded += (s, e) => { if (this.DataContext == null) this.DataContext = ViewModel; };
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)

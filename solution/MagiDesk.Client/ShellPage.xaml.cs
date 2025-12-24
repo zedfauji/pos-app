@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Controls;
 using MagiDesk.Client.ViewModels;
+using Serilog;
 
 namespace MagiDesk.Client
 {
@@ -9,10 +10,36 @@ namespace MagiDesk.Client
 
         public ShellPage(ShellViewModel viewModel)
         {
-            this.InitializeComponent();
-            ViewModel = viewModel;
-            this.DataContext = ViewModel;
-            this.Loaded += ShellPage_Loaded;
+            Log.Information("ShellPage: Constructor entry - ViewModel is {Status}", viewModel != null ? "not null" : "NULL");
+            try
+            {
+                Log.Information("ShellPage constructor: About to call InitializeComponent...");
+                Log.Information("ShellPage constructor: Current App.Current is {Status}", Microsoft.UI.Xaml.Application.Current != null ? "not null" : "NULL");
+                
+                this.InitializeComponent();
+                Log.Information("ShellPage constructor: InitializeComponent completed");
+                
+                Log.Information("ShellPage constructor: Setting ViewModel property...");
+                ViewModel = viewModel;
+                Log.Information("ShellPage constructor: ViewModel property set");
+                
+                Log.Information("ShellPage constructor: Setting DataContext...");
+                this.DataContext = ViewModel;
+                Log.Information("ShellPage constructor: DataContext set");
+                
+                Log.Information("ShellPage constructor: Subscribing to Loaded event...");
+                this.Loaded += ShellPage_Loaded;
+                Log.Information("ShellPage constructor: Completed successfully");
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "ShellPage constructor: Exception during construction. Type: {ExType}, Message: {ExMsg}", ex.GetType().Name, ex.Message);
+                if (ex.InnerException != null)
+                {
+                    Log.Fatal(ex.InnerException, "ShellPage constructor: Inner exception: {InnerType} - {InnerMsg}", ex.InnerException.GetType().Name, ex.InnerException.Message);
+                }
+                throw;
+            }
         }
 
         private void ShellPage_Loaded(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
@@ -26,13 +53,9 @@ namespace MagiDesk.Client
                 NavView.SelectedItem = null;
             }
 
-            // Force update of one-way bindings to ensure ContentControl reflects the ViewModel state
-            this.Bindings.Update();
+            // Note: {Binding} updates automatically when properties change (INotifyPropertyChanged)
+            // No need to call Bindings.Update() which is only for x:Bind
         }
-
-
-        public Microsoft.UI.Xaml.Visibility ToVis(bool isVisible) =>
-            isVisible ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 
         private void OnItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {

@@ -9,7 +9,7 @@ public interface IMenuAnalyticsService
     Task<IReadOnlyList<MenuPerformanceDto>> GetMenuPerformanceAsync(MenuPerformanceQueryDto query, CancellationToken ct);
     Task<IReadOnlyList<MenuTrendDto>> GetMenuTrendsAsync(MenuTrendQueryDto query, CancellationToken ct);
     Task<IReadOnlyList<MenuInsightDto>> GetMenuInsightsAsync(MenuInsightQueryDto query, CancellationToken ct);
-    Task<MenuAnalyticsDto> GetItemAnalyticsAsync(long menuItemId, DateTime? fromDate, DateTime? toDate, CancellationToken ct);
+    Task<MenuAnalyticsDto> GetItemAnalyticsAsync(Guid menuItemId, DateTime? fromDate, DateTime? toDate, CancellationToken ct);
     Task<Dictionary<string, object>> GetMenuDashboardDataAsync(DateTime? fromDate, DateTime? toDate, CancellationToken ct);
     Task<Dictionary<string, object>> GetDetailedReportAsync(MenuAnalyticsQueryDto query);
     Task<Dictionary<string, object>> GetExportDataAsync(MenuAnalyticsQueryDto query, string format);
@@ -34,17 +34,17 @@ public interface IMenuVersionService
     Task<MenuVersionDto> ActivateVersionAsync(ActivateMenuVersionDto dto, string user, CancellationToken ct);
     Task DeleteVersionAsync(long id, string user, CancellationToken ct);
     Task<MenuVersionDto> GetCurrentVersionAsync(CancellationToken ct);
-    Task<IReadOnlyList<MenuItemVersionDto>> GetItemVersionHistoryAsync(long menuItemId, CancellationToken ct);
+    Task<IReadOnlyList<MenuItemVersionDto>> GetItemVersionHistoryAsync(Guid menuItemId, CancellationToken ct);
 }
 
 public interface IMenuBulkOperationService
 {
     Task<BulkOperationResultDto> ExecuteBulkOperationAsync(BulkOperationDto operation, CancellationToken ct);
-    Task<BulkOperationResultDto> UpdatePricesAsync(List<long> menuItemIds, decimal priceChange, string changeType, string user, CancellationToken ct);
-    Task<BulkOperationResultDto> ChangeCategoryAsync(List<long> menuItemIds, string newCategory, string user, CancellationToken ct);
-    Task<BulkOperationResultDto> ToggleAvailabilityAsync(List<long> menuItemIds, bool isAvailable, string user, CancellationToken ct);
-    Task<BulkOperationResultDto> UpdateImagesAsync(List<long> menuItemIds, string imageUrl, string user, CancellationToken ct);
-    Task<BulkOperationResultDto> ApplyDiscountAsync(List<long> menuItemIds, decimal discountPercentage, string user, CancellationToken ct);
+    Task<BulkOperationResultDto> UpdatePricesAsync(List<Guid> menuItemIds, decimal priceChange, string changeType, string user, CancellationToken ct);
+    Task<BulkOperationResultDto> ChangeCategoryAsync(List<Guid> menuItemIds, string newCategory, string user, CancellationToken ct);
+    Task<BulkOperationResultDto> ToggleAvailabilityAsync(List<Guid> menuItemIds, bool isAvailable, string user, CancellationToken ct);
+    Task<BulkOperationResultDto> UpdateImagesAsync(List<Guid> menuItemIds, string imageUrl, string user, CancellationToken ct);
+    Task<BulkOperationResultDto> ApplyDiscountAsync(List<Guid> menuItemIds, decimal discountPercentage, string user, CancellationToken ct);
 }
 
 public interface IMenuExportImportService
@@ -59,11 +59,11 @@ public interface IMenuExportImportService
 public interface IMenuValidationService
 {
     Task<MenuValidationResultDto> ValidateMenuAsync(CancellationToken ct);
-    Task<MenuValidationResultDto> ValidateMenuItemAsync(long menuItemId, CancellationToken ct);
+    Task<MenuValidationResultDto> ValidateMenuItemAsync(Guid menuItemId, CancellationToken ct);
     Task<MenuValidationResultDto> ValidateCategoryAsync(string category, CancellationToken ct);
     Task<IReadOnlyList<MenuValidationErrorDto>> GetValidationErrorsAsync(string? category, CancellationToken ct);
     Task<IReadOnlyList<MenuValidationWarningDto>> GetValidationWarningsAsync(string? category, CancellationToken ct);
-    Task<bool> FixValidationIssuesAsync(List<long> menuItemIds, string user, CancellationToken ct);
+    Task<bool> FixValidationIssuesAsync(List<Guid> menuItemIds, string user, CancellationToken ct);
 }
 
 /// <summary>

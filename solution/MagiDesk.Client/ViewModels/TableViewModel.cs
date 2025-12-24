@@ -14,31 +14,27 @@ using Serilog;
 
 namespace MagiDesk.Client.ViewModels;
 
-public partial class TableViewModel : ObservableObject, IDisposable
+public partial class TableViewModel : BaseViewModel, IDisposable
 {
     private readonly ITableApi _tableApi;
     private readonly IDialogService _dialogService;
     private readonly IPrinterService _printerService;
+    private readonly IDispatcherService _dispatcherService;
     private readonly PeriodicTimer _timer;
     private readonly CancellationTokenSource _cts = new();
 
     [ObservableProperty]
     private ObservableCollection<TableStatusDto> _tables = new();
 
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _errorMessage = string.Empty;
-
     private readonly ShellViewModel _shellViewModel;
 
-    public TableViewModel(ITableApi tableApi, IDialogService dialogService, IPrinterService printerService, ShellViewModel shellViewModel)
+    public TableViewModel(ITableApi tableApi, IDialogService dialogService, IPrinterService printerService, ShellViewModel shellViewModel, IDispatcherService dispatcherService)
     {
         _tableApi = tableApi;
         _dialogService = dialogService;
         _printerService = printerService;
         _shellViewModel = shellViewModel;
+        _dispatcherService = dispatcherService;
         _timer = new PeriodicTimer(TimeSpan.FromSeconds(5)); // Poll every 5s
         _ = PollTablesAsync();
     }
@@ -59,8 +55,7 @@ public partial class TableViewModel : ObservableObject, IDisposable
         {
             var tables = await _tableApi.GetTablesAsync();
             
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(() => 
+            _dispatcherService.InvokeOnUIThread(() => 
             {
                 try
                 {
@@ -94,11 +89,11 @@ public partial class TableViewModel : ObservableObject, IDisposable
                     System.Diagnostics.Debug.WriteLine($"LoadTables UI update failed: {ex}");
                 }
             });
-            ErrorMessage = string.Empty;
+            ClearError();
         }
         catch (Exception ex)
         {
-            ErrorMessage = "Failed to load tables: " + ex.Message;
+            SetError("Failed to load tables: " + ex.Message);
         }
     }
 
@@ -176,6 +171,9 @@ public partial class TableViewModel : ObservableObject, IDisposable
                 table.Label
             );
             
+            // Note: TableViewModel still needs ShellViewModel for NavigateToOrder
+            // Navigation to PaymentWorkspace can use static access for now, or inject INavigationService
+            // For now, using ShellViewModel method to avoid breaking changes
             _shellViewModel.NavigateToPaymentWorkspace(navParams);
         }
         catch (Exception ex)

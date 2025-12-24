@@ -1,20 +1,20 @@
 namespace OrderApi.Models;
 
-public sealed record ModifierSelectionDto(long ModifierId, long OptionId);
+public sealed record ModifierSelectionDto(Guid ModifierId, Guid OptionId);
 
-public sealed record CreateOrderItemDto(long? MenuItemId, long? ComboId, int Quantity, IReadOnlyList<ModifierSelectionDto> Modifiers);
+public sealed record CreateOrderItemDto(Guid? MenuItemId, long? ComboId, int Quantity, IReadOnlyList<ModifierSelectionDto> Modifiers);
 
-public sealed record CreateOrderRequestDto(Guid SessionId, Guid? BillingId, string TableId, string ServerId, string? ServerName, IReadOnlyList<CreateOrderItemDto> Items);
+public sealed record CreateOrderRequestDto(Guid SessionId, Guid? BillingId, string TableId, string ServerId, string? ServerName, IReadOnlyList<CreateOrderItemDto> Items, decimal? DiscountTotal = null);
 
-public sealed record UpdateOrderItemDto(long OrderItemId, int? Quantity, IReadOnlyList<ModifierSelectionDto>? Modifiers);
+public sealed record UpdateOrderItemDto(Guid OrderItemId, int? Quantity, IReadOnlyList<ModifierSelectionDto>? Modifiers);
 
-public sealed record OrderItemDto(long Id, long? MenuItemId, long? ComboId, int Quantity, int DeliveredQuantity, decimal BasePrice, decimal PriceDelta, decimal LineTotal, decimal Profit);
+public sealed record OrderItemDto(Guid Id, Guid? MenuItemId, long? ComboId, int Quantity, int DeliveredQuantity, decimal BasePrice, decimal PriceDelta, decimal LineTotal, decimal Profit);
 
-public sealed record OrderDto(long Id, Guid SessionId, string TableId, string Status, string DeliveryStatus, decimal Subtotal, decimal DiscountTotal, decimal TaxTotal, decimal Total, decimal ProfitTotal, IReadOnlyList<OrderItemDto> Items);
+public sealed record OrderDto(Guid Id, Guid SessionId, string TableId, string Status, string DeliveryStatus, decimal Subtotal, decimal DiscountTotal, decimal TaxTotal, decimal Total, decimal ProfitTotal, IReadOnlyList<OrderItemDto> Items);
 
-public sealed record OrderLogDto(long Id, long OrderId, string Action, object? OldValue, object? NewValue, string? ServerId, DateTimeOffset CreatedAt);
+public sealed record OrderLogDto(Guid Id, Guid OrderId, string Action, object? OldValue, object? NewValue, string? ServerId, DateTimeOffset CreatedAt);
 
-public sealed record ItemDeliveryDto(long OrderItemId, int DeliveredQuantity);
+public sealed record ItemDeliveryDto(Guid OrderItemId, int DeliveredQuantity);
 
 public sealed record MarkDeliveredRequestDto(IReadOnlyList<ItemDeliveryDto> ItemDeliveries);
 

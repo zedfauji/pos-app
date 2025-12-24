@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using PaymentApi.Models;
+using PaymentApi.Models;
+using MagiDesk.Shared.DTOs.Payments;
 using PaymentApi.Services;
+using PaymentApi.Filters;
 
 namespace PaymentApi.Controllers;
 
@@ -16,11 +19,13 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [HttpPost]
+    [RequireOpenShift]
     public async Task<ActionResult<PaymentTransactionResult>> RegisterAsync([FromBody] RegisterPaymentRequestDto req, CancellationToken ct)
     {
         try
         {
-            var result = await _service.RegisterPaymentAsync(req, ct);
+            var shiftId = HttpContext.Items["CurrentShiftId"] as Guid?;
+            var result = await _service.RegisterPaymentAsync(req, shiftId, ct);
             // Avoid route link-generation issues across hosting environments
             return Created($"/api/payments/{req.BillingId}/ledger", result);
         }
@@ -42,7 +47,24 @@ public sealed class PaymentsController : ControllerBase
         }
     }
 
+    [HttpPost("void")]
+    [RequireOpenShift]
+    public async Task<ActionResult<PaymentTransactionResult>> VoidPaymentAsync([FromBody] VoidPaymentRequestDto req, CancellationToken ct)
+    {
+        try
+        {
+            var shiftId = HttpContext.Items["CurrentShiftId"] as Guid?;
+            var result = await _service.VoidPaymentAsync(req, shiftId, ct);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = "VOID_ERROR", message = ex.Message });
+        }
+    }
+
     [HttpPost("{billingId}/discounts")]
+    [RequireOpenShift]
     public async Task<ActionResult<BillLedgerDto>> ApplyDiscountAsync([FromRoute] Guid billingId, [FromBody] decimal discountAmount, [FromQuery] Guid sessionId, [FromQuery] string? reason, [FromQuery] string? serverId, CancellationToken ct = default)
     {
         var ledger = await _service.ApplyDiscountAsync(billingId, sessionId, discountAmount, reason, serverId, ct);
@@ -86,6 +108,7 @@ public sealed class PaymentsController : ControllerBase
     }
 
     [HttpPost("{billingId}/close")]
+    [RequireOpenShift]
     public async Task<ActionResult<BillLedgerDto>> CloseAsync([FromRoute] Guid billingId, [FromQuery] string? serverId, CancellationToken ct)
     {
         var ledger = await _service.CloseBillAsync(billingId, serverId, ct);

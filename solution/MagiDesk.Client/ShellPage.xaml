@@ -6,9 +6,12 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:MagiDesk.Client.ViewModels"
     xmlns:views="using:MagiDesk.Client.Views"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
 
     <Page.Resources>
+        <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" TrueValue="Visible" FalseValue="Collapsed" />
+        
         <DataTemplate x:Key="TableTemplate" x:DataType="vm:TableViewModel">
             <views:TableMapPage />
         </DataTemplate>
@@ -70,20 +73,20 @@
                     PaneDisplayMode="Top" 
                     IsSettingsVisible="False" 
                     ItemInvoked="OnItemInvoked"
-                    IsPaneVisible="{x:Bind ViewModel.IsLoggedIn, Mode=OneWay}">
+                    IsPaneVisible="{Binding IsLoggedIn, Mode=OneWay}">
         <NavigationView.MenuItems>
             <NavigationViewItem Content="Shift Control" Icon="Clock" Tag="ShiftController" />
             <NavigationViewItem Content="Tables" Icon="Map" Tag="Tables" />
             <NavigationViewItem Icon="List" Content="Menu Catalog" Tag="Menu" />
-            <NavigationViewItem Icon="Edit" Content="Menu Management" Tag="MenuEditor" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
-            <NavigationViewItem Icon="Library" Content="Inventory" Tag="Inventory" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
-            <NavigationViewItem Icon="GoToStart" Content="Reports" Tag="Reports" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+            <NavigationViewItem Icon="Edit" Content="Menu Management" Tag="MenuEditor" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+            <NavigationViewItem Icon="Library" Content="Inventory" Tag="Inventory" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+            <NavigationViewItem Icon="GoToStart" Content="Reports" Tag="Reports" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
             <NavigationViewItem Icon="Calculator" Content="Payments" Tag="PaymentHub" />
         </NavigationView.MenuItems>
         
         <NavigationView.FooterMenuItems>
-             <NavigationViewItem Icon="Setting" Content="Table Admin" Tag="TableManagement" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
-             <NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings" Visibility="{x:Bind ToVis(ViewModel.IsAdmin), Mode=OneWay}" />
+             <NavigationViewItem Icon="Setting" Content="Table Admin" Tag="TableManagement" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
+             <NavigationViewItem Icon="Setting" Content="Settings" Tag="Settings" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}" />
              <NavigationViewItem Icon="Cancel" Content="Logout" Tag="Logout" SelectsOnInvoked="False" />
         </NavigationView.FooterMenuItems>
 

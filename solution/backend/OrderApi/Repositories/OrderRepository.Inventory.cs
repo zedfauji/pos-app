@@ -34,7 +34,7 @@ public sealed partial class OrderRepository
         }
     }
 
-    public async Task DeductInventoryBySkuAsync(long orderId, IEnumerable<(string Sku, decimal Quantity, decimal? UnitCost)> items, CancellationToken ct)
+    public async Task DeductInventoryBySkuAsync(Guid orderId, IEnumerable<(string Sku, decimal Quantity, decimal? UnitCost)> items, CancellationToken ct)
     {
         try
         {

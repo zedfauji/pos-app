@@ -5,19 +5,17 @@ using MagiDesk.Shared.DTOs.Inventory;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace MagiDesk.Client.ViewModels
 {
-    public partial class InventoryViewModel : ObservableObject
+    public partial class InventoryViewModel : BaseViewModel
     {
         private readonly IInventoryApi _api;
         private readonly IDialogService _dialogService; // Would need to expand IDialog for inputs, but for now we'll simulate or use simple confirm.
 
         [ObservableProperty]
         private ObservableCollection<InventoryItemDto> _items = new();
-
-        [ObservableProperty]
-        private bool _isLoading;
 
         public InventoryViewModel(IInventoryApi api, IDialogService dialogService)
         {
@@ -41,7 +39,8 @@ namespace MagiDesk.Client.ViewModels
             }
             catch (Exception ex)
             {
-                 // Handle error
+                Log.Error(ex, "Failed to load inventory items");
+                await _dialogService.ShowMessageAsync("Error", "Failed to load inventory items. Please try again.");
             }
             finally
             {
@@ -71,7 +70,11 @@ namespace MagiDesk.Client.ViewModels
                      await _api.CreateItemAsync(newItem);
                      await LoadItemsAsync();
                  }
-                 catch {}
+                 catch (Exception ex)
+                 {
+                     Log.Error(ex, "Failed to create inventory item: {ItemName}", newItem.Name);
+                     await _dialogService.ShowMessageAsync("Error", "Failed to create inventory item. Please try again.");
+                 }
              }
         }
 
@@ -84,7 +87,11 @@ namespace MagiDesk.Client.ViewModels
                  await _api.DeleteItemAsync(item.Id);
                  Items.Remove(item);
              }
-             catch {}
+             catch (Exception ex)
+             {
+                 Log.Error(ex, "Failed to delete inventory item: {ItemId}, {ItemName}", item.Id, item.Name);
+                 await _dialogService.ShowMessageAsync("Error", "Failed to delete inventory item. Please try again.");
+             }
         }
 
         [RelayCommand]
@@ -92,12 +99,16 @@ namespace MagiDesk.Client.ViewModels
         {
             // Simple +1 adjustment for test
             var adj = new AdjustStockDto { ChangeAmount = 1, Reason = "Manual Add" };
-             try 
-             {
-                 await _api.AdjustStockAsync(item.Id, adj);
-                 await LoadItemsAsync();
-             }
-             catch {}
+            try 
+            {
+                await _api.AdjustStockAsync(item.Id, adj);
+                await LoadItemsAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to adjust stock for item: {ItemId}, {ItemName}, Change: {ChangeAmount}", item.Id, item.Name, adj.ChangeAmount);
+                await _dialogService.ShowMessageAsync("Error", "Failed to adjust stock. Please try again.");
+            }
         }
          
         [RelayCommand]
@@ -105,12 +116,16 @@ namespace MagiDesk.Client.ViewModels
         {
             // Simple -1 adjustment for test
             var adj = new AdjustStockDto { ChangeAmount = -1, Reason = "Manual Reduce" };
-             try 
-             {
-                 await _api.AdjustStockAsync(item.Id, adj);
-                 await LoadItemsAsync();
-             }
-             catch {}
+            try 
+            {
+                await _api.AdjustStockAsync(item.Id, adj);
+                await LoadItemsAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to reduce stock for item: {ItemId}, {ItemName}, Change: {ChangeAmount}", item.Id, item.Name, adj.ChangeAmount);
+                await _dialogService.ShowMessageAsync("Error", "Failed to reduce stock. Please try again.");
+            }
         }
     }
 }

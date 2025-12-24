@@ -7,10 +7,11 @@
     xmlns:vm="using:MagiDesk.Client.ViewModels"
     xmlns:dto="using:MagiDesk.Shared.DTOs.Tables"
     xmlns:converters="using:MagiDesk.Client.Converters"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
 
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" TrueValue="Visible" FalseValue="Collapsed"/>
     </UserControl.Resources>
 
     <Grid x:Name="RootGrid">
@@ -35,21 +36,21 @@
                 <DataTemplate x:DataType="dto:TableStatusDto">
                     <Button Width="160" Height="110" Margin="10" Padding="0"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                            Command="{Binding DataContext.SelectTableCommand, ElementName=RootGrid}"
-                            CommandParameter="{x:Bind}">
+                            Command="{Binding ElementName=RootGrid, Path=DataContext.SelectTableCommand}"
+                            CommandParameter="{Binding}">
                         <Button.ContextFlyout>
                             <MenuFlyout>
                                 <MenuFlyoutItem Text="Move Table" 
-                                                Command="{Binding DataContext.MoveTableCommand, ElementName=RootGrid}"
-                                                CommandParameter="{x:Bind}"/>
+                                                Command="{Binding ElementName=RootGrid, Path=DataContext.MoveTableCommand}"
+                                                CommandParameter="{Binding}"/>
                             </MenuFlyout>
                         </Button.ContextFlyout>
                         <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                               CornerRadius="8" BorderBrush="Gray" BorderThickness="1">
                              <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                 <TextBlock Text="{x:Bind Label}" Style="{StaticResource SubtitleTextBlockStyle}"/>
-                                 <TextBlock Text="{x:Bind Type}" Foreground="Gray"/>
-                                 <TextBlock Text="Occupied" Foreground="Green" Visibility="{x:Bind Occupied, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                 <TextBlock Text="{Binding Label}" Style="{StaticResource SubtitleTextBlockStyle}"/>
+                                 <TextBlock Text="{Binding Type}" Foreground="Gray"/>
+                                 <TextBlock Text="Occupied" Foreground="Green" Visibility="{Binding Occupied, Converter={StaticResource BoolToVisibilityConverter}}"/>
                              </StackPanel>
                         </Grid>
                     </Button>

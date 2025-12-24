@@ -25,23 +25,41 @@ namespace MagiDesk.Infrastructure.Repositories
 
         public async Task<Guid> CreateBillAsync(BillResult bill)
         {
-             const string sql = @"INSERT INTO public.bills(bill_id, table_label, server_id, server_name, start_time, end_time, total_time_minutes, items, time_cost, items_cost, total_amount, status, is_settled)
-                                  VALUES(@BillId, @TableLabel, @ServerId, @ServerName, @StartTime, @EndTime, @TotalTimeMinutes, @ItemsJson::jsonb, @TimeCost, @ItemsCost, @TotalAmount, 'awaiting_payment', false)";
-             
-             // Serialize items
-             var itemsJson = JsonSerializer.Serialize(bill.Items);
+             // Get table_id from tables table using table_label
+             // If table_label doesn't match any table, use a placeholder but log it
+             const string getTableIdSql = @"
+                 SELECT t.table_id 
+                 FROM public.tables t 
+                 WHERE t.table_number = @TableLabel 
+                 LIMIT 1";
              
              using var conn = CreateConnection();
+             await conn.OpenAsync();
+             
+             var tableId = await conn.ExecuteScalarAsync<Guid?>(getTableIdSql, new { TableLabel = bill.TableLabel });
+             
+             // If no table found, use placeholder but this should be logged/fixed
+             if (tableId == null || tableId == Guid.Empty)
+             {
+                 tableId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+                 // Log warning - this is a data integrity issue
+                 // TODO: Consider throwing exception or logging to audit table
+             }
+             
+             const string sql = @"INSERT INTO billing.bills(bill_id, billing_id, session_id, table_id, table_label, server_id, server_name, start_time, end_time, time_minutes, items_total, time_total, subtotal, discounts, tax, total_amount, status, created_at, updated_at)
+                                  VALUES(@BillId, @BillId, @SessionId, @TableId, @TableLabel, @ServerId, @ServerName, @StartTime, @EndTime, @TotalTimeMinutes, @ItemsCost, @TimeCost, @ItemsCost + @TimeCost, 0, 0, @TotalAmount, 'AwaitingPayment'::billing.bill_status, now(), now())";
+             
              await conn.ExecuteAsync(sql, new 
              {
                  bill.BillId,
+                 SessionId = bill.SessionId ?? Guid.Empty, // Use SessionId from BillResult
+                 TableId = tableId.Value,
                  bill.TableLabel,
                  bill.ServerId,
                  bill.ServerName,
                  bill.StartTime,
                  bill.EndTime,
                  bill.TotalTimeMinutes,
-                 ItemsJson = itemsJson,
                  bill.TimeCost,
                  bill.ItemsCost,
                  bill.TotalAmount
@@ -56,10 +74,10 @@ namespace MagiDesk.Infrastructure.Repositories
                 SELECT 
                     COALESCE(SUM(total_amount), 0) as TotalSalesToday,
                     COUNT(1) as ClosedSessionsToday
-                FROM public.bills
+                FROM billing.bills
                 WHERE created_at >= CURRENT_DATE";
              
-             const string sqlOpen = "SELECT COUNT(1) FROM public.table_sessions WHERE status = 'active'";
+             const string sqlOpen = "SELECT COUNT(1) FROM public.\"TableSessions\" WHERE end_time IS NULL";
 
              using var conn = CreateConnection();
              

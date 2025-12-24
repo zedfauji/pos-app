@@ -9,12 +9,13 @@
     xmlns:tables="using:MagiDesk.Shared.DTOs.Tables"
     xmlns:menu="using:MagiDesk.Shared.DTOs.Menu"
     xmlns:converters="using:MagiDesk.Client.Converters"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
 
     <Page.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVis" TrueValue="Visible" FalseValue="Collapsed"/>
         <converters:CurrencyConverter x:Key="CurrencyConverter"/>
-        <converters:BoolNegationConverter x:Key="BoolNegation"/>
+        <toolkitConverters:BoolNegationConverter x:Key="BoolNegation"/>
     </Page.Resources>
 
     <Grid x:Name="RootGrid" Padding="0">
@@ -43,34 +44,34 @@
                     
                     <!-- Back & Title -->
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                         <Button Command="{Binding GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
+                         <Button Command="{x:Bind ViewModel.GoBackCommand, Mode=OneWay}" Style="{StaticResource SubtleButtonStyle}">
                             <SymbolIcon Symbol="Back"/>
                          </Button>
-                         <TextBlock Text="{Binding TableLabel}" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
+                         <TextBlock Text="{x:Bind ViewModel.TableLabel, Mode=OneWay}" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <!-- Session Details -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="24" Margin="32,0,0,0" VerticalAlignment="Center">
                         <StackPanel>
                              <TextBlock Text="Server" FontSize="11" Foreground="Gray"/>
-                             <TextBlock Text="{Binding ServerName}" FontWeight="SemiBold"/>
+                             <TextBlock Text="{x:Bind ViewModel.ServerName, Mode=OneWay}" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel>
                              <TextBlock Text="Started" FontSize="11" Foreground="Gray"/>
-                             <TextBlock Text="{Binding SessionStartTime}" FontWeight="SemiBold"/>
+                             <TextBlock Text="{x:Bind ViewModel.SessionStartTime, Mode=OneWay}" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel>
                              <TextBlock Text="Duration" FontSize="11" Foreground="Gray"/>
-                             <TextBlock Text="{Binding Duration}" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                             <TextBlock Text="{x:Bind ViewModel.Duration, Mode=OneWay}" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                         </StackPanel>
                     </StackPanel>
                     
                     <!-- Current Time -->
-                    <TextBlock Grid.Column="2" Text="{Binding CurrentTime}" VerticalAlignment="Center" FontSize="14" Foreground="Gray"/>
+                    <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.CurrentTime, Mode=OneWay}" VerticalAlignment="Center" FontSize="14" Foreground="Gray"/>
                 </Grid>
                 
                 <!-- Menu Grid -->
-                <GridView Grid.Row="1" ItemsSource="{Binding MenuItems}" Padding="16" SelectionMode="None">
+                <GridView Grid.Row="1" ItemsSource="{x:Bind ViewModel.MenuItems, Mode=OneWay}" Padding="16" SelectionMode="None">
                     <GridView.ItemTemplate>
                         <DataTemplate x:DataType="menu:MenuItemDto">
                             <Button Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" 
@@ -81,8 +82,8 @@
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Text="{x:Bind Name}" TextWrapping="Wrap" Grid.Row="0"/>
-                                    <TextBlock Text="{x:Bind SellingPrice, Converter={StaticResource CurrencyConverter}}" 
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" Grid.Row="0"/>
+                                    <TextBlock Text="{Binding BasePrice, Converter={StaticResource CurrencyConverter}}" 
                                                FontWeight="SemiBold" Grid.Row="1" HorizontalAlignment="Right"/>
                                 </Grid>
                             </Button>
@@ -100,7 +101,7 @@
                     
                     <TextBlock Text="Current Ticket" FontWeight="SemiBold" Margin="12,8"/>
                     
-                    <ListView Grid.Row="1" ItemsSource="{Binding TicketItems}">
+                    <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.TicketItems, Mode=OneWay}">
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="dto:OrderItemDto">
                                  <Grid>
@@ -111,18 +112,18 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Orientation="Horizontal" Grid.Column="0" Spacing="8">
                                         <Button Content="-" Command="{Binding ElementName=RootGrid, Path=DataContext.RemoveFromTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
-                                        <TextBlock Text="{x:Bind Quantity}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Quantity}" VerticalAlignment="Center"/>
                                         <Button Content="+" Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}" CommandParameter="{Binding}" Padding="4,0" Height="24"/>
                                     </StackPanel>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind ItemId}" Margin="12,0" VerticalAlignment="Center"/> 
-                                    <TextBlock Grid.Column="2" Text="{x:Bind Price, Converter={StaticResource CurrencyConverter}}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ItemId}" Margin="12,0" VerticalAlignment="Center"/> 
+                                    <TextBlock Grid.Column="2" Text="{Binding Price, Converter={StaticResource CurrencyConverter}}" VerticalAlignment="Center"/>
                                  </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
                     
                     <Button Grid.Row="2" Content="Send Order to Kitchen" 
-                            Command="{Binding SubmitOrderCommand}" 
+                            Command="{x:Bind ViewModel.SubmitOrderCommand, Mode=OneWay}" 
                             Style="{StaticResource AccentButtonStyle}" 
                             HorizontalAlignment="Stretch" Margin="12"/>
                 </Grid>
@@ -139,7 +140,7 @@
                 <TextBlock Text="Ordered Items" Style="{StaticResource SubtitleTextBlockStyle}" Grid.Row="0" Margin="0,0,0,16"/>
                 
                 <!-- Confirmed Orders List -->
-                <ListView Grid.Row="1" ItemsSource="{Binding OrderedItems}">
+                <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.OrderedItems, Mode=OneWay}">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="tables:ItemLine">
                             <Grid Margin="0,4">
@@ -148,9 +149,9 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Bind quantity}" FontWeight="Bold" Width="30"/>
-                                <TextBlock Text="{x:Bind name}" Grid.Column="1"/>
-                                <TextBlock Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" Grid.Column="2" Foreground="Gray"/>
+                                <TextBlock Text="{Binding quantity}" FontWeight="Bold" Width="30"/>
+                                <TextBlock Text="{Binding name}" Grid.Column="1"/>
+                                <TextBlock Text="{Binding price, Converter={StaticResource CurrencyConverter}}" Grid.Column="2" Foreground="Gray"/>
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -158,16 +159,16 @@
                 
                 <!-- Operational Actions -->
                 <StackPanel Grid.Row="2" Spacing="12">
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="Orange" TextWrapping="Wrap"/>
+                    <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" Foreground="Orange" TextWrapping="Wrap"/>
                     
-                    <Button Command="{Binding PrintBillCommand}" HorizontalAlignment="Stretch" Content="Print Pre-Settlement Bill"/>
+                    <Button Command="{x:Bind ViewModel.PrintBillCommand, Mode=OneWay}" HorizontalAlignment="Stretch" Content="Print Pre-Settlement Bill"/>
                     
-                    <Button Command="{Binding MoveTableCommand}" HorizontalAlignment="Stretch" Content="Move Session"/>
+                    <Button Command="{x:Bind ViewModel.MoveTableCommand, Mode=OneWay}" HorizontalAlignment="Stretch" Content="Move Session"/>
                     
-                    <Button Command="{Binding GoToPaymentsCommand}" HorizontalAlignment="Stretch" Content="Go to Payments" 
+                    <Button Command="{x:Bind ViewModel.GoToPaymentsCommand, Mode=OneWay}" HorizontalAlignment="Stretch" Content="Go to Payments" 
                             Style="{StaticResource AccentButtonStyle}" Background="Green"/>
                             
-                    <Button Command="{Binding EndSessionCommand}" HorizontalAlignment="Stretch" Content="End Session (Operational Close)"
+                    <Button Command="{x:Bind ViewModel.EndSessionCommand, Mode=OneWay}" HorizontalAlignment="Stretch" Content="End Session (Operational Close)"
                             Foreground="Red" BorderBrush="Red" BorderThickness="1" Background="Transparent" Margin="0,20,0,0"/> 
                 </StackPanel>
             </Grid>
@@ -178,13 +179,13 @@
               Background="{ThemeResource LayerFillColorDefaultBrush}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24" Width="400">
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
-                    <Button Command="{Binding GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
+                    <Button Command="{x:Bind ViewModel.GoBackCommand, Mode=OneWay}" Style="{StaticResource SubtleButtonStyle}">
                         <SymbolIcon Symbol="Back"/>
                      </Button>
                     <TextBlock Text="Start New Session" Style="{StaticResource TitleTextBlockStyle}"/>
                 </StackPanel>
                 
-                <TextBlock Text="{Binding TableLabel}" HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="Gray"/>
+                <TextBlock Text="{x:Bind ViewModel.TableLabel, Mode=OneWay}" HorizontalAlignment="Center" Style="{StaticResource SubtitleTextBlockStyle}" Foreground="Gray"/>
                 
                 <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
                     <StackPanel Spacing="12">
@@ -195,7 +196,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Timer Rate"/>
-                            <TextBlock Grid.Column="1" Text="{Binding TableConfig.HourlyRate, Converter={StaticResource CurrencyConverter}}" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TableConfig.HourlyRate, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" FontWeight="Bold"/>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -203,7 +204,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Allow Orders"/>
-                            <TextBlock Grid.Column="1" Text="{Binding TableConfig.AllowOrders}" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TableConfig.AllowOrders, Mode=OneWay}" FontWeight="Bold"/>
                         </Grid>
                         
                         <MenuFlyoutSeparator/>
@@ -212,9 +213,9 @@
                     </StackPanel>
                 </Border>
                 
-                <TextBlock Text="{Binding StatusMessage}" Foreground="Red" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" Foreground="Red" TextWrapping="Wrap" HorizontalAlignment="Center"/>
 
-                <Button Content="START SESSION" Command="{Binding StartSessionCommand}" 
+                <Button Content="START SESSION" Command="{x:Bind ViewModel.StartSessionCommand, Mode=OneWay}" 
                         Style="{StaticResource AccentButtonStyle}" Height="40" HorizontalAlignment="Stretch"/>
             </StackPanel>
         </Grid>

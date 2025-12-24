@@ -10,6 +10,7 @@ namespace MagiDesk.Client.ViewModels;
 public partial class ShellViewModel : ObservableObject
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     private ObservableObject? _currentViewModel;
@@ -25,70 +26,95 @@ public partial class ShellViewModel : ObservableObject
     private readonly IShiftApi _shiftApi;
     private readonly IDialogService _dialogService;
 
-    public ShellViewModel(IServiceProvider serviceProvider, IAuthenticationService authService, IShiftApi shiftApi, IDialogService dialogService)
+    public ShellViewModel(
+        IServiceProvider serviceProvider, 
+        IAuthenticationService authService, 
+        IShiftApi shiftApi, 
+        IDialogService dialogService,
+        INavigationService navigationService)
     {
-        _serviceProvider = serviceProvider;
-        AuthService = authService;
-        _shiftApi = shiftApi;
-        _dialogService = dialogService;
-
-        if (AuthService is System.ComponentModel.INotifyPropertyChanged notifyService)
+        try
         {
-            notifyService.PropertyChanged += (s, e) =>
+            Log.Information("ShellViewModel: Constructor starting...");
+            _serviceProvider = serviceProvider;
+            Log.Information("ShellViewModel: ServiceProvider assigned");
+            
+            AuthService = authService;
+            Log.Information("ShellViewModel: AuthService assigned");
+            
+            _shiftApi = shiftApi;
+            Log.Information("ShellViewModel: ShiftApi assigned");
+            
+            _dialogService = dialogService;
+            Log.Information("ShellViewModel: DialogService assigned");
+            
+            _navigationService = navigationService;
+            Log.Information("ShellViewModel: NavigationService assigned");
+
+            if (AuthService is System.ComponentModel.INotifyPropertyChanged notifyService)
             {
-                if (e.PropertyName == nameof(IsLoggedIn))
+                notifyService.PropertyChanged += (s, e) =>
                 {
-                    OnPropertyChanged(nameof(IsLoggedIn));
-                    // Re-evaluate Admin status when login changes
-                    OnPropertyChanged(nameof(IsAdmin)); 
-                }
-                else if (e.PropertyName == "CurrentRole") // Role changes affect IsAdmin
-                {
-                    OnPropertyChanged(nameof(IsAdmin));
-                }
-            };
+                    if (e.PropertyName == nameof(IsLoggedIn))
+                    {
+                        OnPropertyChanged(nameof(IsLoggedIn));
+                        // Re-evaluate Admin status when login changes
+                        OnPropertyChanged(nameof(IsAdmin)); 
+                    }
+                    else if (e.PropertyName == "CurrentRole") // Role changes affect IsAdmin
+                    {
+                        OnPropertyChanged(nameof(IsAdmin));
+                    }
+                };
+            }
+            Log.Information("ShellViewModel: Constructor completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "ShellViewModel: Constructor FAILED");
+            throw;
         }
     }
 
     [RelayCommand]
-    public void NavigateToLogin() => NavigateTo<LoginViewModel>();
+    public void NavigateToLogin() => _navigationService.NavigateTo<LoginViewModel>();
 
     [RelayCommand]
-    public void NavigateToShiftController() => NavigateTo<ShiftControllerViewModel>();
+    public void NavigateToShiftController() => _navigationService.NavigateTo<ShiftControllerViewModel>();
 
     [RelayCommand]
     public async void NavigateToTables()
     {
         if (await EnsureShiftOpenAsync())
         {
-            NavigateTo<TableViewModel>();
+            _navigationService.NavigateTo<TableViewModel>();
         }
     }
 
     [RelayCommand]
-    public void NavigateToMenu() => NavigateTo<MenuViewModel>();
+    public void NavigateToMenu() => _navigationService.NavigateTo<MenuViewModel>();
 
     [RelayCommand]
-    public void NavigateToInventory() => NavigateTo<InventoryViewModel>();
+    public void NavigateToInventory() => _navigationService.NavigateTo<InventoryViewModel>();
 
     [RelayCommand]
-    public void NavigateToMenuEditor() => NavigateTo<MenuEditorViewModel>();
+    public void NavigateToMenuEditor() => _navigationService.NavigateTo<MenuEditorViewModel>();
 
     [RelayCommand]
-    public void NavigateToReports() => NavigateTo<ReportsViewModel>();
+    public void NavigateToReports() => _navigationService.NavigateTo<ReportsViewModel>();
 
     [RelayCommand]
-    public void NavigateToSettings() => NavigateTo<SettingsViewModel>();
+    public void NavigateToSettings() => _navigationService.NavigateTo<SettingsViewModel>();
 
     [RelayCommand]
-    public void NavigateToTableManagement() => NavigateTo<TableManagementViewModel>();
+    public void NavigateToTableManagement() => _navigationService.NavigateTo<TableManagementViewModel>();
 
     [RelayCommand]
     public async void NavigateToPaymentHub()
     {
         if (await EnsureShiftOpenAsync())
         {
-            NavigateTo<PaymentHubViewModel>();
+            _navigationService.NavigateTo<PaymentHubViewModel>();
         }
     }
 
@@ -141,33 +167,13 @@ public partial class ShellViewModel : ObservableObject
 
     public async void NavigateToOrder(string tableLabel)
     {
-        var vm = _serviceProvider.GetRequiredService<TableWorkspaceViewModel>();
-        await vm.InitializeAsync(tableLabel);
-        CurrentViewModel = vm;
+        // Use NavigationService with parameter
+        _navigationService.NavigateTo<TableWorkspaceViewModel>(tableLabel);
     }
 
     public void NavigateToPaymentWorkspace(object navParams)
     {
-        // PaymentWorkspacePage expects navigation via its OnNavigatedTo
-        // We'll store the params and trigger navigation via the view
-        var page = _serviceProvider.GetRequiredService<Views.PaymentWorkspacePage>();
-        // This is a workaround since we can't directly pass parameters through ContentControl
-        // The page will need to be navigated to properly
-        
-        // For now, create a temporary navigation mechanism
-        System.Diagnostics.Debug.WriteLine($"Navigate to PaymentWorkspace with params: {navParams}");
-        
-        // We'll need a different approach - let's use a static property or event
-        Views.PaymentWorkspacePage.PendingNavParams = navParams as Views.PaymentWorkspaceNavParams;
-        
-        var vm = _serviceProvider.GetRequiredService<PaymentWorkspaceViewModel>();
-        CurrentViewModel = vm;
-    }
-
-    private void NavigateTo<T>() where T : ObservableObject
-    {
-        var vmName = typeof(T).Name;
-        Log.Information("NAVIGATING to {ViewModel}", vmName);
-        CurrentViewModel = _serviceProvider.GetRequiredService<T>();
+        // Use NavigationService with parameter - no more static workaround!
+        _navigationService.NavigateTo<PaymentWorkspaceViewModel>(navParams);
     }
 }

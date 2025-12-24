@@ -37,62 +37,28 @@ public sealed class DatabaseInitializer : IHostedService
 
     private static async Task EnsureMenuSchemaAsync(NpgsqlConnection conn, CancellationToken ct)
     {
+        // Schema adapted to match existing database structure:
+        // - menu_item_id is UUID (not bigserial)
+        // - sku (not sku_id), base_price (not vendor_price/selling_price)
+        // - No is_deleted column in existing table
+        // Only add missing columns/tables, don't recreate
         const string sql = @"
 create schema if not exists menu;
 
-create table if not exists menu.menu_items (
-  menu_item_id        bigserial primary key,
-  sku_id              text not null,
-  inventory_item_id   uuid null,
-  name                text not null,
-  description         text null,
-  category            text not null,
-  group_name          text null,
-  vendor_price        numeric(12,2) not null default 0.00,
-  selling_price       numeric(12,2) not null,
-  price               numeric(12,2) null,
-  picture_url         text null,
-  is_discountable     boolean not null default true,
-  is_part_of_combo    boolean not null default false,
-  is_available        boolean not null default true,
-  version             int not null default 1,
-  is_deleted          boolean not null default false,
-  created_by          text null,
-  updated_by          text null,
-  created_at          timestamptz not null default now(),
-  updated_at          timestamptz not null default now()
-);
+-- The menu.menu_items table already exists with different column names
+-- Only add missing columns if needed
+DO $$
+BEGIN
+  -- Add is_part_of_combo if not exists
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'menu' AND table_name = 'menu_items' AND column_name = 'is_part_of_combo'
+  ) THEN
+    ALTER TABLE menu.menu_items ADD COLUMN is_part_of_combo boolean NOT NULL DEFAULT false;
+  END IF;
+END $$;
 
--- Migration: Ensure inventory_item_id exists (if restored from legacy dump)
-do $$ begin
-  if not exists (select 1 from information_schema.columns where table_schema='menu' and table_name='menu_items' and column_name='inventory_item_id') then
-    alter table menu.menu_items add column inventory_item_id uuid null;
-  end if;
-end $$;
--- Drop any legacy unique constraint or index on sku_id to allow partial unique index
-do $$ begin
-  if exists (
-    select 1 from information_schema.table_constraints tc
-    where tc.constraint_type = 'UNIQUE'
-      and tc.table_schema = 'menu'
-      and tc.table_name = 'menu_items'
-      and tc.constraint_name = 'menu_items_sku_id_key') then
-    alter table menu.menu_items drop constraint menu_items_sku_id_key;
-  end if;
-exception when undefined_table then
-  -- ignore
-  null;
-end $$;
-
--- Create case-insensitive partial unique index for active (not deleted) rows
-create unique index if not exists ux_menu_items_sku_active
-  on menu.menu_items (lower(sku_id))
-  where is_deleted = false;
-create index if not exists ix_menu_items_inventory_fk on menu.menu_items(inventory_item_id);
-create index if not exists ix_menu_items_category on menu.menu_items(category);
-create index if not exists ix_menu_items_group on menu.menu_items(group_name);
-create index if not exists ix_menu_items_avail on menu.menu_items(is_available) where is_deleted = false;
-
+-- Create modifiers table if not exists
 create table if not exists menu.modifiers (
   modifier_id         bigserial primary key,
   name                text not null,
@@ -105,6 +71,7 @@ create table if not exists menu.modifiers (
   updated_at          timestamptz not null default now()
 );
 
+-- Create modifier_options table if not exists
 create table if not exists menu.modifier_options (
   option_id           bigserial primary key,
   modifier_id         bigint not null references menu.modifiers(modifier_id) on delete cascade,
@@ -117,14 +84,21 @@ create table if not exists menu.modifier_options (
 );
 create index if not exists ix_modifier_options_modifier on menu.modifier_options(modifier_id);
 
-create table if not exists menu.menu_item_modifiers (
-  menu_item_id        bigint not null references menu.menu_items(menu_item_id) on delete cascade,
-  modifier_id         bigint not null references menu.modifiers(modifier_id) on delete restrict,
-  sort_order          int not null default 0,
-  is_optional         boolean not null default true,
-  constraint pk_menu_item_modifiers primary key(menu_item_id, modifier_id)
-);
+-- Create menu_item_modifiers table if not exists (uses UUID for menu_item_id)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'menu' AND table_name = 'menu_item_modifiers') THEN
+    CREATE TABLE menu.menu_item_modifiers (
+      menu_item_id        uuid not null,
+      modifier_id         bigint not null references menu.modifiers(modifier_id) on delete restrict,
+      sort_order          int not null default 0,
+      is_optional         boolean not null default true,
+      constraint pk_menu_item_modifiers primary key(menu_item_id, modifier_id)
+    );
+  END IF;
+END $$;
 
+-- Create combos table if not exists
 create table if not exists menu.combos (
   combo_id            bigserial primary key,
   name                text not null,
@@ -141,14 +115,21 @@ create table if not exists menu.combos (
   updated_at          timestamptz not null default now()
 );
 
-create table if not exists menu.combo_items (
-  combo_id            bigint not null references menu.combos(combo_id) on delete cascade,
-  menu_item_id        bigint not null references menu.menu_items(menu_item_id) on delete restrict,
-  quantity            int not null default 1,
-  is_required         boolean not null default true,
-  constraint pk_combo_items primary key(combo_id, menu_item_id)
-);
+-- Create combo_items table if not exists (uses UUID for menu_item_id)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'menu' AND table_name = 'combo_items') THEN
+    CREATE TABLE menu.combo_items (
+      combo_id            bigint not null references menu.combos(combo_id) on delete cascade,
+      menu_item_id        uuid not null,
+      quantity            int not null default 1,
+      is_required         boolean not null default true,
+      constraint pk_combo_items primary key(combo_id, menu_item_id)
+    );
+  END IF;
+END $$;
 
+-- Create menu_history table if not exists
 create table if not exists menu.menu_history (
   history_id          bigserial primary key,
   entity_type         text not null,

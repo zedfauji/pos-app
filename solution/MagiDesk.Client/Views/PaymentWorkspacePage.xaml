@@ -6,6 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:MagiDesk.Client.ViewModels"
     xmlns:dto="using:MagiDesk.Shared.DTOs.Tables"
+    xmlns:pay="using:MagiDesk.Shared.DTOs.Payments"
     mc:Ignorable="d">
 
     <Grid x:Name="RootGrid" Padding="20">
@@ -23,9 +24,9 @@
                         <TextBlock Text="Process Payment" Style="{StaticResource TitleTextBlockStyle}"/>
                         <TextBlock>
                             <Run Text="Table:"/>
-                            <Run Text="{Binding TableLabel}" FontWeight="Bold"/>
+                            <Run Text="{x:Bind ViewModel.TableLabel, Mode=OneWay}" FontWeight="Bold"/>
                         </TextBlock>
-                        <Button Content="← Back to Hub" Command="{Binding CancelCommand}" 
+                        <Button Content="← Back to Hub" Command="{x:Bind ViewModel.CancelCommand, Mode=OneWay}" 
                                 Style="{StaticResource AccentButtonStyle}"/>
                     </StackPanel>
 
@@ -42,7 +43,7 @@
                                       OffContent="Full Payment"/>
                         
                         <!-- Split Mode Selection (only visible when split is enabled) -->
-                        <StackPanel Spacing="12" Visibility="{Binding IsSplitPayment}">
+                        <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsSplitPayment, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="Split Mode" FontWeight="SemiBold"/>
                             <StackPanel Spacing="8">
                                 <RadioButton Content="By Amount" 
@@ -57,18 +58,18 @@
                             </StackPanel>
 
                             <!-- By Amount Input -->
-                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByAmount}">
+                            <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.SplitMode, Mode=OneWay, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByAmount}">
                                 <TextBlock Text="Amount to Pay"/>
                                 <NumberBox Value="{Binding SplitAmount, Mode=TwoWay}"
                                            SpinButtonPlacementMode="Inline"
                                            Minimum="0"
-                                           Maximum="{Binding TotalDue}"
+                                           Maximum="{x:Bind ViewModel.TotalDue, Mode=OneWay}"
                                            LargeChange="10"
                                            SmallChange="1"/>
                             </StackPanel>
 
                             <!-- By Percentage Input -->
-                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByPercentage}">
+                            <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.SplitMode, Mode=OneWay, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByPercentage}">
                                 <TextBlock Text="Percentage to Pay"/>
                                 <NumberBox Value="{Binding SplitPercentage, Mode=TwoWay}"
                                            SpinButtonPlacementMode="Inline"
@@ -78,22 +79,22 @@
                                            SmallChange="5"/>
                                 <TextBlock FontWeight="SemiBold"
                                            Foreground="{ThemeResource SystemAccentColor}">
-                                    <Run Text="{Binding SplitPercentage}"/><Run Text="%"/>
+                                    <Run Text="{x:Bind ViewModel.SplitPercentage, Mode=OneWay}"/><Run Text="%"/>
                                 </TextBlock>
                             </StackPanel>
 
                             <!-- By Item Selection -->
-                            <StackPanel Spacing="8" Visibility="{Binding SplitMode, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByItem}">
+                            <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.SplitMode, Mode=OneWay, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=ByItem}">
                                 <TextBlock Text="Select Items"/>
-                                <ListView ItemsSource="{Binding BillItems}"
+                                <ListView ItemsSource="{x:Bind ViewModel.BillItems, Mode=OneWay}"
                                           SelectionChanged="ListView_SelectionChanged"
                                           SelectionMode="Multiple"
                                           MaxHeight="150">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="dto:ItemLine">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{x:Bind name}" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" 
+                                                <TextBlock Text="{Binding name}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding price, Converter={StaticResource CurrencyConverter}}" 
                                                            Foreground="Gray"
                                                            VerticalAlignment="Center"/>
                                             </StackPanel>
@@ -104,13 +105,13 @@
 
                             <!-- Calculate Button -->
                             <Button Content="Calculate Split Amount" 
-                                    Command="{Binding CalculateSplitCommand}"
+                                    Command="{x:Bind ViewModel.CalculateSplitCommand, Mode=OneWay}"
                                     HorizontalAlignment="Stretch"/>
 
                             <!-- Calculated Amount Display -->
-                            <StackPanel Spacing="4" Visibility="{Binding CalculatedSplitAmount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                            <StackPanel Spacing="4" Visibility="{x:Bind ViewModel.CalculatedSplitAmount, Mode=OneWay, Converter={StaticResource ZeroToCollapsedConverter}}">
                                 <TextBlock Text="Amount to Pay:"  FontSize="14" Foreground="Gray"/>
-                                <TextBlock Text="{Binding CalculatedSplitAmount, Converter={StaticResource CurrencyConverter}}"
+                                <TextBlock Text="{x:Bind ViewModel.CalculatedSplitAmount, Mode=OneWay, Converter={StaticResource CurrencyConverter}}"
                                            FontSize="24"
                                            FontWeight="Bold"
                                            Foreground="{ThemeResource SystemAccentColor}"/>
@@ -142,7 +143,7 @@
                                    SmallChange="1"/>
                         <TextBlock>
                             <Run Text="Change Due:"/>
-                            <Run Text="{Binding ChangeDue, Converter={StaticResource CurrencyConverter}}" 
+                            <Run Text="{x:Bind ViewModel.ChangeDue, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" 
                                  FontWeight="Bold" 
                                  Foreground="{ThemeResource SystemAccentColor}" 
                                  FontSize="20"/>
@@ -150,7 +151,7 @@
                     </StackPanel>
 
                     <!-- Card Payment Section -->
-                    <StackPanel Spacing="12" Visibility="{Binding SelectedPaymentMethod, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=Card}">
+                    <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.SelectedPaymentMethod, Mode=OneWay, Converter={StaticResource StringEqualsToVisibilityConverter}, ConverterParameter=Card}">
                         <TextBlock Text="Card Payment" FontWeight="SemiBold" FontSize="16"/>
                         <TextBlock Text="Tip Amount (Optional)"/>
                         <NumberBox Value="{Binding TipAmount, Mode=TwoWay}" 
@@ -166,7 +167,7 @@
                         <NumberBox Value="{Binding DiscountAmount, Mode=TwoWay}" 
                                    SpinButtonPlacementMode="Inline"
                                    Minimum="0"
-                                   Maximum="{Binding TotalDue}"/>
+                                   Maximum="{x:Bind ViewModel.TotalDue, Mode=OneWay}"/>
                     </StackPanel>
 
                     <!-- Customer Email -->
@@ -178,31 +179,31 @@
 
                     <!-- Process Button -->
                     <StackPanel Spacing="12">
-                        <Button Command="{Binding ProcessPaymentCommand}"
+                        <Button Command="{x:Bind ViewModel.ProcessPaymentCommand, Mode=OneWay}"
                                 Style="{StaticResource AccentButtonStyle}"
                                 HorizontalAlignment="Stretch"
                                 Height="56"
                                 FontSize="18"
-                                IsEnabled="{Binding IsProcessing, Converter={StaticResource InvertBoolConverter}}">
+                                IsEnabled="{x:Bind ViewModel.IsProcessing, Mode=OneWay, Converter={StaticResource InvertBoolConverter}}">
                             <Button.Content>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <ProgressRing IsActive="{Binding IsProcessing}" Width="20" Height="20" Visibility="{Binding IsProcessing}"/>
+                                    <ProgressRing IsActive="{x:Bind ViewModel.IsProcessing, Mode=OneWay}" Width="20" Height="20" Visibility="{x:Bind ViewModel.IsProcessing, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     <TextBlock Text="Process Payment" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button.Content>
                         </Button>
 
                         <!-- Status Messages -->
-                        <TextBlock Text="{Binding StatusMessage}" 
+                        <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" 
                                    Foreground="Green" 
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap"
-                                   Visibility="{Binding StatusMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
-                        <TextBlock Text="{Binding ErrorMessage}" 
+                                   Visibility="{x:Bind ViewModel.StatusMessage, Mode=OneWay, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
+                        <TextBlock Text="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}" 
                                    Foreground="Red" 
                                    FontWeight="SemiBold"
                                    TextWrapping="Wrap"
-                                   Visibility="{Binding ErrorMessage, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
+                                   Visibility="{x:Bind ViewModel.ErrorMessage, Mode=OneWay, Converter={StaticResource EmptyStringToCollapsedConverter}}"/>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -220,7 +221,7 @@
                     <!-- Bill Header -->
                     <StackPanel Spacing="8">
                         <TextBlock Text="Bill Summary" Style="{StaticResource SubtitleTextBlockStyle}" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding TableLabel}" FontSize="20" Foreground="Gray"/>
+                        <TextBlock Text="{x:Bind ViewModel.TableLabel, Mode=OneWay}" FontSize="20" Foreground="Gray"/>
                     </StackPanel>
 
                     <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
@@ -228,7 +229,7 @@
                     <!-- Items List -->
                     <StackPanel Spacing="12">
                         <TextBlock Text="Items" FontWeight="SemiBold"/>
-                        <ItemsControl ItemsSource="{Binding BillItems}">
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.BillItems, Mode=OneWay}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="dto:ItemLine">
                                     <Grid Margin="0,4">
@@ -237,13 +238,13 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{x:Bind name}" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding name}" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Margin="8,0">
                                             <Run Text="×"/>
-                                            <Run Text="{x:Bind quantity}"/>
+                                            <Run Text="{Binding quantity}"/>
                                         </TextBlock>
                                         <TextBlock Grid.Column="2" 
-                                                   Text="{x:Bind price, Converter={StaticResource CurrencyConverter}}" 
+                                                   Text="{Binding price, Converter={StaticResource CurrencyConverter}}" 
                                                    FontWeight="SemiBold"
                                                    MinWidth="80"
                                                    TextAlignment="Right"/>
@@ -263,7 +264,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Subtotal"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Subtotal, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.Subtotal, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -271,9 +272,9 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Tax"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Tax, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
+                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.Tax, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" MinWidth="80" TextAlignment="Right"/>
                         </Grid>
-                        <Grid Visibility="{Binding DiscountAmount, Converter={StaticResource ZeroToCollapsedConverter}}">
+                        <Grid Visibility="{x:Bind ViewModel.DiscountAmount, Mode=OneWay, Converter={StaticResource ZeroToCollapsedConverter}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -281,7 +282,7 @@
                             <TextBlock Grid.Column="0" Text="Discount" Foreground="Green"/>
                             <TextBlock Grid.Column="1" Foreground="Green">
                                 <Run Text="-"/>
-                                <Run Text="{Binding DiscountAmount, Converter={StaticResource CurrencyConverter}}"/>
+                                <Run Text="{x:Bind ViewModel.DiscountAmount, Mode=OneWay, Converter={StaticResource CurrencyConverter}}"/>
                             </TextBlock>
                         </Grid>
                     </StackPanel>
@@ -299,13 +300,70 @@
                                    FontSize="20" 
                                    FontWeight="Bold"/>
                         <TextBlock Grid.Column="1" 
-                                   Text="{Binding FinalTotal, Converter={StaticResource CurrencyConverter}}" 
+                                   Text="{x:Bind ViewModel.FinalTotal, Mode=OneWay, Converter={StaticResource CurrencyConverter}}" 
                                    FontSize="24" 
                                    FontWeight="Bold"
                                    Foreground="{ThemeResource SystemAccentColor}"
                                    MinWidth="120"
                                    TextAlignment="Right"/>
                     </Grid>
+
+                    <Border Height="2" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+
+                    <!-- Payment History (New Section) -->
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Payment History" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.PaymentHistory, Mode=OneWay}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="pay:PaymentDto">
+                                    <Grid Margin="0,4" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8" CornerRadius="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Time -->
+                                        <TextBlock Grid.Column="0" Text="{Binding CreatedAt.Year}" 
+                                                   VerticalAlignment="Center" Foreground="Gray" Width="50"/>
+
+                                        <!-- Method -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Method" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding PaymentMethod}" FontWeight="SemiBold"/>
+                                        </StackPanel>
+
+                                        <!-- Amount -->
+                                        <TextBlock Grid.Column="2" 
+                                                   Text="{Binding AmountPaid, Converter={StaticResource CurrencyConverter}}" 
+                                                   VerticalAlignment="Center" 
+                                                   FontWeight="Bold"
+                                                   Margin="16,0"/>
+
+                                        <!-- Void Button -->
+                                        <Button Grid.Column="3" 
+                                                Content="Void" 
+                                                FontSize="10"
+                                                Padding="4,2"
+                                                BorderThickness="1"
+                                                Background="Transparent"
+                                                Foreground="Red"
+                                                BorderBrush="Red"
+                                                Command="{Binding ElementName=RootGrid, Path=DataContext.VoidPaymentCommand}"
+                                                CommandParameter="{Binding}">
+                                            <!-- Hide void button if amount <= 0 (already void, or void itself) -->
+                                            <!-- Simple visibility binding could go here if AmountPaid exposing property -->
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="No payments recorded" 
+                                   Foreground="Gray" 
+                                   FontStyle="Italic" 
+                                   Visibility="{x:Bind ViewModel.PaymentHistory.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibleConverter}}"/>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

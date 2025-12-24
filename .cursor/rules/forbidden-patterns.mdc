@@ -1,0 +1,263 @@
+---
+alwaysApply: true
+---
+
+# Forbidden Database Patterns
+
+**Status**: ENFORCED  
+**Last Updated**: 2025-12-23  
+**Purpose**: Prevent common schema and query anti-patterns
+
+## 🚫 FORBIDDEN PATTERNS
+
+### 1. Direct Table Access Across API Boundaries
+**Forbidden**:
+```csharp
+// OrderApi accessing MenuApi's tables directly
+const string sql = "SELECT * FROM menu.menu_items WHERE menu_item_id = @id";
+```
+
+**Required**:
+```csharp
+// Use HTTP API or shared library
+var menuItem = await _menuApiClient.GetMenuItemAsync(id);
+```
+
+**Rationale**: Breaks microservices boundaries, tight coupling
+
+### 2. Implicit Joins Without FK
+**Forbidden**:
+```csharp
+// JOIN without foreign key constraint
+const string sql = @"
+    SELECT o.*, s.table_label 
+    FROM orders.orders o
+    JOIN public.TableSessions s ON o.session_id = s.session_id
+    -- No FK constraint exists
+";
+```
+
+**Required**:
+```csharp
+// First add FK constraint, then use JOIN
+-- Migration: ALTER TABLE orders.orders ADD CONSTRAINT fk_orders_session 
+--            FOREIGN KEY (session_id) REFERENCES public.TableSessions(session_id);
+
+const string sql = @"
+    SELECT o.*, s.table_label 
+    FROM orders.orders o
+    JOIN public.TableSessions s ON o.session_id = s.session_id
+    -- FK constraint exists
+";
+```
+
+**Rationale**: No referential integrity, orphaned records
+
+### 3. Type Casting to Fix Mismatches
+**Forbidden**:
+```csharp
+// Casting to work around type mismatch
+const string sql = @"
+    SELECT * FROM ord.order_items oi
+    JOIN menu.menu_items mi ON oi.menu_item_id::uuid = mi.menu_item_id
+    -- Type mismatch: bigint vs uuid
+";
+```
+
+**Required**:
+```csharp
+// Fix the type mismatch first, then use proper JOIN
+-- Migration: ALTER TABLE ord.order_items ALTER COLUMN menu_item_id TYPE uuid;
+-- Then use proper JOIN without casting
+```
+
+**Rationale**: Type mismatches indicate schema problems, casting is a workaround
+
+### 4. Schema Duplication
+**Forbidden**:
+```csharp
+// Creating duplicate schema
+CREATE SCHEMA orders_v2;
+CREATE TABLE orders_v2.orders (...);
+-- When orders.orders already exists
+```
+
+**Required**:
+```csharp
+// Use existing schema, migrate if needed
+-- Use orders.orders, not orders_v2.orders
+```
+
+**Rationale**: Data inconsistency, confusion, maintenance burden
+
+### 5. Missing Foreign Keys
+**Forbidden**:
+```csharp
+// Inserting without FK constraint
+INSERT INTO orders.orders (session_id, ...) 
+VALUES (@sessionId, ...);
+-- No FK constraint on session_id
+```
+
+**Required**:
+```csharp
+// Add FK constraint first
+-- Migration: ALTER TABLE orders.orders 
+--            ADD CONSTRAINT fk_orders_session 
+--            FOREIGN KEY (session_id) REFERENCES public.TableSessions(session_id);
+
+INSERT INTO orders.orders (session_id, ...) 
+VALUES (@sessionId, ...);
+-- FK constraint exists
+```
+
+**Rationale**: No referential integrity, orphaned records
+
+### 6. Undocumented SQL Queries
+**Forbidden**:
+```csharp
+// SQL query without documentation
+const string sql = "SELECT * FROM orders.orders WHERE session_id = @id";
+// Not documented in api-expectations/OrderApi.md
+```
+
+**Required**:
+```csharp
+// Document in api-expectations/OrderApi.md
+// Tables Used: orders.orders
+// Columns Used: session_id, order_id, ...
+// JOINs: None
+// Assumptions: session_id exists and is valid
+
+const string sql = "SELECT * FROM orders.orders WHERE session_id = @id";
+```
+
+**Rationale**: Schema drift, unclear dependencies
+
+### 7. Hardcoded Schema Names
+**Forbidden**:
+```csharp
+// Hardcoded schema in multiple places
+const string sql1 = "SELECT * FROM ord.orders";
+const string sql2 = "SELECT * FROM ord.order_items";
+// Schema name repeated, hard to change
+```
+
+**Required**:
+```csharp
+// Use constants or configuration
+private const string OrdersSchema = "orders";  // Not "ord"
+const string sql1 = $"SELECT * FROM {OrdersSchema}.orders";
+const string sql2 = $"SELECT * FROM {OrdersSchema}.order_items";
+```
+
+**Rationale**: Hard to migrate, schema name changes break code
+
+### 8. Type Assumptions
+**Forbidden**:
+```csharp
+// Assuming column type without verification
+var menuItemId = (Guid)row.menu_item_id;
+// Assumes uuid, but might be bigint
+```
+
+**Required**:
+```csharp
+// Verify type in canonical schema first
+// docs/schema/CANONICAL_DB_SCHEMA.md says: menu_item_id uuid
+// Then use proper type
+var menuItemId = (Guid)row.menu_item_id;
+```
+
+**Rationale**: Runtime failures, type mismatches
+
+### 9. Silent Type Conversions
+**Forbidden**:
+```csharp
+// Silent conversion that might fail
+var userId = (int)row.opened_by_user_id;
+// But opened_by_user_id is varchar in DB
+```
+
+**Required**:
+```csharp
+// Fix type mismatch first, then use proper type
+// Migration: ALTER TABLE shifts ALTER COLUMN opened_by_user_id TYPE integer;
+// Or use correct type: var userId = (string)row.opened_by_user_id;
+```
+
+**Rationale**: Runtime failures, data corruption
+
+### 10. Missing Transaction Boundaries
+**Forbidden**:
+```csharp
+// Multiple operations without transaction
+await conn.ExecuteAsync("INSERT INTO orders.orders ...");
+await conn.ExecuteAsync("INSERT INTO orders.order_items ...");
+// If second fails, first is committed (inconsistent state)
+```
+
+**Required**:
+```csharp
+// Use transaction for multi-table operations
+await using var tx = await conn.BeginTransactionAsync();
+try {
+    await conn.ExecuteAsync("INSERT INTO orders.orders ...", tx);
+    await conn.ExecuteAsync("INSERT INTO orders.order_items ...", tx);
+    await tx.CommitAsync();
+} catch {
+    await tx.RollbackAsync();
+    throw;
+}
+```
+
+**Rationale**: Data inconsistency, partial updates
+
+## ✅ REQUIRED PATTERNS
+
+### 1. Always Check Canonical Schema
+**Pattern**: Before writing SQL, check `docs/schema/CANONICAL_DB_SCHEMA.md`
+**Example**: Verify column names, types, constraints
+
+### 2. Always Document SQL
+**Pattern**: Document all SQL in API expectation docs
+**Example**: See `docs/schema/api-expectations/TablesApi.md`
+
+### 3. Always Use Foreign Keys
+**Pattern**: All cross-table references must have FK constraints
+**Example**: `ALTER TABLE orders.orders ADD CONSTRAINT fk_orders_session FOREIGN KEY (session_id) REFERENCES public.TableSessions(session_id)`
+
+### 4. Always Use Transactions
+**Pattern**: Multi-table operations in transactions
+**Example**: See transaction pattern above
+
+### 5. Always Handle Errors
+**Pattern**: Log errors, never swallow silently
+**Example**: `catch (Exception ex) { _logger.LogError(ex, "Message"); throw; }`
+
+## 🔍 CODE REVIEW CHECKS
+
+Reviewers MUST reject PRs with:
+
+1. **Undocumented SQL** - No entry in API expectation doc
+2. **Missing FKs** - JOINs without foreign key constraints
+3. **Type Mismatches** - Type casting to work around mismatches
+4. **Schema Duplication** - Duplicate schemas/tables
+5. **Cross-API DB Access** - Direct DB access across API boundaries
+6. **Missing Transactions** - Multi-table operations without transactions
+7. **Silent Failures** - Swallowed exceptions in database code
+
+## 📚 REFERENCE DOCUMENTS
+
+- **Canonical Schema**: `docs/schema/CANONICAL_DB_SCHEMA.md`
+- **Mismatch Matrix**: `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md`
+- **API Expectations**: `docs/schema/api-expectations/`
+- **Forbidden Patterns**: This document
+
+## ⚠️ ENFORCEMENT
+
+**These patterns are ABSOLUTELY FORBIDDEN.**
+- PRs violating these patterns MUST be rejected
+- No exceptions without Architecture Decision Record (ADR)
+- ADR must be approved by Principal Architect
+

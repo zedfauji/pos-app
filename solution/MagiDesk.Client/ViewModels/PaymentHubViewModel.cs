@@ -14,22 +14,17 @@ namespace MagiDesk.Client.ViewModels;
 /// ViewModel for Payment Hub - Dashboard of all bills requiring payment.
 /// Supports tabs for filtering: ALL, UNSETTLED, PARTIAL, ACTIVE.
 /// </summary>
-public partial class PaymentHubViewModel : ObservableObject
+public partial class PaymentHubViewModel : BaseViewModel
 {
     private readonly ITableApi _tableApi;
-    private readonly ShellViewModel _shellViewModel;
+    private readonly INavigationService _navigationService;
+    private readonly IDispatcherService _dispatcherService;
 
     [ObservableProperty]
     private ObservableCollection<BillCardViewModel> _allBills = new();
 
     [ObservableProperty]
     private ObservableCollection<BillCardViewModel> _filteredBills = new();
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _errorMessage = string.Empty;
 
     [ObservableProperty]
     private string _selectedFilter = "Unsettled";
@@ -51,25 +46,37 @@ public partial class PaymentHubViewModel : ObservableObject
     [ObservableProperty]
     private decimal _totalUnsettledAmount;
 
-    public PaymentHubViewModel(ITableApi tableApi, ShellViewModel shellViewModel)
+    public PaymentHubViewModel(ITableApi tableApi, INavigationService navigationService, IDispatcherService dispatcherService)
     {
         _tableApi = tableApi;
-        _shellViewModel = shellViewModel;
+        _navigationService = navigationService;
+        _dispatcherService = dispatcherService;
     }
 
     [RelayCommand]
     public async Task LoadBillsAsync()
     {
         IsLoading = true;
-        ErrorMessage = string.Empty;
+        ClearError();
 
         try
         {
             // Load unsettled bills from backend
             var bills = await _tableApi.GetUnsettledBillsAsync();
             
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(() =>
+            // DEBUG: Log each bill's table information
+            Serilog.Log.Information("PaymentHub: Loaded {Count} bills from API", bills.Count());
+            foreach (var bill in bills)
+            {
+                Serilog.Log.Information("PaymentHub: Bill {BillId} - TableLabel={TableLabel}, ServerName={ServerName}, SessionId={SessionId}, TableId={TableId}", 
+                    bill.BillId, 
+                    bill.TableLabel ?? "NULL", 
+                    bill.ServerName ?? "NULL",
+                    bill.SessionId,
+                    bill.TableId);
+            }
+            
+            _dispatcherService.InvokeOnUIThread(() =>
             {
                 AllBills.Clear();
                 foreach (var bill in bills)
@@ -92,7 +99,7 @@ public partial class PaymentHubViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Failed to load bills: {ex.Message}";
+            SetError($"Failed to load bills: {ex.Message}");
         }
         finally
         {
@@ -131,9 +138,23 @@ public partial class PaymentHubViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void NavigateToPayment(BillCardViewModel bill)
+    public void NavigateToPayment(object? parameter)
     {
-        if (bill == null) return;
+        // Robust parameter handling to avoid InvalidCastException
+        if (parameter == null)
+        {
+            Serilog.Log.Warning("NavigateToPayment: parameter is null");
+            return;
+        }
+        
+        if (parameter is not BillCardViewModel bill)
+        {
+            Serilog.Log.Warning("NavigateToPayment: parameter is {Type}, expected BillCardViewModel", parameter.GetType().Name);
+            return;
+        }
+        
+        Serilog.Log.Information("NavigateToPayment: BillId={BillId}, SessionId={SessionId}, TableLabel={TableLabel}", 
+            bill.BillId, bill.SessionId, bill.TableLabel);
         
         // Navigate to PaymentWorkspacePage with bill parameters
         var navParams = new Views.PaymentWorkspaceNavParams(
@@ -142,7 +163,7 @@ public partial class PaymentHubViewModel : ObservableObject
             bill.TableLabel ?? "Unknown"
         );
         
-        _shellViewModel.NavigateToPaymentWorkspace(navParams);
+        _navigationService.NavigateTo<PaymentWorkspaceViewModel>(navParams);
     }
 }
 

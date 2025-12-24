@@ -1,0 +1,109 @@
+# Process Compose Configuration for MagiDesk Backend
+# All 10 microservices orchestrated with dependencies
+
+version: "0.5"
+
+# Global environment variables
+environment:
+  - ASPNETCORE_ENVIRONMENT=Development
+  - DOTNET_ENVIRONMENT=Development
+
+# Global logging directory
+log_location: ./logs
+
+# Process definitions
+processes:
+  # Core Services (no dependencies on other APIs)
+  usersapi:
+    command: dotnet run --project solution/backend/UsersApi/UsersApi.csproj --launch-profile UsersApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  settingsapi:
+    command: dotnet run --project solution/backend/SettingsApi/SettingsApi.csproj --launch-profile SettingsApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  inventoryapi:
+    command: dotnet run --project solution/backend/InventoryApi/InventoryApi.csproj --launch-profile http
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  menuapi:
+    command: dotnet run --project solution/backend/MenuApi/MenuApi.csproj --launch-profile http
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  discountapi:
+    command: dotnet run --project solution/backend/DiscountApi/DiscountApi.csproj --launch-profile http
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  customerapi:
+    command: dotnet run --project solution/backend/CustomerApi/CustomerApi.csproj --launch-profile CustomerApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  tablesapi:
+    command: dotnet run --project solution/backend/TablesApi/TablesApi.csproj --launch-profile TablesApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  # OrderApi depends on InventoryApi
+  orderapi:
+    command: dotnet run --project solution/backend/OrderApi/OrderApi.csproj --launch-profile http
+    working_dir: .
+    namespace: apis
+    depends_on:
+      inventoryapi:
+        condition: process_started
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  paymentapi:
+    command: dotnet run --project solution/backend/PaymentApi/PaymentApi.csproj --launch-profile PaymentApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3
+
+  reportingapi:
+    command: dotnet run --project solution/backend/ReportingApi/ReportingApi.csproj --launch-profile ReportingApi
+    working_dir: .
+    namespace: apis
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+      max_restarts: 3

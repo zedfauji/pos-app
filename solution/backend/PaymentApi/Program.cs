@@ -28,6 +28,9 @@ builder.Services.AddHostedService<PaymentApi.Services.DatabaseInitializer>();
 builder.Services.AddScoped<PaymentApi.Repositories.IPaymentRepository, PaymentApi.Repositories.PaymentRepository>();
 builder.Services.AddScoped<PaymentApi.Services.IPaymentService, PaymentApi.Services.PaymentService>();
 builder.Services.AddScoped<PaymentApi.Services.ImmutableIdService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IAuditService, MagiDesk.Infrastructure.Services.AuditService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IShiftService, MagiDesk.Infrastructure.Services.ShiftService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IShiftRepository, MagiDesk.Infrastructure.Repositories.ShiftRepository>();
 
 var app = builder.Build();
 

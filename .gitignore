@@ -23,6 +23,7 @@ solution/frontend/install/redist/
 # Logs
 *.log
 *.binlog
+logs/
 
 # User-specific
 *.swp

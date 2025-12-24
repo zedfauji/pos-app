@@ -7,12 +7,15 @@ namespace MagiDesk.Client.Views
 {
     public sealed partial class MenuEditorPage : Page
     {
-        public MenuEditorViewModel ViewModel { get; }
+        private MenuEditorViewModel? _viewModel;
+        public MenuEditorViewModel ViewModel => _viewModel ??= App.GetService<MenuEditorViewModel>() 
+            ?? throw new InvalidOperationException("MenuEditorViewModel could not be resolved from DI container");
 
         public MenuEditorPage()
         {
             this.InitializeComponent();
-            ViewModel = App.Current.Services.GetRequiredService<MenuEditorViewModel>();
+            // ViewModel will be resolved lazily when DataContext is set or ViewModel is accessed
+            this.Loaded += (s, e) => { if (this.DataContext == null) this.DataContext = ViewModel; };
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)

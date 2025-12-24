@@ -11,7 +11,8 @@ public sealed record RegisterPaymentLineDto
     public decimal DiscountAmount { get; init; }
     public string? DiscountReason { get; init; }
     public decimal TipAmount { get; init; }
-    public string? ReferenceNumber { get; init; }
+    public string? ExternalRef { get; init; }
+    public object? Meta { get; init; }
     public string? Notes { get; init; }
 }
 
@@ -43,3 +44,19 @@ public sealed record PaymentTransactionResult
     public decimal RemainingBalance { get; init; }
     public string Message { get; init; } = string.Empty;
 }
+
+public sealed record PaymentDto(
+    Guid PaymentId, 
+    Guid SessionId, 
+    Guid BillingId, 
+    decimal AmountPaid, 
+    string PaymentMethod, 
+    decimal DiscountAmount, 
+    string? DiscountReason, 
+    decimal TipAmount, 
+    string? ExternalRef, 
+    object? Meta, 
+    string? CreatedBy, 
+    DateTimeOffset CreatedAt,
+    string? Notes = null
+);

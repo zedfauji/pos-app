@@ -14,6 +14,7 @@ namespace MagiDesk.Client.ViewModels;
 public partial class ShiftControllerViewModel : ObservableObject
 {
     private readonly IShiftApi _shiftApi;
+    private readonly IReportingApi _reportingApi;
     private readonly IDialogService _dialogService;
 
     [ObservableProperty] private bool isLoading;
@@ -28,9 +29,10 @@ public partial class ShiftControllerViewModel : ObservableObject
     
     [ObservableProperty] private ObservableCollection<ShiftDto> shiftHistory = new();
 
-    public ShiftControllerViewModel(IShiftApi shiftApi, IDialogService dialogService)
+    public ShiftControllerViewModel(IShiftApi shiftApi, IReportingApi reportingApi, IDialogService dialogService)
     {
         _shiftApi = shiftApi;
+        _reportingApi = reportingApi;
         _dialogService = dialogService;
     }
 
@@ -114,7 +116,26 @@ public partial class ShiftControllerViewModel : ObservableObject
     {
         if (CurrentShift == null) return;
 
-        var vm = new CloseShiftViewModel(CurrentShift);
+        if (CurrentShift == null) return;
+
+        IsLoading = true;
+        MagiDesk.Shared.DTOs.Reporting.ZReportDto? report = null;
+        try
+        {
+            report = await _reportingApi.GetShiftReportAsync(CurrentShift.ShiftId);
+        }
+        catch (Exception ex)
+        {
+             // Log or warn, but allow closing anyway?
+             // For now, let's just show a warning toast if possible, or proceed with null report
+             ErrorMessage = "Warning: Failed to fetch shift report. " + ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+
+        var vm = new CloseShiftViewModel(CurrentShift, report);
         var dialog = new CloseShiftDialog { DataContext = vm, XamlRoot = App.Current.MainWindow.Content.XamlRoot };
 
         var result = await dialog.ShowAsync();

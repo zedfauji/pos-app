@@ -61,5 +61,45 @@ namespace MagiDesk.Infrastructure.Repositories
                 GeneratedBy = "System" 
             };
         }
+
+        public async Task<ZReportDto> GetShiftReportAsync(Guid shiftId)
+        {
+            using var conn = CreateConnection();
+            
+            // Get Shift Details
+            const string shiftSql = @"SELECT opened_at, closed_at FROM public.shifts WHERE shift_id = @id";
+            var shift = await conn.QueryFirstOrDefaultAsync<(DateTime Start, DateTime? End)>(shiftSql, new { id = shiftId });
+            
+            if (shift == default) throw new ArgumentException("Shift not found");
+
+            // Aggregate Payments by ShiftId
+            const string sql = @"
+                SELECT 
+                    COALESCE(SUM(amount_paid), 0)
+                FROM pay.payments
+                WHERE shift_id = @ShiftId AND payment_method = @Method";
+
+            const string sqlTotal = @"
+                SELECT 
+                     count(DISTINCT billing_id)
+                FROM pay.payments
+                WHERE shift_id = @ShiftId";
+
+            var cash = await conn.ExecuteScalarAsync<decimal>(sql, new { ShiftId = shiftId, Method = "Cash" });
+            var card = await conn.ExecuteScalarAsync<decimal>(sql, new { ShiftId = shiftId, Method = "Card" });
+            var orders = await conn.ExecuteScalarAsync<int>(sqlTotal, new { ShiftId = shiftId });
+
+            return new ZReportDto
+            {
+                StartTime = shift.Start,
+                EndTime = shift.End ?? DateTime.UtcNow,
+                TotalCash = cash,
+                TotalCard = card,
+                TotalSales = cash + card,
+                TotalOrders = orders,
+                GeneratedAt = DateTime.UtcNow,
+                GeneratedBy = "System"
+            };
+        }
     }
 }

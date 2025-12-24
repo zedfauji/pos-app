@@ -4,6 +4,7 @@ using MagiDesk.Client.Services;
 using MagiDesk.Shared.DTOs.Payments;
 using MagiDesk.Shared.DTOs.Tables;
 using MagiDesk.Shared.Enums;
+using MagiDesk.Client.Services.Dtos; // For Void DTO
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -19,7 +20,8 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 {
     private readonly ITableApi _tableApi;
     private readonly IPaymentApi _paymentApi;
-    private readonly ShellViewModel _shellViewModel;
+    private readonly INavigationService _navigationService;
+    private readonly IDispatcherService _dispatcherService;
 
     [ObservableProperty]
     private Guid _sessionId;
@@ -34,9 +36,13 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
     private ObservableCollection<ItemLine> _billItems = new();
 
     [ObservableProperty]
+    private ObservableCollection<PaymentDto> _paymentHistory = new();
+
+    [ObservableProperty]
     private BillPreviewDto? _billPreview;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FinalTotal), nameof(ChangeDue))]
     private double _totalDue;
 
     [ObservableProperty]
@@ -46,15 +52,18 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
     private double _tax;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChangeDue))]
     private PaymentMethod _selectedPaymentMethod = PaymentMethod.Cash;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChangeDue))]
     private double _amountTendered;
 
     [ObservableProperty]
     private double _tipAmount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FinalTotal), nameof(ChangeDue))]
     private double _discountAmount;
 
     [ObservableProperty]
@@ -71,6 +80,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 
     // Phase 3: Split Payment Properties
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FinalTotal), nameof(ChangeDue))]
     private bool _isSplitPayment;
 
     [ObservableProperty]
@@ -86,6 +96,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
     private ObservableCollection<ItemLine> _selectedItems = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FinalTotal), nameof(ChangeDue))]
     private double _calculatedSplitAmount;
 
     // Computed properties for display (backend will validate)
@@ -94,11 +105,16 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
         ? Math.Max(0, AmountTendered - FinalTotal) 
         : 0;
 
-    public PaymentWorkspaceViewModel(ITableApi tableApi, IPaymentApi paymentApi, ShellViewModel shellViewModel)
+    public PaymentWorkspaceViewModel(
+        ITableApi tableApi, 
+        IPaymentApi paymentApi, 
+        INavigationService navigationService,
+        IDispatcherService dispatcherService)
     {
         _tableApi = tableApi;
         _paymentApi = paymentApi;
-        _shellViewModel = shellViewModel;
+        _navigationService = navigationService;
+        _dispatcherService = dispatcherService;
     }
 
     public async Task InitializeAsync(Guid sessionId, Guid billingId, string tableLabel)
@@ -121,8 +137,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
             // Fetch items
             var items = await _tableApi.GetItemsAsync(TableLabel);
             
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(() =>
+            _dispatcherService.InvokeOnUIThread(() =>
             {
                 BillItems.Clear();
                 foreach (var item in items)
@@ -132,23 +147,85 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 
                 if (BillPreview != null)
                 {
-                    TotalDue = (double)BillPreview.TotalAmount;
-                    Subtotal =  (double)BillPreview.Subtotal;
-                    Tax = (double)BillPreview.TaxAmount;
+                    TotalDue = Convert.ToDouble(BillPreview.TotalAmount);
+                    Subtotal = Convert.ToDouble(BillPreview.Subtotal);
+                    Tax = Convert.ToDouble(BillPreview.TaxAmount);
                     
                     // Pre-fill amount tendered for convenience
                     AmountTendered = TotalDue;
                 }
 
-                OnPropertyChanged(nameof(FinalTotal));
-                OnPropertyChanged(nameof(ChangeDue));
+                // Property change notifications now handled by [NotifyPropertyChangedFor] attributes
             });
+
+            // Fetch History
+            var payments = await _paymentApi.ListPaymentsAsync(BillingId);
+            _dispatcherService.InvokeOnUIThread(() =>
+            {
+                PaymentHistory.Clear();
+                foreach (var p in payments) PaymentHistory.Add(p);
+            });
+
+            ErrorMessage = string.Empty;
 
             ErrorMessage = string.Empty;
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Failed to load bill: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public async Task VoidPaymentAsync(PaymentDto payment)
+    {
+        if (payment == null) return;
+        if (payment.AmountPaid <= 0) return; // Can't void a void/reversal
+
+        try
+        {
+            var confirm = new ContentDialog
+            {
+                Title = "Confirm Void",
+                Content = $"Are you sure you want to void this payment of {payment.AmountPaid:C}?",
+                PrimaryButtonText = "Void",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = App.Current.MainWindow.Content.XamlRoot
+            };
+
+            var res = await confirm.ShowAsync();
+            if (res != ContentDialogResult.Primary) return;
+
+            IsProcessing = true;
+            // DTO matching client namespace
+            var req = new VoidPaymentRequestDto
+            {
+                BillingId = BillingId,
+                SessionId = SessionId,
+                AmountToVoid = payment.AmountPaid,
+                Reason = "Operator Void",
+                ServerId = "System" // Should get current user
+            };
+
+            var result = await _paymentApi.VoidPaymentAsync(req);
+            if (result.IsSuccessStatusCode)
+            {
+                 StatusMessage = "Payment Voided Successfully";
+                 await LoadBillAsync(); // Reload to see update
+            }
+            else
+            {
+                ErrorMessage = "Failed to void payment.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Void error: {ex.Message}";
+        }
+        finally
+        {
+            IsProcessing = false;
         }
     }
 
@@ -174,12 +251,10 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 
             var result = await _tableApi.CalculateSplitAsync(TableLabel, request);
 
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(() =>
+            _dispatcherService.InvokeOnUIThread(() =>
             {
                 CalculatedSplitAmount = (double)result.AmountToPay;
-                OnPropertyChanged(nameof(FinalTotal));
-                OnPropertyChanged(nameof(ChangeDue));
+                // Property change notifications now handled by [NotifyPropertyChangedFor] attributes
             });
 
             ErrorMessage = string.Empty;
@@ -238,8 +313,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
 
         if (result.IsSuccessStatusCode)
         {
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+            await _dispatcherService.InvokeOnUIThreadAsync(async () =>
             {
                 StatusMessage = $"Payment successful! Bill settled.";
                 
@@ -247,7 +321,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
                 await Task.Delay(1500);
                 
                 // Navigate back to Payment Hub
-                _shellViewModel.NavigateToPaymentHub();
+                _navigationService.NavigateTo<PaymentHubViewModel>();
             });
         }
         else
@@ -264,7 +338,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
         {
             AmountPaid = (decimal)FinalTotal,
             PaymentMethod = SelectedPaymentMethod,
-            ReferenceNumber = null,
+            ExternalRef = null,
             Notes = $"Partial payment - {SplitMode}"
         };
 
@@ -284,8 +358,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
         {
             var transactionResult = result.Content;
             
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(async () =>
+            await _dispatcherService.InvokeOnUIThreadAsync(async () =>
             {
                 StatusMessage = $"Partial payment successful! {transactionResult.Message}";
                 
@@ -293,7 +366,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
                 await Task.Delay(1500);
                 
                 // Navigate back to Payment Hub
-                _shellViewModel.NavigateToPaymentHub();
+                _navigationService.NavigateTo<PaymentHubViewModel>();
             });
         }
         else
@@ -305,7 +378,7 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
     [RelayCommand]
     public void Cancel()
     {
-        _shellViewModel.NavigateToPaymentHub();
+        _navigationService.NavigateTo<PaymentHubViewModel>();
     }
 
     partial void OnSelectedPaymentMethodChanged(PaymentMethod value)
@@ -321,18 +394,17 @@ public partial class PaymentWorkspaceViewModel : ObservableObject
             AmountTendered = 0;
         }
         
-        OnPropertyChanged(nameof(ChangeDue));
+        // Property change notification now handled by [NotifyPropertyChangedFor] attribute
     }
 
     partial void OnAmountTenderedChanged(double value)
     {
-        OnPropertyChanged(nameof(ChangeDue));
+        // Property change notification now handled by [NotifyPropertyChangedFor] attribute
     }
 
     partial void OnDiscountAmountChanged(double value)
     {
-        OnPropertyChanged(nameof(FinalTotal));
-        OnPropertyChanged(nameof(ChangeDue));
+        // Property change notifications now handled by [NotifyPropertyChangedFor] attributes
         
         // Adjust amount tendered if needed
         if (SelectedPaymentMethod == PaymentMethod.Cash && AmountTendered < FinalTotal)

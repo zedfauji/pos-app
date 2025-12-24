@@ -14,6 +14,9 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IKitchenService, KitchenService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IAuditService, MagiDesk.Infrastructure.Services.AuditService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IShiftService, MagiDesk.Infrastructure.Services.ShiftService>();
+builder.Services.AddScoped<MagiDesk.Core.Interfaces.IShiftRepository, MagiDesk.Infrastructure.Repositories.ShiftRepository>();
 
 // HttpClient for InventoryApi with retry policy (for drinks only)
 builder.Services.AddHttpClient("InventoryApi", (sp, http) =>

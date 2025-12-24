@@ -22,8 +22,8 @@ public class MenuItemsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<MenuItemDetailsDto>> GetAsync([FromRoute] long id, CancellationToken ct)
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<MenuItemDetailsDto>> GetAsync([FromRoute] Guid id, CancellationToken ct)
     {
         var item = await _service.GetItemAsync(id, ct);
         if (item is null) return NotFound();
@@ -41,31 +41,31 @@ public class MenuItemsController : ControllerBase
 
     // New: duplicate SKU check
     [HttpGet("check-duplicate-sku/{sku}")]
-    public async Task<ActionResult<object>> CheckDuplicateSkuAsync([FromRoute] string sku, [FromQuery] long? excludeId, CancellationToken ct)
+    public async Task<ActionResult<object>> CheckDuplicateSkuAsync([FromRoute] string sku, [FromQuery] Guid? excludeId, CancellationToken ct)
     {
         var exists = await _service.ExistsSkuAsync(sku, excludeId, ct);
         return Ok(new { duplicate = exists });
     }
 
     // New: availability toggle
-    [HttpPut("{id:long}/availability")]
-    public async Task<IActionResult> SetAvailabilityAsync([FromRoute] long id, [FromBody] AvailabilityUpdateDto dto, CancellationToken ct)
+    [HttpPut("{id:guid}/availability")]
+    public async Task<IActionResult> SetAvailabilityAsync([FromRoute] Guid id, [FromBody] AvailabilityUpdateDto dto, CancellationToken ct)
     {
         await _service.SetItemAvailabilityAsync(id, dto.IsAvailable, User.Identity?.Name ?? "system", ct);
         return NoContent();
     }
 
     // New: rollback to version
-    [HttpPost("{id:long}/rollback")]
-    public async Task<ActionResult<object>> RollbackAsync([FromRoute] long id, [FromQuery] int toVersion, CancellationToken ct)
+    [HttpPost("{id:guid}/rollback")]
+    public async Task<ActionResult<object>> RollbackAsync([FromRoute] Guid id, [FromQuery] int toVersion, CancellationToken ct)
     {
         await _service.RollbackItemAsync(id, toVersion, User.Identity?.Name ?? "system", ct);
         return Accepted(new { success = true, id, version = toVersion });
     }
 
     // New: picture endpoint - redirect/fallback
-    [HttpGet("{id:long}/picture")]
-    public async Task<IActionResult> GetPictureAsync([FromRoute] long id, CancellationToken ct)
+    [HttpGet("{id:guid}/picture")]
+    public async Task<IActionResult> GetPictureAsync([FromRoute] Guid id, CancellationToken ct)
     {
         var details = await _service.GetItemAsync(id, ct);
         if (details is null) return NotFound();
@@ -83,22 +83,22 @@ public class MenuItemsController : ControllerBase
         return CreatedAtAction(nameof(GetAsync), new { id = created.Id }, created);
     }
 
-    [HttpPut("{id:long}")]
-    public async Task<ActionResult<MenuItemDto>> UpdateAsync([FromRoute] long id, [FromBody] UpdateMenuItemDto dto, CancellationToken ct)
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<MenuItemDto>> UpdateAsync([FromRoute] Guid id, [FromBody] UpdateMenuItemDto dto, CancellationToken ct)
     {
         var updated = await _service.UpdateItemAsync(id, dto, User.Identity?.Name ?? "system", ct);
         return Ok(updated);
     }
 
-    [HttpDelete("{id:long}")]
-    public async Task<IActionResult> DeleteAsync([FromRoute] long id, CancellationToken ct)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteAsync([FromRoute] Guid id, CancellationToken ct)
     {
         await _service.DeleteItemAsync(id, User.Identity?.Name ?? "system", ct);
         return NoContent();
     }
 
-    [HttpPost("{id:long}/restore")]
-    public async Task<IActionResult> RestoreAsync([FromRoute] long id, CancellationToken ct)
+    [HttpPost("{id:guid}/restore")]
+    public async Task<IActionResult> RestoreAsync([FromRoute] Guid id, CancellationToken ct)
     {
         await _service.RestoreItemAsync(id, User.Identity?.Name ?? "system", ct);
         return NoContent();

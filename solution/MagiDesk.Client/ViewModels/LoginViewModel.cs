@@ -6,23 +6,17 @@ using System.Threading.Tasks;
 
 namespace MagiDesk.Client.ViewModels
 {
-    public partial class LoginViewModel : ObservableObject
+    public partial class LoginViewModel : BaseViewModel
     {
-        private readonly IAuthenticationService _authService;
-        private readonly IDialogService _dialogService;
-        private readonly ShellViewModel _shellViewModel;
+    private readonly IAuthenticationService _authService;
+    private readonly IDialogService _dialogService;
+    private readonly ShellViewModel _shellViewModel; // Still needed for OnLoginSuccess
 
         [ObservableProperty]
         private string _username = string.Empty;
 
         [ObservableProperty]
         private string _password = string.Empty;
-
-        [ObservableProperty]
-        private bool _isLoading;
-
-        [ObservableProperty]
-        private string _errorMessage = string.Empty;
 
         public LoginViewModel(IAuthenticationService authService, IDialogService dialogService, ShellViewModel shellViewModel)
         {
@@ -36,12 +30,12 @@ namespace MagiDesk.Client.ViewModels
         {
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                ErrorMessage = "Please enter username and password.";
+                SetError("Please enter username and password.");
                 return;
             }
 
             IsLoading = true;
-            ErrorMessage = string.Empty;
+            ClearError();
             try
             {
                 var success = await _authService.LoginAsync(Username, Password);

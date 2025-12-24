@@ -8,4 +8,7 @@ public interface IReportingApi
 {
     [Get("/api/reporting/z-report")]
     Task<ZReportDto> GetZReportAsync();
+
+    [Get("/api/reporting/shift/{shiftId}")]
+    Task<ZReportDto> GetShiftReportAsync(Guid shiftId);
 }

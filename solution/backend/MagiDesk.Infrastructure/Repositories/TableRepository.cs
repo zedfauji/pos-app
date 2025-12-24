@@ -72,8 +72,8 @@ namespace MagiDesk.Infrastructure.Repositories
                                       SELECT o.session_id, 
                                              COUNT(*) as ItemsCount, 
                                              SUM((oi.base_price + oi.price_delta) * oi.quantity) as Total
-                                      FROM ord.orders o
-                                      JOIN ord.order_items oi ON oi.order_id = o.order_id
+                                      FROM orders.orders o
+                                      JOIN orders.order_items oi ON oi.order_id = o.order_id
                                       WHERE o.is_deleted = false AND oi.is_deleted = false
                                       GROUP BY o.session_id
                                   ) item_stats ON item_stats.session_id = s.session_id
@@ -260,22 +260,22 @@ namespace MagiDesk.Infrastructure.Repositories
                      {
                          // Insert Order Item
                          // Find active order or create new one
-                         var orderId = await conn.ExecuteScalarAsync<Guid?>("SELECT order_id FROM ord.orders WHERE session_id = @Sid AND is_deleted = false LIMIT 1", new { Sid = sessionId }, tx);
-                         
-                         if (orderId == null)
-                         {
-                             orderId = Guid.NewGuid();
-                             await conn.ExecuteAsync("INSERT INTO ord.orders(order_id, session_id, table_id, server_id, created_at) VALUES(@Oid, @Sid, @Tid, @SrvId, @Now)",
-                                 new { Oid = orderId, Sid = sessionId, Tid = sessionId, SrvId = "SYSTEM", Now = now }, tx);
-                         }
+                        var orderId = await conn.ExecuteScalarAsync<Guid?>("SELECT order_id FROM orders.orders WHERE session_id = @Sid AND is_deleted = false LIMIT 1", new { Sid = sessionId }, tx);
+                        
+                        if (orderId == null)
+                        {
+                            orderId = Guid.NewGuid();
+                            await conn.ExecuteAsync("INSERT INTO orders.orders(order_id, session_id, table_id, server_id, created_at, status, delivery_status, subtotal, discount, tax, tip, total, profit_total, is_deleted) VALUES(@Oid, @Sid, @Tid, @SrvId, @Now, 'open', 'pending', 0, 0, 0, 0, 0, 0, false)",
+                                new { Oid = orderId, Sid = sessionId, Tid = sessionId, SrvId = "SYSTEM", Now = now }, tx);
+                        }
 
-                         var menuItemId = Guid.Empty; // System Item
-                         string itemName = $"Table Time ({fromLabel}): {duration.Hours}h {duration.Minutes}m";
+                        var menuItemId = Guid.Empty; // System Item
+                        string itemName = $"Table Time ({fromLabel}): {duration.Hours}h {duration.Minutes}m";
 
-                         await conn.ExecuteAsync(@"
-                             INSERT INTO ord.order_items(order_item_id, order_id, menu_item_id, quantity, base_price, price_delta, is_deleted, created_at, snapshot_name)
-                             VALUES(@ItemId, @Oid, @MenuId, 1, @Price, 0, false, @Now, @Name)",
-                             new { ItemId = Guid.NewGuid(), Oid = orderId, MenuId = menuItemId, Price = costToAdd, Now = now, Name = itemName }, tx);
+                        await conn.ExecuteAsync(@"
+                            INSERT INTO orders.order_items(order_item_id, order_id, menu_item_id, menu_item_version, name, quantity, base_price, price_delta, vendor_price, line_total, profit, delivered_quantity, delivery_status, created_at, updated_at, modifiers, snapshot_name, line_discount, is_deleted)
+                            VALUES(@ItemId, @Oid, @MenuId, 1, @Name, 1, @Price, 0, 0, @Price, 0, 0, 'pending', @Now, @Now, '[]'::jsonb, @Name, 0, false)",
+                            new { ItemId = Guid.NewGuid(), Oid = orderId, MenuId = menuItemId, Price = costToAdd, Now = now, Name = itemName }, tx);
                      }
                      
                      // Reset Start Time if Timer Stopped or Rate Changed (New segment starts now)
@@ -344,8 +344,8 @@ namespace MagiDesk.Infrastructure.Repositories
                     oi.quantity,
                     (oi.base_price + oi.price_delta) as price,
                     oi.menu_item_id::text as itemId
-                FROM ord.order_items oi
-                JOIN ord.orders o ON oi.order_id = o.order_id
+                FROM orders.order_items oi
+                JOIN orders.orders o ON oi.order_id = o.order_id
                 WHERE o.session_id = @Sid AND oi.is_deleted = false AND o.is_deleted = false";
 
             var rawItems = await conn.QueryAsync(itemsSql, new { Sid = sessionId });
@@ -408,10 +408,16 @@ namespace MagiDesk.Infrastructure.Repositories
 
             try
             {
-                // 1. Get Session Details & Total
+                // 1. Get Session Details & Total, and get table_id from tables table
                 const string sessionSql = @"
-                    SELECT s.table_label, s.billing_id, s.status
+                    SELECT 
+                        s.table_label, 
+                        s.billing_id, 
+                        s.status,
+                        s.server_name,
+                        COALESCE(t.table_id, '00000000-0000-0000-0000-000000000001'::uuid) AS table_id
                     FROM public.""TableSessions"" s
+                    LEFT JOIN public.tables t ON t.table_number = s.table_label
                     WHERE s.session_id = @Sid";
                 
                 var session = await conn.QueryFirstOrDefaultAsync<dynamic>(sessionSql, new { Sid = sessionId }, tx);
@@ -421,12 +427,13 @@ namespace MagiDesk.Infrastructure.Repositories
 
                 Guid billingId = session.billing_id;
                 string label = session.table_label;
+                Guid tableId = session.table_id;
 
                 // 2. Calculate Total (Simplified vs GetBillPreview)
                 const string totalSql = @"
                     SELECT SUM((oi.base_price + oi.price_delta) * oi.quantity)
-                    FROM ord.orders o
-                    JOIN ord.order_items oi ON oi.order_id = o.order_id
+                    FROM orders.orders o
+                    JOIN orders.order_items oi ON oi.order_id = o.order_id
                     WHERE o.session_id = @Sid AND o.is_deleted = false AND oi.is_deleted = false";
                 
                 var subtotal = await conn.ExecuteScalarAsync<decimal?>(totalSql, new { Sid = sessionId }, tx) ?? 0;
@@ -438,6 +445,7 @@ namespace MagiDesk.Infrastructure.Repositories
 
                 // Use billing.bills table which has proper UUID session_id
                 // Include table_label and server_name for Payment Hub display
+                // Use actual table_id from tables table, not session_id
                 const string insertBill = @"
                     INSERT INTO billing.bills (
                         bill_id, billing_id, session_id, table_id,
@@ -445,7 +453,7 @@ namespace MagiDesk.Infrastructure.Repositories
                         items_total, time_total, subtotal, discounts, tax, total_amount,
                         time_minutes, status, created_at, updated_at
                     ) VALUES (
-                        @Bid, @Bid, @Sid, @Sid,
+                        @Bid, @Bid, @Sid, @TableId,
                         @TableLabel, @ServerName,
                         @Subtotal, 0, @Subtotal, 0, @Tax, @Total,
                         0, 'AwaitingPayment', @Now, @Now
@@ -454,6 +462,7 @@ namespace MagiDesk.Infrastructure.Repositories
                 await conn.ExecuteAsync(insertBill, new { 
                     Bid = billingId, 
                     Sid = sessionId,
+                    TableId = tableId,
                     TableLabel = label,
                     ServerName = session.server_name ?? "Unknown",
                     Subtotal = subtotal,

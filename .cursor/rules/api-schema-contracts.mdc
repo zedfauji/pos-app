@@ -1,0 +1,134 @@
+---
+alwaysApply: true
+---
+
+# API Schema Contract Rules
+
+**Status**: ENFORCED  
+**Last Updated**: 2025-12-23  
+**Purpose**: Ensure APIs respect schema boundaries and contracts
+
+## 🚫 ABSOLUTE PROHIBITIONS
+
+### 1. No Undocumented SQL
+**Rule**: All SQL queries MUST be documented in API expectation docs
+**Location**: `docs/schema/api-expectations/{ApiName}.md`
+**Violation Consequence**: PR rejection
+
+### 2. No Cross-Schema Writes Without Ownership
+**Rule**: APIs can only WRITE to schemas they own
+**Ownership Map**: See `docs/schema/CROSS_API_SCHEMA_DEPENDENCIES.md`
+**Exception**: Read-only access allowed with FK constraints
+**Violation Consequence**: PR rejection
+
+### 3. No Type Assumptions
+**Rule**: Never assume column types - verify against canonical schema
+**Pattern**: Always check `docs/schema/CANONICAL_DB_SCHEMA.md` before writing SQL
+**Violation Consequence**: Runtime failures, PR rejection
+
+### 4. No FK-Less Joins
+**Rule**: All JOINs across tables MUST have foreign key constraints
+**Exception**: None
+**Violation Consequence**: PR rejection
+
+### 5. No Implicit Schema Dependencies
+**Rule**: All schema dependencies MUST be documented
+**Location**: `docs/schema/CROSS_API_SCHEMA_DEPENDENCIES.md`
+**Violation Consequence**: PR rejection
+
+## ✅ REQUIRED PATTERNS
+
+### 1. Repository Pattern
+**Pattern**: All database access through repositories
+**Location**: `{ApiName}/Repositories/`
+**Example**: `OrderRepository.cs`, `TableRepository.cs`
+
+### 2. SQL Documentation
+**Pattern**: Document all SQL queries with:
+- Tables accessed
+- Columns used
+- JOINs performed
+- Assumptions made
+
+**Location**: `docs/schema/api-expectations/{ApiName}.md`
+
+### 3. Type Safety
+**Pattern**: Use Dapper with explicit type mapping
+**Example**: `QueryAsync<OrderDto>(sql, parameters)`
+
+### 4. Transaction Management
+**Pattern**: Use explicit transactions for multi-table operations
+**Example**: `BeginTransactionAsync()`, `CommitAsync()`, `RollbackAsync()`
+
+### 5. Error Handling
+**Pattern**: Catch and log database errors, never swallow silently
+**Example**: `catch (Exception ex) { _logger.LogError(ex, "Message"); throw; }`
+
+## 📋 API-SPECIFIC RULES
+
+### TablesApi
+**Owns**: `public.TableSessions`, `public.tables`, `public.table_types`, `public.shifts`
+**Reads**: `orders.orders`, `orders.order_items` (for totals)
+**Writes**: `billing.bills` (via EndSessionAsync)
+**Rules**:
+- Must add FK: `TableSessions.shift_id` → `shifts.shift_id`
+- Must not assume `ord.order_items.menu_item_id` type (bigint vs uuid mismatch)
+
+### OrderApi
+**Owns**: `orders.orders`, `orders.order_items`, `orders.order_logs`
+**Reads**: `menu.menu_items`, `menu.combos`, `billing.bills`
+**Writes**: `billing.bills` (auto-creation)
+**Rules**:
+- Must add FK: `orders.session_id` → `TableSessions.session_id`
+- Must add FK: `orders.billing_id` → `billing.bills.billing_id`
+- Must add FK: `orders.shift_id` → `shifts.shift_id`
+- Must handle `menu_item_id` type mismatch (use orders.order_items, not ord.order_items)
+
+### PaymentApi
+**Owns**: `pay.payments`, `pay.bill_ledger`, `pay.payment_logs`
+**Reads**: `billing.bills`, `public.TableSessions`
+**Writes**: None (only owns pay schema)
+**Rules**:
+- Must add FK: `payments.billing_id` → `billing.bills.billing_id`
+- Must add FK: `payments.shift_id` → `shifts.shift_id`
+- Must fix `bill_ledger.billing_id` type (text → uuid)
+- Must fix `bill_ledger.session_id` type (text → uuid)
+
+### MenuApi
+**Owns**: `menu.*` (all menu schema tables)
+**Reads**: `inventory.items` (via SKU lookup)
+**Writes**: None (only owns menu schema)
+**Rules**:
+- Must maintain composite PK on `menu_items` (menu_item_id, version)
+- Must ensure only one current version per menu_item_id
+
+### InventoryApi
+**Owns**: `inventory.items`, `inventory.transactions`
+**Reads**: None (self-contained)
+**Writes**: None (only owns inventory schema)
+**Rules**:
+- Must verify table name (items vs inventory_items)
+
+## 🔍 CODE REVIEW CHECKS
+
+Reviewers MUST verify:
+
+1. **SQL Documentation**: All queries documented in API expectation doc
+2. **Schema Ownership**: API only writes to owned schemas
+3. **Foreign Keys**: All references have FK constraints (or documented why not)
+4. **Type Safety**: No type assumptions, verified against canonical schema
+5. **Error Handling**: Proper error handling and logging
+
+## 📚 REFERENCE DOCUMENTS
+
+- **API Expectations**: `docs/schema/api-expectations/{ApiName}.md`
+- **Canonical Schema**: `docs/schema/CANONICAL_DB_SCHEMA.md`
+- **Cross-API Dependencies**: `docs/schema/CROSS_API_SCHEMA_DEPENDENCIES.md`
+- **Mismatch Matrix**: `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md`
+
+## ⚠️ CURRENT VIOLATIONS
+
+See `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md` for API-specific violations.
+
+**DO NOT** introduce new violations. Fix existing ones first.
+

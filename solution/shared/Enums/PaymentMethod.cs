@@ -7,6 +7,8 @@ namespace MagiDesk.Shared.Enums
     {
         Cash,
         Card,
-        Other
+        Other,
+        Void,
+        Refund
     }
 }

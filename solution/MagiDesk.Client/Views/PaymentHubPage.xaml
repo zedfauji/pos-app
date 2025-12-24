@@ -80,8 +80,8 @@
                                 Padding="0"
                                 HorizontalContentAlignment="Stretch" 
                                 VerticalContentAlignment="Stretch"
-                                Command="{Binding DataContext.NavigateToPaymentCommand, ElementName=RootGrid}"
-                                CommandParameter="{x:Bind}">
+                                Command="{Binding ElementName=RootGrid, Path=DataContext.NavigateToPaymentCommand}"
+                                CommandParameter="{Binding}">
                             <Grid CornerRadius="12" 
                                   BorderThickness="2"
                                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -102,7 +102,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" 
-                                               Text="{x:Bind TableLabel}" 
+                                               Text="{Binding TableLabel}" 
                                                Style="{StaticResource SubtitleTextBlockStyle}"
                                                FontWeight="Bold"
                                                FontSize="18"/>
@@ -111,7 +111,7 @@
                                             Background="Orange" 
                                             CornerRadius="12" 
                                             Padding="8,4">
-                                        <TextBlock Text="{x:Bind StatusBadge}" 
+                                        <TextBlock Text="{Binding StatusBadge}" 
                                                    FontSize="10" 
                                                    Foreground="White"
                                                    FontWeight="SemiBold"/>
@@ -122,9 +122,9 @@
                                 <StackPanel Grid.Row="1" Spacing="2" Margin="0,8,0,0">
                                     <TextBlock Foreground="Gray" FontSize="12">
                                         <Run Text="Server: "/>
-                                        <Run Text="{x:Bind ServerName}" FontWeight="SemiBold"/>
+                                        <Run Text="{Binding ServerName}" FontWeight="SemiBold"/>
                                     </TextBlock>
-                                    <TextBlock Text="{x:Bind DisplayTime}" 
+                                    <TextBlock Text="{Binding DisplayTime}" 
                                                Foreground="Gray"
                                                FontSize="12"/>
                                 </StackPanel>
@@ -135,7 +135,7 @@
                                 <!-- Total Amount -->
                                 <StackPanel Grid.Row="3" Spacing="2">
                                     <TextBlock Text="TOTAL" FontSize="11" Foreground="Gray" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{x:Bind DisplayAmount}" 
+                                    <TextBlock Text="{Binding DisplayAmount}" 
                                                FontSize="24"
                                                FontWeight="Bold"
                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>

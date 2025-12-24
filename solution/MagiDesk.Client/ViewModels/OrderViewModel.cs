@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using Serilog;
 
 namespace MagiDesk.Client.ViewModels;
 
@@ -17,7 +18,7 @@ public partial class OrderViewModel : ObservableObject
     private readonly IMenuApi _menuApi;
     private readonly IDialogService _dialogService;
     private readonly IPrinterService _printerService;
-    private readonly ShellViewModel _shell; // To navigate back
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     private string _tableLabel = string.Empty;
@@ -28,13 +29,13 @@ public partial class OrderViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<OrderItemDto> _ticketItems = new();
 
-    public OrderViewModel(ITableApi tableApi, IMenuApi menuApi, IDialogService dialogService, IPrinterService printerService, ShellViewModel shell)
+    public OrderViewModel(ITableApi tableApi, IMenuApi menuApi, IDialogService dialogService, IPrinterService printerService, INavigationService navigationService)
     {
         _tableApi = tableApi;
         _menuApi = menuApi;
         _dialogService = dialogService;
         _printerService = printerService;
-        _shell = shell;
+        _navigationService = navigationService;
     }
 
     [ObservableProperty]
@@ -59,7 +60,11 @@ public partial class OrderViewModel : ObservableObject
                SessionId = table.CurrentSessionId; 
             }
         }
-        catch {}
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to load session ID for table: {TableLabel}", TableLabel);
+            // Error handled - SessionId will remain null, user can retry
+        }
     }
 
     private async Task LoadMenuAsync()
@@ -73,7 +78,11 @@ public partial class OrderViewModel : ObservableObject
                 foreach(var item in result.Content.Items) MenuItems.Add(item);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to submit order for table: {TableLabel}", TableLabel);
+            // Error will be handled by calling code (SubmitOrderAsync method)
+        }
     }
 
     [RelayCommand]
@@ -98,7 +107,7 @@ public partial class OrderViewModel : ObservableObject
             { 
                 ItemId = item.Id.ToString(), 
                 Quantity = 1, 
-                Price = item.SellingPrice // Map SellingPrice to Price
+                Price = item.BasePrice // Map BasePrice to Price
             });
         }
     }
@@ -131,7 +140,7 @@ public partial class OrderViewModel : ObservableObject
             if (result.IsSuccessStatusCode)
             {
                 await _dialogService.ShowMessageAsync("Success", "Order sent to kitchen.");
-                _shell.NavigateToTables(); // Go back to map
+                _navigationService.NavigateTo<TableViewModel>(); // Go back to map
             }
             else
             {
@@ -148,7 +157,7 @@ public partial class OrderViewModel : ObservableObject
     [RelayCommand]
     public void Cancel()
     {
-        _shell.NavigateToTables();
+        _navigationService.NavigateTo<TableViewModel>();
     }
 
     [RelayCommand]
@@ -203,19 +212,9 @@ public partial class OrderViewModel : ObservableObject
             await Task.Delay(500);
 
             // Ensure UI operations happen on the UI thread
-            var app = (App)Microsoft.UI.Xaml.Application.Current;
-            app.MainWindow.DispatcherQueue.TryEnqueue(async () =>
-            {
-                try
-                {
+            // Note: DialogService should handle its own threading, but keeping for safety
                     await _dialogService.ShowMessageAsync("Success", $"Session closed. Total: {bill.TotalAmount:C}");
-                    _shell.NavigateToTables();
-                }
-                catch (Exception innerEx)
-                {
-                     System.Diagnostics.Debug.WriteLine($"Error in UI callback: {innerEx}");
-                }
-            });
+                    _navigationService.NavigateTo<TableViewModel>();
         }
         catch (Exception ex)
         {

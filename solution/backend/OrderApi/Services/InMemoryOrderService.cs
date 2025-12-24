@@ -4,18 +4,17 @@ namespace OrderApi.Services;
 
 public sealed class InMemoryOrderService : IOrderService
 {
-    private long _nextOrderId = 1;
     private long _nextOrderItemId = 1;
-    private readonly Dictionary<long, OrderDto> _orders = new();
-    private readonly Dictionary<long, List<OrderLogDto>> _logs = new();
+    private readonly Dictionary<Guid, OrderDto> _orders = new();
+    private readonly Dictionary<Guid, List<OrderLogDto>> _logs = new();
 
-    public Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct)
+    public Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, Guid? shiftId, CancellationToken ct)
     {
-        var id = _nextOrderId++;
+        var id = Guid.NewGuid();
         var items = new List<OrderItemDto>();
         foreach (var i in req.Items)
         {
-            var itemId = _nextOrderItemId++;
+            var itemId = Guid.NewGuid();
             var qty = Math.Max(1, i.Quantity);
             decimal basePrice = 10m; // placeholder price
             decimal priceDelta = 0m; // modifiers ignored in-memory
@@ -30,7 +29,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(order);
     }
 
-    public Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct)
+    public Task<OrderDto?> GetOrderAsync(Guid orderId, CancellationToken ct)
     {
         _orders.TryGetValue(orderId, out var order);
         return Task.FromResult(order);
@@ -58,13 +57,13 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult((IReadOnlyList<OrderItemDto>)items);
     }
 
-    public Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
+    public Task<OrderDto> AddItemsAsync(Guid orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) throw new KeyNotFoundException("Order not found");
         var itemList = order.Items.ToList();
         foreach (var i in items)
         {
-            var itemId = _nextOrderItemId++;
+            var itemId = Guid.NewGuid();
             var qty = Math.Max(1, i.Quantity);
             decimal basePrice = 10m;
             decimal priceDelta = 0m;
@@ -78,7 +77,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(updated);
     }
 
-    public Task<OrderDto> UpdateItemAsync(long orderId, UpdateOrderItemDto item, CancellationToken ct)
+    public Task<OrderDto> UpdateItemAsync(Guid orderId, UpdateOrderItemDto item, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) throw new KeyNotFoundException("Order not found");
         var list = order.Items.ToList();
@@ -95,7 +94,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(updated);
     }
 
-    public Task<OrderDto> DeleteItemAsync(long orderId, long orderItemId, CancellationToken ct)
+    public Task<OrderDto> DeleteItemAsync(Guid orderId, Guid orderItemId, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) throw new KeyNotFoundException("Order not found");
         var list = order.Items.Where(i => i.Id != orderItemId).ToList();
@@ -105,7 +104,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(updated);
     }
 
-    public Task<OrderDto> CloseOrderAsync(long orderId, CancellationToken ct)
+    public Task<OrderDto> CloseOrderAsync(Guid orderId, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) throw new KeyNotFoundException("Order not found");
         var closed = order with { Status = "closed" };
@@ -113,7 +112,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(closed);
     }
 
-    public Task<PagedResult<OrderLogDto>> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct)
+    public Task<PagedResult<OrderLogDto>> ListLogsAsync(Guid orderId, int page, int pageSize, CancellationToken ct)
     {
         if (!_logs.TryGetValue(orderId, out var list)) list = new List<OrderLogDto>();
         var limit = Math.Clamp(pageSize, 1, 200);
@@ -122,7 +121,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult(new PagedResult<OrderLogDto>(items, list.Count));
     }
 
-    public Task RecalculateTotalsAsync(long orderId, CancellationToken ct)
+    public Task RecalculateTotalsAsync(Guid orderId, CancellationToken ct)
     {
         // In-memory recalculation
         if (_orders.TryGetValue(orderId, out var order))
@@ -134,7 +133,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.CompletedTask;
     }
 
-    public Task<OrderDto?> MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
+    public Task<OrderDto?> MarkItemsDeliveredAsync(Guid orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) 
             return Task.FromResult<OrderDto?>(null);
@@ -147,7 +146,7 @@ public sealed class InMemoryOrderService : IOrderService
         return Task.FromResult<OrderDto?>(updated);
     }
 
-    public Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct)
+    public Task<OrderDto?> MarkOrderWaitingAsync(Guid orderId, CancellationToken ct)
     {
         if (!_orders.TryGetValue(orderId, out var order)) 
             return Task.FromResult<OrderDto?>(null);

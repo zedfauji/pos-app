@@ -36,7 +36,7 @@ public sealed class MenuAnalyticsService : IMenuAnalyticsService
                     TotalRevenue = CalculateSimulatedRevenue(item),
                     TotalOrders = CalculateSimulatedOrders(item),
                     TotalQuantitySold = CalculateSimulatedQuantity(item),
-                    AverageOrderValue = item.SellingPrice,
+                    AverageOrderValue = item.BasePrice,
                     ProfitMargin = CalculateSimulatedProfitMargin(item),
                     CostOfGoodsSold = CalculateSimulatedCOGS(item),
                     LastSold = DateTime.UtcNow.AddDays(-Random.Shared.Next(0, 30)),
@@ -192,7 +192,7 @@ public sealed class MenuAnalyticsService : IMenuAnalyticsService
         }
     }
 
-    public async Task<MenuAnalyticsDto> GetItemAnalyticsAsync(long menuItemId, DateTime? fromDate, DateTime? toDate, CancellationToken ct)
+    public async Task<MenuAnalyticsDto> GetItemAnalyticsAsync(Guid menuItemId, DateTime? fromDate, DateTime? toDate, CancellationToken ct)
     {
         try
         {
@@ -211,7 +211,7 @@ public sealed class MenuAnalyticsService : IMenuAnalyticsService
                 TotalRevenue = CalculateSimulatedRevenue(item.Item),
                 TotalOrders = CalculateSimulatedOrders(item.Item),
                 TotalQuantitySold = CalculateSimulatedQuantity(item.Item),
-                AverageOrderValue = item.Item.SellingPrice,
+                AverageOrderValue = item.Item.BasePrice,
                 ProfitMargin = CalculateSimulatedProfitMargin(item.Item),
                 CostOfGoodsSold = CalculateSimulatedCOGS(item.Item),
                 LastSold = DateTime.UtcNow.AddDays(-Random.Shared.Next(0, 7)),
@@ -272,7 +272,7 @@ public sealed class MenuAnalyticsService : IMenuAnalyticsService
 
     private decimal CalculateSimulatedRevenue(MenuItemDto item)
     {
-        return item.SellingPrice * Random.Shared.Next(10, 100);
+        return item.BasePrice * Random.Shared.Next(10, 100);
     }
 
     private int CalculateSimulatedOrders(MenuItemDto item)
@@ -292,7 +292,7 @@ public sealed class MenuAnalyticsService : IMenuAnalyticsService
 
     private decimal CalculateSimulatedCOGS(MenuItemDto item)
     {
-        return item.SellingPrice * (1 - CalculateSimulatedProfitMargin(item));
+        return item.BasePrice * (1 - CalculateSimulatedProfitMargin(item));
     }
 
     private decimal CalculateSimulatedDailyRevenue(DateTime date)

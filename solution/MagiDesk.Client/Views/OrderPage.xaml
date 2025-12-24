@@ -9,7 +9,7 @@
     xmlns:shared="using:MagiDesk.Shared.DTOs.Tables"
     mc:Ignorable="d">
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="400"/>
@@ -28,14 +28,14 @@
                 <GridView.ItemTemplate>
                     <DataTemplate> <!-- Removed x:DataType -->
                         <Button Width="180" Height="100" Margin="5" Padding="0"
-                                Command="{Binding DataContext.AddToTicketCommand, ElementName=RootGrid}"
+                                Command="{Binding ElementName=RootGrid, Path=DataContext.AddToTicketCommand}"
                                 CommandParameter="{Binding}"> <!-- Changed to Binding -->
                              <Grid Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
                                    CornerRadius="8" BorderBrush="Gray" BorderThickness="1">
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding Sku}" FontWeight="Bold"/>
                                     <TextBlock Text="{Binding Name}" TextWrapping="Wrap" MaxWidth="160" TextAlignment="Center"/>
-                                    <TextBlock Text="{Binding SellingPrice}" Foreground="Gray"/>
+                                    <TextBlock Text="{Binding BasePrice}" Foreground="Gray"/>
                                 </StackPanel>
                              </Grid>
                         </Button>
@@ -78,7 +78,7 @@
                              
                              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
                                  <AppBarButton Icon="Remove" Width="30" Height="30"
-                                               Command="{Binding DataContext.RemoveFromTicketCommand, ElementName=RootGrid}"
+                                               Command="{Binding ElementName=RootGrid, Path=DataContext.RemoveFromTicketCommand}"
                                                CommandParameter="{Binding}"/>
                                  <TextBlock Text="{Binding Quantity}" VerticalAlignment="Center" Width="20" TextAlignment="Center"/>
                              </StackPanel>

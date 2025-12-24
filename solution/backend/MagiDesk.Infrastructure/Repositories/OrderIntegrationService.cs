@@ -43,16 +43,16 @@ namespace MagiDesk.Infrastructure.Repositories
             try 
             {
                 // Legacy Logic Replication:
-                // 1. Create an Order in 'ord.orders' if not exists for this session? Or create new order for every batch?
+                // 1. Create an Order in 'orders.orders' if not exists for this session? Or create new order for every batch?
                 // The legacy code often appended items to table_session.items JSON directly OR used OrderApi.
                 // The Refit client calls PostOrderAsync.
                 // We will create a NEW order record for this batch of items to track distinct "sends".
                 
 
-                // Simple Order Record
+                // Simple Order Record - Using canonical orders schema
                 const string insertOrderSql = @"
-                    INSERT INTO ord.orders(order_id, session_id, table_label, created_at, status, is_deleted)
-                    VALUES(@OrderId, @SessionId, @TableLabel, @CreatedAt, 'submitted', false)";
+                    INSERT INTO orders.orders(order_id, session_id, table_id, billing_id, status, delivery_status, subtotal, discount, tax, tip, total, profit_total, created_at, updated_at, is_deleted)
+                    VALUES(@OrderId, @SessionId, @TableLabel, gen_random_uuid(), 'open'::orders.order_status, 'pending', 0, 0, 0, 0, 0, 0, @CreatedAt, @CreatedAt, false)";
                 
                 // Note: Guid extraction from string sessionId
                 if (!Guid.TryParse(sessionId, out var sessionGuid))
@@ -72,26 +72,29 @@ namespace MagiDesk.Infrastructure.Repositories
                 
                 _logger.LogInformation("Order {OrderId} created for session {SessionId}", orderId, sessionGuid);
 
-                // 2. Insert Items into 'ord.order_items'
+                // 2. Insert Items into 'orders.order_items' - Using canonical orders schema
+                // Note: menu_item_id is now uuid in orders.order_items, but we may need to convert
                 const string insertItemSql = @"
-                    INSERT INTO ord.order_items(order_item_id, order_id, menu_item_id, quantity, base_price, price_delta, is_deleted, created_at, delivered_quantity, status)
-                    VALUES(@OrderItemId, @OrderId, @MenuItemId, @Quantity, @Price, 0, false, @CreatedAt, @Quantity, 'pending')";
+                    INSERT INTO orders.order_items(order_item_id, order_id, menu_item_id, menu_item_version, name, quantity, base_price, price_delta, vendor_price, line_total, profit, delivered_quantity, delivery_status, created_at, updated_at, modifiers, line_discount, is_deleted)
+                    VALUES(@OrderItemId, @OrderId, @MenuItemId, 1, @ItemName, @Quantity, @Price, 0, 0, @Price * @Quantity, 0, @Quantity, 'pending'::orders.delivery_status, @CreatedAt, @CreatedAt, '[]'::jsonb, 0, false)";
                 
                 foreach (var item in items)
                 {
                     // ItemId from DTO is string (Menu Item ID).
-                    // MenuApi uses bigserial (long).
-                    if (!long.TryParse(item.ItemId, out var menuItemId))
+                    // orders.order_items.menu_item_id is uuid, so we need to parse as Guid
+                    Guid menuItemId;
+                    if (!Guid.TryParse(item.ItemId, out menuItemId))
                     {
-                         // If not long, handle gracefully or default?
-                         menuItemId = 0; 
+                         // If not UUID, generate one (fallback)
+                         menuItemId = Guid.NewGuid();
                     }
 
-                    await conn.ExecuteAsync(insertItemSql, new 
+                    await conn.ExecuteAsync(insertItemSql, new
                     {
                         OrderItemId = Guid.NewGuid(),
                         OrderId = orderId,
                         MenuItemId = menuItemId,
+                        ItemName = item.ItemName ?? "Unknown Item",
                         Quantity = item.Quantity,
                         Price = item.Price,
                         CreatedAt = now
@@ -99,7 +102,7 @@ namespace MagiDesk.Infrastructure.Repositories
                 }
                 
                 // 3. Optional: Update table_sessions items JSON just for legacy read compatibility?
-                // The refactored StopSession reads from ord.order_items now (as per my fix in legacy Program.cs earlier).
+                // The refactored StopSession reads from orders.order_items now (canonical schema).
                 // So we do NOT need to update the JSON blob. Clean separation!
                 
                 
@@ -118,17 +121,16 @@ namespace MagiDesk.Infrastructure.Repositories
         {
              _logger.LogInformation("GetOrderItemsForSessionAsync called for Session {SessionId}", sessionId);
              using var conn = CreateConnection();
-             // 1. Fetch SQL Items (ord.order_items)
-             // NOTE: Cannot join menu.menu_items because menu_item_id types differ (bigint vs uuid).
-             // Using snapshot_name as the fallback for item names.
+             // 1. Fetch SQL Items (orders.order_items) - Using canonical orders schema
+             // NOTE: Can now join menu.menu_items because menu_item_id types match (uuid).
              const string sql = @"
                 SELECT 
-                    COALESCE(oi.snapshot_name, 'Item #' || oi.menu_item_id::text) as name,
+                    COALESCE(oi.name, oi.snapshot_name, 'Item #' || oi.menu_item_id::text) as name,
                     oi.quantity,
-                    (oi.base_price + oi.price_delta) as price,
+                    oi.line_total as price,
                     oi.menu_item_id::text as itemId
-                FROM ord.order_items oi
-                JOIN ord.orders o ON oi.order_id = o.order_id
+                FROM orders.order_items oi
+                JOIN orders.orders o ON oi.order_id = o.order_id
                 WHERE o.session_id = @Sid AND oi.is_deleted = false AND o.is_deleted = false
                 ORDER BY oi.created_at";
 

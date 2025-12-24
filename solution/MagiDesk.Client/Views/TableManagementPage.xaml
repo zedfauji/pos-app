@@ -7,16 +7,17 @@
     xmlns:vm="using:MagiDesk.Client.ViewModels"
     xmlns:shared="using:MagiDesk.Shared.DTOs.Tables"
     xmlns:converters="using:MagiDesk.Client.Converters"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
 
     <Page.Resources>
-    <converters:BoolToVisibilityConverter x:Key="BoolToVis" />
-    <converters:BoolToVisibilityConverter x:Key="InvBoolToVis" Reverse="True" />
+    <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVis" TrueValue="Visible" FalseValue="Collapsed" />
+    <toolkitConverters:BoolToVisibilityConverter x:Key="InvBoolToVis" TrueValue="Collapsed" FalseValue="Visible" />
     <converters:IntToDoubleConverter x:Key="IntToDouble" />
     <converters:DecimalToDoubleConverter x:Key="DecToDouble" />
 </Page.Resources>
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
@@ -49,16 +50,16 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     
-                                    <TextBlock Text="{x:Bind Label}" FontWeight="SemiBold" Grid.Column="0"/>
-                                    <TextBlock Text="{x:Bind TypeName}" Foreground="Gray" Grid.Column="1"/>
-                                    <TextBlock Text="{x:Bind Capacity}" Grid.Column="2"/>
+                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Grid.Column="0"/>
+                                    <TextBlock Text="{Binding TypeName}" Foreground="Gray" Grid.Column="1"/>
+                                    <TextBlock Text="{Binding Capacity}" Grid.Column="2"/>
                                     <TextBlock Text="Occupied" 
-                                               Visibility="{x:Bind Occupied, Converter={StaticResource BoolToVis}}"
+                                               Visibility="{Binding Occupied, Converter={StaticResource BoolToVis}}"
                                                Foreground="OrangeRed" Grid.Column="3"/> 
                                                
                                     <StackPanel Orientation="Horizontal" Grid.Column="5" Spacing="8">
-                                        <Button Content="Edit" Command="{Binding ElementName=ViewModelRoot, Path=DataContext.OpenEditTableCommand}" CommandParameter="{Binding}" />
-                                        <Button Content="Delete" Command="{Binding ElementName=ViewModelRoot, Path=DataContext.DeleteTableCommand}" CommandParameter="{Binding}" Background="DarkRed" Foreground="White"/>
+                                        <Button Content="Edit" Command="{Binding ElementName=RootGrid, Path=DataContext.OpenEditTableCommand}" CommandParameter="{Binding}" />
+                                        <Button Content="Delete" Command="{Binding ElementName=RootGrid, Path=DataContext.DeleteTableCommand}" CommandParameter="{Binding}" Background="DarkRed" Foreground="White"/>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -90,16 +91,16 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     
-                                    <TextBlock Text="{x:Bind Name}" FontWeight="Bold" FontSize="16" Grid.Column="0"/>
-                                    <TextBlock Text="{x:Bind HourlyRate}" Grid.Column="1"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16" Grid.Column="0"/>
+                                    <TextBlock Text="{Binding HourlyRate}" Grid.Column="1"/>
                                     
                                     <StackPanel Grid.Column="2" Orientation="Vertical">
-                                        <TextBlock Text="{x:Bind HasTimer}" FontSize="12" Foreground="Gray"/>
-                                        <TextBlock Text="{x:Bind RequiresServer}" FontSize="12" Foreground="Gray"/>
+                                        <TextBlock Text="{Binding HasTimer}" FontSize="12" Foreground="Gray"/>
+                                        <TextBlock Text="{Binding RequiresServer}" FontSize="12" Foreground="Gray"/>
                                     </StackPanel>
                                     
                                     <Button Content="Configure" Grid.Column="3" 
-                                            Command="{Binding ElementName=ViewModelRoot, Path=DataContext.OpenEditTypeAsyncCommand}" 
+                                            Command="{Binding ElementName=RootGrid, Path=DataContext.OpenEditTypeAsyncCommand}" 
                                             CommandParameter="{Binding}"/>
                                 </Grid>
                             </DataTemplate>
@@ -161,8 +162,5 @@
         <Grid Grid.ColumnSpan="2" Background="#80000000" Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVis}}">
             <ProgressRing IsActive="True" Width="60" Height="60"/>
         </Grid>
-        
-        <!-- Element Binding Proxy -->
-        <Grid x:Name="ViewModelRoot" Visibility="Collapsed" DataContext="{x:Bind ViewModel}"/> 
     </Grid>
 </Page>

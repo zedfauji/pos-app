@@ -49,7 +49,13 @@ namespace MagiDesk.Core.Services
                 itemCost = items.Sum(i => i.price * i.quantity);
             }
 
-            var total = timeCost + itemCost;
+            // FINANCIAL PARITY: Tax Calculation
+            // TODO: Load from Settings (Unified Tax Policy)
+            const decimal TaxRate = 0.08m;
+            
+            var subtotal = timeCost + itemCost;
+            var tax = Math.Round(subtotal * TaxRate, 2, MidpointRounding.AwayFromZero);
+            var total = Math.Round(subtotal + tax, 2, MidpointRounding.AwayFromZero);
 
             return (timeCost, itemCost, total);
         }

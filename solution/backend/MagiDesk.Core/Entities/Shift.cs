@@ -4,12 +4,12 @@ public class Shift
 {
     public Guid ShiftId { get; set; }
     public int ShiftNumber { get; set; }
-    public int OpenedByUserId { get; set; }
-    public string OpenedByName { get; set; }
+    public string OpenedByUserId { get; set; } = string.Empty;
+    public string OpenedByName { get; set; } = string.Empty;
     public DateTime OpenedAt { get; set; }
     public decimal StartingCash { get; set; }
     
-    public int? ClosedByUserId { get; set; }
+    public string? ClosedByUserId { get; set; }
     public string? ClosedByName { get; set; }
     public DateTime? ClosedAt { get; set; }
     

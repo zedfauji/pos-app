@@ -14,7 +14,7 @@ public partial class TableManagementViewModel : ObservableObject
 {
     private readonly ITableApi _tableApi;
     private readonly IDialogService _dialogService;
-    private readonly ShellViewModel _shell;
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     private ObservableCollection<TableStatusDto> _tables = new();
@@ -67,11 +67,11 @@ public partial class TableManagementViewModel : ObservableObject
     private bool _editTypeAllowOrders;
 
 
-    public TableManagementViewModel(ITableApi tableApi, IDialogService dialogService, ShellViewModel shell)
+    public TableManagementViewModel(ITableApi tableApi, IDialogService dialogService, INavigationService navigationService)
     {
         _tableApi = tableApi;
         _dialogService = dialogService;
-        _shell = shell;
+        _navigationService = navigationService;
     }
 
     public async Task InitializeAsync()

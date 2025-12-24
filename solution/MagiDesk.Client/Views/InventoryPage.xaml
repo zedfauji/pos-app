@@ -9,7 +9,7 @@
     mc:Ignorable="d"
     x:Name="Root">
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="24">
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -33,16 +33,16 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="{x:Bind Name}" FontSize="18" FontWeight="SemiBold"/>
-                            <TextBlock Text="{x:Bind Unit}" Foreground="Gray"/>
+                            <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding Unit}" Foreground="Gray"/>
                         </StackPanel>
                         
-                        <TextBlock Grid.Column="1" Text="{x:Bind Quantity}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" Margin="20,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Quantity}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" Margin="20,0"/>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                            <Button Content="+" Command="{Binding DataContext.AdjustStockCommand, ElementName=InventoryList}" CommandParameter="{x:Bind}" />
-                            <Button Content="-" Command="{Binding DataContext.ReduceStockCommand, ElementName=InventoryList}" CommandParameter="{x:Bind}" />
-                            <Button Background="Transparent" BorderThickness="0" Margin="10,0,0,0" Command="{Binding DataContext.DeleteItemCommand, ElementName=InventoryList}" CommandParameter="{x:Bind}">
+                            <Button Content="+" Command="{Binding ElementName=RootGrid, Path=DataContext.AdjustStockCommand}" CommandParameter="{Binding}" />
+                            <Button Content="-" Command="{Binding ElementName=RootGrid, Path=DataContext.ReduceStockCommand}" CommandParameter="{Binding}" />
+                            <Button Background="Transparent" BorderThickness="0" Margin="10,0,0,0" Command="{Binding ElementName=RootGrid, Path=DataContext.DeleteItemCommand}" CommandParameter="{Binding}">
                                 <SymbolIcon Symbol="Delete" Foreground="Red"/>
                             </Button>
                         </StackPanel>

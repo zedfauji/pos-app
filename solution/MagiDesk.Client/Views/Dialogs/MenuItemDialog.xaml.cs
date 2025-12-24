@@ -10,8 +10,7 @@ public sealed partial class MenuItemDialog : ContentDialog
     public string Description => DescriptionTextBox.Text;
     public string Category => CategoryTextBox.Text;
     public string? GroupName => string.IsNullOrWhiteSpace(GroupTextBox.Text) ? null : GroupTextBox.Text;
-    public decimal SellingPrice => (decimal)PriceBox.Value;
-    public decimal? VendorPrice => double.IsNaN(CostBox.Value) ? null : (decimal)CostBox.Value;
+    public decimal BasePrice => (decimal)PriceBox.Value;
     public string? PictureUrl => string.IsNullOrWhiteSpace(PictureUrlTextBox.Text) ? null : PictureUrlTextBox.Text;
     public bool IsAvailable => IsAvailableCheckBox.IsChecked ?? false;
     public bool IsDiscountable => IsDiscountableCheckBox.IsChecked ?? false;
@@ -30,8 +29,9 @@ public sealed partial class MenuItemDialog : ContentDialog
             DescriptionTextBox.Text = item.Description ?? "";
             CategoryTextBox.Text = item.Category;
             GroupTextBox.Text = item.GroupName ?? "";
-            PriceBox.Value = (double)item.SellingPrice;
-            CostBox.Value = (double)(item.Price ?? 0);
+            PriceBox.Value = (double)item.BasePrice;
+            // CostBox is not part of the DTO - keeping for backward compatibility but not using it
+            CostBox.Value = 0;
             PictureUrlTextBox.Text = item.PictureUrl ?? "";
             IsAvailableCheckBox.IsChecked = item.IsAvailable;
             IsDiscountableCheckBox.IsChecked = item.IsDiscountable;
@@ -47,9 +47,7 @@ public sealed partial class MenuItemDialog : ContentDialog
             DescriptionTextBox.Text,
             CategoryTextBox.Text,
             string.IsNullOrWhiteSpace(GroupTextBox.Text) ? null : GroupTextBox.Text,
-            VendorPrice ?? 0,
-            SellingPrice,
-            null, // Price (MSRP) is not exposed in UI yet
+            BasePrice,
             PictureUrl,
             IsDiscountable,
             IsPartOfCombo,

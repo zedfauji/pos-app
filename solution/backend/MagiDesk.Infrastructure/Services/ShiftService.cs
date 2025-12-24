@@ -17,7 +17,7 @@ public class ShiftService : IShiftService
         return await _repository.GetCurrentOpenShiftAsync();
     }
 
-    public async Task<Shift> OpenShiftAsync(int userId, string userName, decimal startingCash, Guid idempotencyKey)
+    public async Task<Shift> OpenShiftAsync(string userId, string userName, decimal startingCash, Guid idempotencyKey)
     {
         // 1. Check if open
         var existing = await _repository.GetCurrentOpenShiftAsync();
@@ -43,6 +43,11 @@ public class ShiftService : IShiftService
         return newShift;
     }
 
+    public async Task<Shift> OpenSystemShiftAsync(string userId, string userName)
+    {
+        return await OpenShiftAsync(userId, userName, 0m, Guid.NewGuid());
+    }
+
     public async Task<ShiftBlockers> GetShiftBlockersAsync(Guid shiftId)
     {
         var tables = await _repository.HasActiveTablesAsync(shiftId);
@@ -52,7 +57,7 @@ public class ShiftService : IShiftService
         return new ShiftBlockers(tables, bills, tables ? 1 : 0, bills ? 1 : 0);
     }
 
-    public async Task<ShiftCloseResult> CloseShiftAsync(Guid shiftId, int userId, string userName, decimal declaredCash, Guid idempotencyKey, string? note)
+    public async Task<ShiftCloseResult> CloseShiftAsync(Guid shiftId, string userId, string userName, decimal declaredCash, Guid idempotencyKey, string? note)
     {
         var shift = await _repository.GetShiftByIdAsync(shiftId);
         if (shift == null) throw new ArgumentException("Shift not found");

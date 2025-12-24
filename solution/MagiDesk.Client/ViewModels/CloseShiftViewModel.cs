@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using MagiDesk.Shared.DTOs.Shifts;
+using MagiDesk.Shared.DTOs.Reporting;
 
 namespace MagiDesk.Client.ViewModels;
 
@@ -15,12 +16,23 @@ public partial class CloseShiftViewModel : ObservableObject
     [ObservableProperty] private bool isShort;
     [ObservableProperty] private bool isOver;
 
-    public CloseShiftViewModel(ShiftDto currentShift)
+    // Report Data
+    [ObservableProperty] private double totalSales;
+    [ObservableProperty] private double totalCashSales;
+    [ObservableProperty] private double totalCardSales;
+
+    public CloseShiftViewModel(ShiftDto currentShift, ZReportDto? report = null)
     {
         _currentShift = currentShift;
-        // In a real app, we'd query Expected Cash here. 
-        // For now, assume Expected = Starting + Sales (Zero for now as report API not fully linked to this VM)
-        ExpectedCash = (double)currentShift.StartingCash; 
+        
+        if (report != null)
+        {
+            TotalSales = (double)report.TotalSales;
+            TotalCashSales = (double)report.TotalCash;
+            TotalCardSales = (double)report.TotalCard;
+        }
+
+        ExpectedCash = (double)currentShift.StartingCash + TotalCashSales;
     }
 
     partial void OnDeclaredCashChanged(double value)

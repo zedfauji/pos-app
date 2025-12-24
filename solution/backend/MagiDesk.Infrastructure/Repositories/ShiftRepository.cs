@@ -13,7 +13,24 @@ public class ShiftRepository : IShiftRepository
 
     public ShiftRepository(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("Postgres");
+        var conn = configuration.GetConnectionString("Postgres");
+        
+        if (string.IsNullOrWhiteSpace(conn))
+        {
+            conn = configuration["Postgres:LocalConnectionString"];
+        }
+        
+        if (string.IsNullOrWhiteSpace(conn))
+        {
+            conn = configuration.GetConnectionString("DefaultConnection");
+        }
+
+        if (string.IsNullOrWhiteSpace(conn))
+        {
+            throw new InvalidOperationException("Postgres connection string is missing or empty. Checked: ConnectionStrings:Postgres, Postgres:LocalConnectionString, ConnectionStrings:DefaultConnection");
+        }
+        
+        _connectionString = conn;
     }
 
     private IDbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
@@ -39,7 +56,7 @@ public class ShiftRepository : IShiftRepository
                 close_reason as CloseReason,
                 status as Status,
                 idempotency_key as IdempotencyKey
-            FROM shifts 
+            FROM public.shifts 
             WHERE status = 'open' 
             LIMIT 1";
             
@@ -67,7 +84,7 @@ public class ShiftRepository : IShiftRepository
                 close_reason as CloseReason,
                 status as Status,
                 idempotency_key as IdempotencyKey
-            FROM shifts 
+            FROM public.shifts 
             WHERE shift_id = @shiftId";
             
         return await conn.QueryFirstOrDefaultAsync<Shift>(sql, new { shiftId });
@@ -77,18 +94,7 @@ public class ShiftRepository : IShiftRepository
     {
         using var conn = CreateConnection();
         const string sql = @"
-            SELECT * FROM shifts 
-            ORDER BY shift_number DESC 
-            LIMIT @limit OFFSET @offset";
-            
-        // Note: Dapper mapping for snake_case columns to PascalCase properties 
-        // usually requires explicit DefaultTypeMap or "as Alias". 
-        // For brevity in this fix, we are assuming Dapper generic mapping or we should use aliases.
-        // Let's use simple aliases for safety matching the entity.
-        // Re-using the select list from GetCurrentOpenShiftAsync would be cleaner but verbose here.
-        // We will stick to the safe verbose select for correctness.
-        const string safeSql = @"
-             SELECT 
+            SELECT 
                 shift_id as ShiftId,
                 shift_number as ShiftNumber,
                 opened_by_user_id as OpenedByUserId,
@@ -105,18 +111,18 @@ public class ShiftRepository : IShiftRepository
                 close_reason as CloseReason,
                 status as Status,
                 idempotency_key as IdempotencyKey
-            FROM shifts 
+            FROM public.shifts 
             ORDER BY shift_number DESC 
             LIMIT @limit OFFSET @offset";
 
-        return await conn.QueryAsync<Shift>(safeSql, new { limit, offset });
+        return await conn.QueryAsync<Shift>(sql, new { limit, offset });
     }
 
     public async Task InsertAsync(Shift shift)
     {
         using var conn = CreateConnection();
         const string sql = @"
-            INSERT INTO shifts (
+            INSERT INTO public.shifts (
                 shift_id, opened_by_user_id, opened_by_name, opened_at, starting_cash, status, idempotency_key
             ) VALUES (
                 @ShiftId, @OpenedByUserId, @OpenedByName, @OpenedAt, @StartingCash, @Status, @IdempotencyKey
@@ -129,7 +135,7 @@ public class ShiftRepository : IShiftRepository
     {
         using var conn = CreateConnection();
         const string sql = @"
-            UPDATE shifts SET
+            UPDATE public.shifts SET
                 closed_by_user_id = @ClosedByUserId,
                 closed_by_name = @ClosedByName,
                 closed_at = @ClosedAt,
@@ -148,7 +154,7 @@ public class ShiftRepository : IShiftRepository
     {
         using var conn = CreateConnection();
         // Assuming table_sessions has shift_id
-        const string sql = "SELECT COUNT(1) FROM \"TableSessions\" WHERE shift_id = @shiftId AND \"EndTime\" IS NULL";
+        const string sql = "SELECT COUNT(1) FROM \"TableSessions\" WHERE shift_id = @shiftId AND end_time IS NULL";
         var count = await conn.ExecuteScalarAsync<int>(sql, new { shiftId });
         return count > 0;
     }
@@ -157,7 +163,7 @@ public class ShiftRepository : IShiftRepository
     {
         using var conn = CreateConnection();
         // Uses the new bills table
-        const string sql = "SELECT COUNT(1) FROM bills WHERE shift_id = @shiftId AND status = 'unsettled'";
+        const string sql = "SELECT COUNT(1) FROM billing.bills WHERE shift_id = @shiftId AND status = 'AwaitingPayment'";
         var count = await conn.ExecuteScalarAsync<int>(sql, new { shiftId });
         return count > 0;
     }
@@ -168,9 +174,9 @@ public class ShiftRepository : IShiftRepository
         // Uses the new payments table
         const string sql = @"
             SELECT COALESCE(SUM(amount_paid), 0) 
-            FROM payments 
+            FROM pay.payments 
             WHERE shift_id = @shiftId 
-              AND payment_method = 'Cash' 
+              AND method = 'Cash'::pay.payment_method 
               AND is_voided = false";
         return await conn.ExecuteScalarAsync<decimal>(sql, new { shiftId });
     }

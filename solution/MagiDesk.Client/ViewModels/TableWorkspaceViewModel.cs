@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
+using Serilog;
 
 namespace MagiDesk.Client.ViewModels;
 
@@ -17,7 +18,8 @@ public partial class TableWorkspaceViewModel : ObservableObject
     private readonly IMenuApi _menuApi;
     private readonly IDialogService _dialogService;
     private readonly IPrinterService _printerService;
-    private readonly ShellViewModel _shell;
+    private readonly ShellViewModel _shell; // Still needed for AuthService access
+    private readonly INavigationService _navigationService;
 
     [ObservableProperty]
     private string _tableLabel = string.Empty;
@@ -67,13 +69,15 @@ public partial class TableWorkspaceViewModel : ObservableObject
         IMenuApi menuApi, 
         IDialogService dialogService, 
         IPrinterService printerService, 
-        ShellViewModel shell)
+        ShellViewModel shell,
+        INavigationService navigationService)
     {
         _tableApi = tableApi;
         _menuApi = menuApi;
         _dialogService = dialogService;
         _printerService = printerService;
         _shell = shell;
+        _navigationService = navigationService;
         
         // Timer for Current Time update (optional but nice)
         // For simplicity, just set it on load.
@@ -165,7 +169,11 @@ public partial class TableWorkspaceViewModel : ObservableObject
                 foreach(var item in result.Content.Items) MenuItems.Add(item);
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to load menu items for table workspace");
+            // Error handled silently - menu will remain empty if already loaded
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanStartSession))]
@@ -235,7 +243,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
             { 
                 ItemId = item.Id.ToString(), 
                 Quantity = 1, 
-                Price = item.SellingPrice
+                Price = item.BasePrice
             });
         }
     }
@@ -287,7 +295,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
     [RelayCommand]
     public void GoBack()
     {
-        _shell.NavigateToTables();
+        _navigationService.NavigateTo<TableViewModel>();
     }
 
     [RelayCommand]
@@ -297,7 +305,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
         {
             // Use navigation parameters to direct the PaymentHub / PaymentWorkspace
             var navParams = new Views.PaymentWorkspaceNavParams(SessionId.Value, Guid.Empty, TableLabel);
-            _shell.NavigateToPaymentWorkspace(navParams);
+            _navigationService.NavigateTo<PaymentWorkspaceViewModel>(navParams);
         }
     }
 
@@ -363,7 +371,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
                      if (forceResponse.IsSuccessStatusCode && forceResponse.Content.Success)
                      {
                          await _dialogService.ShowMessageAsync("Move Complete", forceResponse.Content.Message);
-                         _shell.NavigateToTables();
+                         _navigationService.NavigateTo<TableViewModel>();
                      }
                      else
                      {
@@ -374,7 +382,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
             else if (result.Success)
             {
                 await _dialogService.ShowMessageAsync("Success", result.Message);
-                _shell.NavigateToTables();
+                _navigationService.NavigateTo<TableViewModel>();
             }
             else
             {
@@ -401,7 +409,7 @@ public partial class TableWorkspaceViewModel : ObservableObject
         try
         {
             await _tableApi.EndSessionAsync(SessionId.Value); 
-            _shell.NavigateToTables();
+            _navigationService.NavigateTo<TableViewModel>();
         }
         catch (Exception ex)
         {

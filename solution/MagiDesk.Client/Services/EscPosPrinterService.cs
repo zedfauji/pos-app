@@ -20,7 +20,16 @@ public class EscPosPrinterService : IPrinterService
 
         try 
         {
+            // Note: EscPosPrinterService is a service, not a ViewModel.
+            // It should ideally receive IDispatcherService via DI, but for now,
+            // we'll keep the UI thread access here since it's the only service that needs it.
+            // In a future refactor, we could inject IDispatcherService here too.
             var app = (App)Microsoft.UI.Xaml.Application.Current;
+            if (app?.MainWindow?.DispatcherQueue == null)
+            {
+                throw new InvalidOperationException("MainWindow not available");
+            }
+
             var tcs = new TaskCompletionSource<(string, string, string, decimal)>();
             
             app.MainWindow.DispatcherQueue.TryEnqueue(() => 

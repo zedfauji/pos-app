@@ -5,8 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.19" />
     <PackageReference Include="Npgsql" Version="8.0.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MagiDesk.Core\MagiDesk.Core.csproj" />
+    <ProjectReference Include="..\MagiDesk.Infrastructure\MagiDesk.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\shared\MagiDesk.Shared.csproj" />
   </ItemGroup>
 </Project>

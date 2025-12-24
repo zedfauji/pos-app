@@ -1,5 +1,8 @@
 using PaymentApi.Models;
+using MagiDesk.Shared.DTOs.Payments;
 using PaymentApi.Repositories;
+using MagiDesk.Core.Interfaces;
+using MagiDesk.Core.Enums;
 
 namespace PaymentApi.Services;
 
@@ -8,15 +11,20 @@ public sealed class PaymentService : IPaymentService
     private readonly IPaymentRepository _repo;
     private readonly IConfiguration _config;
     private readonly ImmutableIdService _idService;
+    private readonly IAuditService _auditService;
 
-    public PaymentService(IPaymentRepository repo, IConfiguration config, ImmutableIdService idService)
+    public PaymentService(IPaymentRepository repo, IConfiguration config, ImmutableIdService idService, IAuditService auditService)
     {
         _repo = repo;
         _config = config;
         _idService = idService;
+        _auditService = auditService;
     }
 
-    public async Task<PaymentTransactionResult> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
+    public Task<PaymentTransactionResult> RegisterPaymentAsync(RegisterPaymentRequestDto req, CancellationToken ct)
+        => RegisterPaymentAsync(req, null, ct);
+
+    public async Task<PaymentTransactionResult> RegisterPaymentAsync(RegisterPaymentRequestDto req, Guid? shiftId, CancellationToken ct)
     {
         if (req.Lines is null || req.Lines.Count == 0)
             throw new InvalidOperationException("NO_PAYMENT_LINES");
@@ -115,7 +123,7 @@ public sealed class PaymentService : IPaymentService
             var old = await _repo.GetLedgerAsync(req.BillingId, token);
 
             // Insert all payment legs
-            await _repo.InsertPaymentsAsync(conn, tx, req.SessionId, req.BillingId, req.ServerId, req.Lines, token);
+            await _repo.InsertPaymentsAsync(conn, tx, req.SessionId, req.BillingId, req.ServerId, req.Lines, shiftId, token);
 
             // Aggregate deltas
             var addPaid = req.Lines.Sum(l => l.AmountPaid);
@@ -130,7 +138,22 @@ public sealed class PaymentService : IPaymentService
 
             // Log
             await _repo.AppendLogAsync(conn, tx, req.BillingId, req.SessionId, "register_payment", old, new { lines = req.Lines, ledger }, req.ServerId, token);
+            
+            // AUDIT LOGGING (In Transaction context if possible, but here we invoke service which opens new connection usually. 
+            // Ideally should pass transaction, but for now we log AFTER core transaction succeeds to avoid blocking)
         }, ct);
+        
+        // AUDIT LOGGING (Outside transaction to ensure core logic succeeds first)
+        await _auditService.LogEventAsync(
+            actorId: req.ServerId ?? "system",
+            actionType: AuditActionTypes.PaymentReceived,
+            entityType: "BillLedger",
+            entityId: req.BillingId.ToString(),
+            beforeState: (BillLedgerDto?)null,
+            afterState: ledger,
+            correlationId: req.BillingId.ToString(),
+            source: "PaymentApi"
+        );
 
         // If fully settled, notify TablesApi to mark the bill settled (best-effort)
         try
@@ -198,6 +221,64 @@ public sealed class PaymentService : IPaymentService
             ChangeDue = changeDue,
             RemainingBalance = Math.Max(0, remainingBalance),
             Message = message
+        };
+    }
+
+    public async Task<PaymentTransactionResult> VoidPaymentAsync(VoidPaymentRequestDto req, Guid? shiftId, CancellationToken ct)
+    {
+        // 1. Validate
+        if (req.AmountToVoid <= 0) throw new InvalidOperationException("INVALID_VOID_AMOUNT");
+
+        // 2. Create Negative Payment Line
+        var negativeAmount = -req.AmountToVoid;
+        // In a void, we usually void the "Paid" amount. We assume "Cash" for now or Generic "Void" method?
+        // Legacy: "Void" or "Refund". Let's use "Void" as method for clarity or "Refund".
+        // Better: use the original method? No, let's use "Void" to be distinct.
+        var line = new MagiDesk.Shared.DTOs.Payments.RegisterPaymentLineDto
+        {
+            AmountPaid = negativeAmount,
+            PaymentMethod = MagiDesk.Shared.Enums.PaymentMethod.Void, 
+            DiscountAmount = 0,
+            TipAmount = 0,
+            ExternalRef = null,
+            Meta = new { Reason = req.Reason }
+        };
+        var lines = new List<MagiDesk.Shared.DTOs.Payments.RegisterPaymentLineDto> { line };
+
+        BillLedgerDto? ledger = null;
+        await _repo.ExecuteInTransactionAsync(async (conn, tx, token) =>
+        {
+            var old = await _repo.GetLedgerAsync(req.BillingId, token);
+            if (old is null) throw new InvalidOperationException("LEDGER_NOT_FOUND");
+
+            // Insert Negative Payment
+            await _repo.InsertPaymentsAsync(conn, tx, req.SessionId, req.BillingId, req.ServerId, lines, shiftId, token);
+
+            // Opsert Ledger (Negative delta subtracts from total_paid)
+            var (due, disc, paid, tip, status) = await _repo.UpsertLedgerAsync(conn, tx, req.SessionId, req.BillingId, old.TotalDue, (negativeAmount, 0, 0), token);
+            ledger = new BillLedgerDto(req.BillingId, req.SessionId, due, disc, paid, tip, status);
+
+            // Log
+            await _repo.AppendLogAsync(conn, tx, req.BillingId, req.SessionId, "void_payment", old, new { amount = negativeAmount, reason = req.Reason, ledger }, req.ServerId, token);
+        }, ct);
+
+        // Audit
+         await _auditService.LogEventAsync(
+            actorId: req.ServerId ?? "system",
+            actionType: AuditActionTypes.RefundProcessed, // Ensure this enum exists or map to closest
+            entityType: "BillLedger",
+            entityId: req.BillingId.ToString(),
+            beforeState: (BillLedgerDto?)null,
+            afterState: ledger,
+            correlationId: req.BillingId.ToString(),
+            source: "PaymentApi"
+        );
+
+        return new PaymentTransactionResult
+        {
+            Ledger = ledger,
+            Message = "Void successful",
+            RemainingBalance = ledger!.TotalDue - ledger.TotalPaid - ledger.TotalDiscount
         };
     }
 

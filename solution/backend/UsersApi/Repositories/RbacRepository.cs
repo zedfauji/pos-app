@@ -1,5 +1,6 @@
 using MagiDesk.Shared.DTOs.Users;
 using Npgsql;
+using Dapper;
 using UsersApi.Services;
 
 namespace UsersApi.Repositories;
@@ -29,19 +30,20 @@ public sealed class RbacRepository : IRbacRepository
         {
             const string insertRoleSql = @"
                 INSERT INTO users.roles (role_id, name, description, is_system_role, is_active, created_at, updated_at)
-                VALUES (@roleId, @name, @description, @isSystemRole, @isActive, @createdAt, @updatedAt)
+                VALUES (@Id, @Name, @Description, @IsSystemRole, @IsActive, @CreatedAt, @UpdatedAt)
                 RETURNING role_id";
 
-            await using var cmd = new NpgsqlCommand(insertRoleSql, conn, transaction);
-            cmd.Parameters.AddWithValue("@roleId", role.Id);
-            cmd.Parameters.AddWithValue("@name", role.Name);
-            cmd.Parameters.AddWithValue("@description", role.Description ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@isSystemRole", role.IsSystemRole);
-            cmd.Parameters.AddWithValue("@isActive", role.IsActive);
-            cmd.Parameters.AddWithValue("@createdAt", role.CreatedAt);
-            cmd.Parameters.AddWithValue("@updatedAt", role.UpdatedAt);
+            var roleId = await conn.ExecuteScalarAsync<string>(insertRoleSql, new
+            {
+                role.Id,
+                role.Name,
+                Description = role.Description ?? (object)DBNull.Value,
+                role.IsSystemRole,
+                role.IsActive,
+                role.CreatedAt,
+                role.UpdatedAt
+            }, transaction);
 
-            var roleId = await cmd.ExecuteScalarAsync(ct) as string;
             if (string.IsNullOrEmpty(roleId))
             {
                 throw new InvalidOperationException("Failed to create role");
@@ -62,25 +64,18 @@ public sealed class RbacRepository : IRbacRepository
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
 
         const string sql = @"
-            SELECT r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at,
-                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}') as permissions,
-                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{}') as inherit_from_roles
+            SELECT r.role_id as Id, r.name as Name, r.description as Description, 
+                   r.is_system_role as IsSystemRole, r.is_active as IsActive, 
+                   r.created_at as CreatedAt, r.updated_at as UpdatedAt,
+                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}') as Permissions,
+                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{}') as InheritFromRoles
             FROM users.roles r
             LEFT JOIN users.role_permissions rp ON r.role_id = rp.role_id
             LEFT JOIN users.role_inheritance ri ON r.role_id = ri.child_role_id
-            WHERE r.role_id = @roleId AND r.is_deleted = false
+            WHERE r.role_id = @RoleId AND r.is_deleted = false
             GROUP BY r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleId", roleId);
-
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        if (await reader.ReadAsync(ct))
-        {
-            return MapRoleFromReader(reader);
-        }
-
-        return null;
+        return await conn.QuerySingleOrDefaultAsync<RoleDto>(sql, new { RoleId = roleId });
     }
 
     public async Task<RoleDto?> GetRoleByNameAsync(string roleName, CancellationToken ct = default)
@@ -88,98 +83,80 @@ public sealed class RbacRepository : IRbacRepository
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
 
         const string sql = @"
-            SELECT r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at,
-                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}') as permissions,
-                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{}') as inherit_from_roles
+            SELECT r.role_id as Id, r.name as Name, r.description as Description, 
+                   r.is_system_role as IsSystemRole, r.is_active as IsActive, 
+                   r.created_at as CreatedAt, r.updated_at as UpdatedAt,
+                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}') as Permissions,
+                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{}') as InheritFromRoles
             FROM users.roles r
             LEFT JOIN users.role_permissions rp ON r.role_id = rp.role_id
             LEFT JOIN users.role_inheritance ri ON r.role_id = ri.child_role_id
-            WHERE r.name = @roleName AND r.is_deleted = false
+            WHERE r.name = @RoleName AND r.is_deleted = false
             GROUP BY r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleName", roleName);
-
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        if (await reader.ReadAsync(ct))
-        {
-            return MapRoleFromReader(reader);
-        }
-
-        return null;
+        return await conn.QuerySingleOrDefaultAsync<RoleDto>(sql, new { RoleName = roleName });
     }
 
     public async Task<PagedResult<RoleDto>> GetRolesAsync(RoleSearchRequest request, CancellationToken ct = default)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        
+        var sqlBuilder = new SqlBuilder();
+        var template = sqlBuilder.AddTemplate(@"
+             SELECT r.role_id as Id, r.name as Name, r.description as Description, 
+                   r.is_system_role as IsSystemRole, r.is_active as IsActive, 
+                   r.created_at as CreatedAt, r.updated_at as UpdatedAt,
+                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{}') as Permissions,
+                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{}') as InheritFromRoles
+            FROM users.roles r
+            LEFT JOIN users.role_permissions rp ON r.role_id = rp.role_id
+            LEFT JOIN users.role_inheritance ri ON r.role_id = ri.child_role_id
+            /**where**/
+            GROUP BY r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at
+            /**orderby**/
+            LIMIT @PageSize OFFSET @Offset");
+        
+        var countTemplate = sqlBuilder.AddTemplate("SELECT COUNT(*) FROM users.roles r /**where**/");
 
-        var whereConditions = new List<string> { "r.is_deleted = false" };
-        var parameters = new List<NpgsqlParameter>();
+        sqlBuilder.Where("r.is_deleted = false");
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
-            whereConditions.Add("(r.name ILIKE @searchTerm OR r.description ILIKE @searchTerm)");
-            parameters.Add(new NpgsqlParameter("@searchTerm", $"%{request.SearchTerm}%"));
+            sqlBuilder.Where("(r.name ILIKE @SearchTerm OR r.description ILIKE @SearchTerm)", new { SearchTerm = $"%{request.SearchTerm}%" });
         }
 
         if (request.IsSystemRole.HasValue)
         {
-            whereConditions.Add("r.is_system_role = @isSystemRole");
-            parameters.Add(new NpgsqlParameter("@isSystemRole", request.IsSystemRole.Value));
+            sqlBuilder.Where("r.is_system_role = @IsSystemRole", new { IsSystemRole = request.IsSystemRole.Value });
         }
 
         if (request.IsActive.HasValue)
         {
-            whereConditions.Add("r.is_active = @isActive");
-            parameters.Add(new NpgsqlParameter("@isActive", request.IsActive.Value));
+            sqlBuilder.Where("r.is_active = @IsActive", new { IsActive = request.IsActive.Value });
         }
 
-        var whereClause = whereConditions.Any() ? "WHERE " + string.Join(" AND ", whereConditions) : "";
-
-        // Get total count
-        var countSql = $"SELECT COUNT(*) FROM users.roles r {whereClause}";
-        await using var countCmd = new NpgsqlCommand(countSql, conn);
-        foreach (var param in parameters)
+        var orderByDir = request.SortDescending ? "DESC" : "ASC";
+        var sortBy = request.SortBy.ToLower() switch 
         {
-            countCmd.Parameters.Add(new NpgsqlParameter(param.ParameterName, param.Value));
-        }
+            "name" => "r.name",
+            "createdat" => "r.created_at",
+            "updatedat" => "r.updated_at",
+            _ => "r.name"
+        };
+        sqlBuilder.OrderBy($"{sortBy} {orderByDir}");
 
-        var totalCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
-
-        // Get paginated results
-        var orderBy = request.SortDescending ? "DESC" : "ASC";
         var offset = (request.Page - 1) * request.PageSize;
 
-        var sql = $@"
-            SELECT r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at,
-                   COALESCE(array_agg(DISTINCT rp.permission) FILTER (WHERE rp.permission IS NOT NULL), '{{}}') as permissions,
-                   COALESCE(array_agg(DISTINCT ri.parent_role_id) FILTER (WHERE ri.parent_role_id IS NOT NULL), '{{}}') as inherit_from_roles
-            FROM users.roles r
-            LEFT JOIN users.role_permissions rp ON r.role_id = rp.role_id
-            LEFT JOIN users.role_inheritance ri ON r.role_id = ri.child_role_id
-            {whereClause}
-            GROUP BY r.role_id, r.name, r.description, r.is_system_role, r.is_active, r.created_at, r.updated_at
-            ORDER BY r.{request.SortBy.ToLower()} {orderBy}
-            LIMIT @pageSize OFFSET @offset";
-
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        foreach (var param in parameters)
-        {
-            cmd.Parameters.Add(new NpgsqlParameter(param.ParameterName, param.Value));
-        }
-        cmd.Parameters.Add(new NpgsqlParameter("@pageSize", request.PageSize));
-        cmd.Parameters.Add(new NpgsqlParameter("@offset", offset));
-
-        var roles = new List<RoleDto>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            roles.Add(MapRoleFromReader(reader));
-        }
+        var totalCount = await conn.ExecuteScalarAsync<int>(countTemplate.RawSql, countTemplate.Parameters);
+        
+        // Fix: AddDynamicParams returns void, so separate calls needed
+        var parameters = new DynamicParameters(template.Parameters);
+        parameters.AddDynamicParams(new { request.PageSize, Offset = offset });
+        var roles = await conn.QueryAsync<RoleDto>(template.RawSql, parameters);
 
         return new PagedResult<RoleDto>
         {
-            Items = roles,
+            Items = roles.ToList(),
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize
@@ -190,38 +167,30 @@ public sealed class RbacRepository : IRbacRepository
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
 
-        var updateFields = new List<string>();
-        var parameters = new List<NpgsqlParameter> { new("@roleId", roleId) };
+        var sqlBuilder = new SqlBuilder();
+        var template = sqlBuilder.AddTemplate("UPDATE users.roles SET /**set**/ WHERE role_id = @RoleId AND is_deleted = false", new { RoleId = roleId });
 
+        bool hasUpdate = false;
         if (!string.IsNullOrWhiteSpace(request.Description))
         {
-            updateFields.Add("description = @description");
-            parameters.Add(new NpgsqlParameter("@description", request.Description));
+            sqlBuilder.Set("description = @Description", new { request.Description });
+            hasUpdate = true;
         }
 
         if (request.IsActive.HasValue)
         {
-            updateFields.Add("is_active = @isActive");
-            parameters.Add(new NpgsqlParameter("@isActive", request.IsActive.Value));
+            sqlBuilder.Set("is_active = @IsActive", new { IsActive = request.IsActive.Value });
+            hasUpdate = true;
         }
 
-        if (!updateFields.Any())
+        if (!hasUpdate)
         {
-            return true; // Nothing to update
+            return true;
         }
 
-        updateFields.Add("updated_at = @updatedAt");
-        parameters.Add(new NpgsqlParameter("@updatedAt", DateTime.UtcNow));
+        sqlBuilder.Set("updated_at = @UpdatedAt", new { UpdatedAt = DateTime.UtcNow });
 
-        var sql = $"UPDATE users.roles SET {string.Join(", ", updateFields)} WHERE role_id = @roleId AND is_deleted = false";
-
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        foreach (var param in parameters)
-        {
-            cmd.Parameters.Add(param);
-        }
-
-        var rowsAffected = await cmd.ExecuteNonQueryAsync(ct);
+        var rowsAffected = await conn.ExecuteAsync(template.RawSql, template.Parameters);
         return rowsAffected > 0;
     }
 
@@ -231,14 +200,10 @@ public sealed class RbacRepository : IRbacRepository
 
         const string sql = @"
             UPDATE users.roles 
-            SET is_deleted = true, updated_at = @updatedAt 
-            WHERE role_id = @roleId AND is_deleted = false";
+            SET is_deleted = true, updated_at = @UpdatedAt 
+            WHERE role_id = @RoleId AND is_deleted = false";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleId", roleId);
-        cmd.Parameters.AddWithValue("@updatedAt", DateTime.UtcNow);
-
-        var rowsAffected = await cmd.ExecuteNonQueryAsync(ct);
+        var rowsAffected = await conn.ExecuteAsync(sql, new { RoleId = roleId, UpdatedAt = DateTime.UtcNow });
         return rowsAffected > 0;
     }
 
@@ -248,32 +213,16 @@ public sealed class RbacRepository : IRbacRepository
 
         const string sql = @"
             SELECT 
-                COUNT(*) as total_roles,
-                COUNT(*) FILTER (WHERE is_system_role = true) as system_roles,
-                COUNT(*) FILTER (WHERE is_system_role = false) as custom_roles,
-                COUNT(*) FILTER (WHERE is_active = true) as active_roles,
-                COUNT(*) FILTER (WHERE is_active = false) as inactive_roles,
-                MAX(created_at) as last_role_created
+                COUNT(*) as TotalRoles,
+                COUNT(*) FILTER (WHERE is_system_role = true) as SystemRoles,
+                COUNT(*) FILTER (WHERE is_system_role = false) as CustomRoles,
+                COUNT(*) FILTER (WHERE is_active = true) as ActiveRoles,
+                COUNT(*) FILTER (WHERE is_active = false) as InactiveRoles,
+                COALESCE(MAX(created_at), '0001-01-01') as LastRoleCreated
             FROM users.roles 
             WHERE is_deleted = false";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-
-        if (await reader.ReadAsync(ct))
-        {
-            return new RoleStatsDto
-            {
-                TotalRoles = reader.GetInt32(0),
-                SystemRoles = reader.GetInt32(1),
-                CustomRoles = reader.GetInt32(2),
-                ActiveRoles = reader.GetInt32(3),
-                InactiveRoles = reader.GetInt32(4),
-                LastRoleCreated = reader.GetDateTime(5)
-            };
-        }
-
-        return new RoleStatsDto();
+        return await conn.QuerySingleOrDefaultAsync<RoleStatsDto>(sql) ?? new RoleStatsDto();
     }
 
     #endregion
@@ -287,23 +236,14 @@ public sealed class RbacRepository : IRbacRepository
 
         try
         {
-            // Delete existing permissions
-            const string deleteSql = "DELETE FROM users.role_permissions WHERE role_id = @roleId";
-            await using var deleteCmd = new NpgsqlCommand(deleteSql, conn, transaction);
-            deleteCmd.Parameters.AddWithValue("@roleId", roleId);
-            await deleteCmd.ExecuteNonQueryAsync(ct);
+            await conn.ExecuteAsync("DELETE FROM users.role_permissions WHERE role_id = @RoleId", new { RoleId = roleId }, transaction);
 
-            // Insert new permissions
             if (permissions.Any())
             {
-                const string insertSql = "INSERT INTO users.role_permissions (role_id, permission) VALUES (@roleId, @permission)";
-                await using var insertCmd = new NpgsqlCommand(insertSql, conn, transaction);
-                insertCmd.Parameters.AddWithValue("@roleId", roleId);
-
+                const string insertSql = "INSERT INTO users.role_permissions (role_id, permission) VALUES (@RoleId, @Permission)";
                 foreach (var permission in permissions)
                 {
-                    insertCmd.Parameters["@permission"].Value = permission;
-                    await insertCmd.ExecuteNonQueryAsync(ct);
+                    await conn.ExecuteAsync(insertSql, new { RoleId = roleId, Permission = permission }, transaction);
                 }
             }
 
@@ -324,23 +264,14 @@ public sealed class RbacRepository : IRbacRepository
 
         try
         {
-            // Delete existing inheritance
-            const string deleteSql = "DELETE FROM users.role_inheritance WHERE child_role_id = @roleId";
-            await using var deleteCmd = new NpgsqlCommand(deleteSql, conn, transaction);
-            deleteCmd.Parameters.AddWithValue("@roleId", roleId);
-            await deleteCmd.ExecuteNonQueryAsync(ct);
+            await conn.ExecuteAsync("DELETE FROM users.role_inheritance WHERE child_role_id = @RoleId", new { RoleId = roleId }, transaction);
 
-            // Insert new inheritance
             if (parentRoleIds.Any())
             {
-                const string insertSql = "INSERT INTO users.role_inheritance (child_role_id, parent_role_id) VALUES (@roleId, @parentRoleId)";
-                await using var insertCmd = new NpgsqlCommand(insertSql, conn, transaction);
-                insertCmd.Parameters.AddWithValue("@roleId", roleId);
-
+                const string insertSql = "INSERT INTO users.role_inheritance (child_role_id, parent_role_id) VALUES (@RoleId, @ParentRoleId)";
                 foreach (var parentRoleId in parentRoleIds)
                 {
-                    insertCmd.Parameters["@parentRoleId"].Value = parentRoleId;
-                    await insertCmd.ExecuteNonQueryAsync(ct);
+                    await conn.ExecuteAsync(insertSql, new { RoleId = roleId, ParentRoleId = parentRoleId }, transaction);
                 }
             }
 
@@ -357,37 +288,17 @@ public sealed class RbacRepository : IRbacRepository
     public async Task<string[]> GetRolePermissionsAsync(string roleId, CancellationToken ct = default)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-
-        const string sql = "SELECT permission FROM users.role_permissions WHERE role_id = @roleId";
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleId", roleId);
-
-        var permissions = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            permissions.Add(reader.GetString(0));
-        }
-
-        return permissions.ToArray();
+        const string sql = "SELECT permission FROM users.role_permissions WHERE role_id = @RoleId";
+        var result = await conn.QueryAsync<string>(sql, new { RoleId = roleId });
+        return result.ToArray();
     }
 
     public async Task<string[]> GetRoleInheritanceAsync(string roleId, CancellationToken ct = default)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-
-        const string sql = "SELECT parent_role_id FROM users.role_inheritance WHERE child_role_id = @roleId";
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleId", roleId);
-
-        var parentRoles = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            parentRoles.Add(reader.GetString(0));
-        }
-
-        return parentRoles.ToArray();
+        const string sql = "SELECT parent_role_id FROM users.role_inheritance WHERE child_role_id = @RoleId";
+        var result = await conn.QueryAsync<string>(sql, new { RoleId = roleId });
+        return result.ToArray();
     }
 
     public async Task<string[]> GetUserPermissionsAsync(string userId, CancellationToken ct = default)
@@ -399,8 +310,9 @@ public sealed class RbacRepository : IRbacRepository
                 -- Direct role permissions
                 SELECT rp.permission
                 FROM users.role_permissions rp
+                JOIN users.roles r ON rp.role_id = r.role_id
                 JOIN users.users u ON u.role = r.name
-                WHERE u.user_id = @userId AND u.is_active = true AND u.is_deleted = false
+                WHERE u.user_id = @UserId AND u.is_active = true AND u.is_deleted = false
                 
                 UNION
                 
@@ -408,22 +320,14 @@ public sealed class RbacRepository : IRbacRepository
                 SELECT rp.permission
                 FROM users.role_permissions rp
                 JOIN users.role_inheritance ri ON rp.role_id = ri.parent_role_id
+                JOIN users.roles r ON ri.child_role_id = r.role_id
                 JOIN users.users u ON u.role = r.name
-                WHERE u.user_id = @userId AND u.is_active = true AND u.is_deleted = false
+                WHERE u.user_id = @UserId AND u.is_active = true AND u.is_deleted = false
             )
             SELECT DISTINCT permission FROM role_permissions";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@userId", userId);
-
-        var permissions = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            permissions.Add(reader.GetString(0));
-        }
-
-        return permissions.ToArray();
+        var result = await conn.QueryAsync<string>(sql, new { UserId = userId });
+        return result.ToArray();
     }
 
     #endregion
@@ -439,7 +343,7 @@ public sealed class RbacRepository : IRbacRepository
                 -- Direct permissions
                 SELECT permission
                 FROM users.role_permissions
-                WHERE role_id = @roleId
+                WHERE role_id = @RoleId
                 
                 UNION
                 
@@ -447,142 +351,39 @@ public sealed class RbacRepository : IRbacRepository
                 SELECT rp.permission
                 FROM users.role_permissions rp
                 JOIN users.role_inheritance ri ON rp.role_id = ri.parent_role_id
-                WHERE ri.child_role_id = @roleId
+                WHERE ri.child_role_id = @RoleId
             )
             SELECT DISTINCT permission FROM role_permissions";
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@roleId", roleId);
-
-        var permissions = new List<string>();
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            permissions.Add(reader.GetString(0));
-        }
-
-        return permissions.ToArray();
+        var result = await conn.QueryAsync<string>(sql, new { RoleId = roleId });
+        return result.ToArray();
     }
 
     public async Task<bool> RoleExistsAsync(string roleName, string? excludeRoleId = null, CancellationToken ct = default)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
 
-        var sql = "SELECT COUNT(*) FROM users.roles WHERE name = @roleName AND is_deleted = false";
-        var parameters = new List<NpgsqlParameter> { new("@roleName", roleName) };
+        var sql = "SELECT COUNT(*) FROM users.roles WHERE name = @RoleName AND is_deleted = false";
+        var param = new DynamicParameters();
+        param.Add("RoleName", roleName);
 
         if (!string.IsNullOrEmpty(excludeRoleId))
         {
-            sql += " AND role_id != @excludeRoleId";
-            parameters.Add(new NpgsqlParameter("@excludeRoleId", excludeRoleId));
+            sql += " AND role_id != @ExcludeRoleId";
+            param.Add("ExcludeRoleId", excludeRoleId);
         }
 
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        foreach (var param in parameters)
-        {
-            cmd.Parameters.Add(param);
-        }
-
-        var count = Convert.ToInt32(await cmd.ExecuteScalarAsync(ct));
+        var count = await conn.ExecuteScalarAsync<int>(sql, param);
         return count > 0;
     }
 
     public async Task<bool> ValidateRoleInheritanceAsync(string roleId, string[] parentRoleIds, CancellationToken ct = default)
     {
-        // Check for circular inheritance
         foreach (var parentRoleId in parentRoleIds)
         {
-            if (parentRoleId == roleId)
-            {
-                return false; // Can't inherit from self
-            }
-
-            // Check if parent role would inherit from this role (circular dependency)
-            var parentEffectivePermissions = await GetEffectivePermissionsAsync(parentRoleId, ct);
-            // This is a simplified check - in a real implementation, you'd need to traverse the inheritance tree
+            if (parentRoleId == roleId) return false;
         }
-
         return true;
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private static RoleDto MapRoleFromReader(NpgsqlDataReader reader)
-    {
-        // Handle array fields safely - PostgreSQL arrays need special handling
-        var permissions = new List<string>();
-        var inheritFromRoles = new List<string>();
-        
-        try
-        {
-            // Get the column index for permissions array
-            var permissionsIndex = reader.GetOrdinal("permissions");
-            if (!reader.IsDBNull(permissionsIndex))
-            {
-                // Use GetValue and cast to string array
-                var permValue = reader.GetValue(permissionsIndex);
-                if (permValue is string[] permArray)
-                {
-                    permissions.AddRange(permArray);
-                }
-                else if (permValue is Array array)
-                {
-                    foreach (var item in array)
-                    {
-                        if (item != null)
-                            permissions.Add(item.ToString()!);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log the error but don't fail the entire operation
-            Console.WriteLine($"Error reading permissions array: {ex.Message}");
-        }
-        
-        try
-        {
-            // Get the column index for inherit_from_roles array
-            var inheritIndex = reader.GetOrdinal("inherit_from_roles");
-            if (!reader.IsDBNull(inheritIndex))
-            {
-                // Use GetValue and cast to string array
-                var inheritValue = reader.GetValue(inheritIndex);
-                if (inheritValue is string[] inheritArray)
-                {
-                    inheritFromRoles.AddRange(inheritArray);
-                }
-                else if (inheritValue is Array array)
-                {
-                    foreach (var item in array)
-                    {
-                        if (item != null)
-                            inheritFromRoles.Add(item.ToString()!);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log the error but don't fail the entire operation
-            Console.WriteLine($"Error reading inherit_from_roles array: {ex.Message}");
-        }
-
-        return new RoleDto
-        {
-            Id = reader.GetString(reader.GetOrdinal("role_id")),
-            Name = reader.GetString(reader.GetOrdinal("name")),
-            Description = reader.IsDBNull(reader.GetOrdinal("description")) ? null : reader.GetString(reader.GetOrdinal("description")),
-            Permissions = permissions.ToArray(),
-            InheritFromRoles = inheritFromRoles.ToArray(),
-            IsSystemRole = reader.GetBoolean(reader.GetOrdinal("is_system_role")),
-            IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
-            CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at")),
-            UpdatedAt = reader.GetDateTime(reader.GetOrdinal("updated_at"))
-        };
     }
 
     #endregion

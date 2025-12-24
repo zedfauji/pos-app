@@ -17,8 +17,9 @@ public record ShiftBlockers(bool HasActiveTables, bool HasUnsettledBills, int Ac
 public interface IShiftService
 {
     Task<Shift?> GetCurrentOpenShiftAsync();
-    Task<Shift> OpenShiftAsync(int userId, string userName, decimal startingCash, Guid idempotencyKey);
+    Task<Shift> OpenShiftAsync(string userId, string userName, decimal startingCash, Guid idempotencyKey);
+    Task<Shift> OpenSystemShiftAsync(string userId, string userName);
     Task<ShiftBlockers> GetShiftBlockersAsync(Guid shiftId);
-    Task<ShiftCloseResult> CloseShiftAsync(Guid shiftId, int userId, string userName, decimal declaredCash, Guid idempotencyKey, string? note);
+    Task<ShiftCloseResult> CloseShiftAsync(Guid shiftId, string userId, string userName, decimal declaredCash, Guid idempotencyKey, string? note);
     Task<IEnumerable<Shift>> GetHistoryAsync(int limit, int offset);
 }

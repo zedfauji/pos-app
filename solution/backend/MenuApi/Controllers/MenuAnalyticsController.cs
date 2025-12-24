@@ -93,7 +93,7 @@ public sealed class MenuAnalyticsController : ControllerBase
     /// Get analytics for a specific menu item
     /// </summary>
     [HttpGet("items/{id}")]
-    public async Task<ActionResult<MenuAnalyticsDto>> GetItemAnalytics(long id, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, CancellationToken ct)
+    public async Task<ActionResult<MenuAnalyticsDto>> GetItemAnalytics(Guid id, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, CancellationToken ct)
     {
         try
         {

@@ -6,13 +6,15 @@ namespace MagiDesk.Client.Views
 {
     public sealed partial class InventoryPage : UserControl
     {
-        public InventoryViewModel ViewModel { get; }
+        private InventoryViewModel? _viewModel;
+        public InventoryViewModel ViewModel => _viewModel ??= App.GetService<InventoryViewModel>() 
+            ?? throw new InvalidOperationException("InventoryViewModel could not be resolved from DI container");
 
         public InventoryPage()
         {
             this.InitializeComponent();
-            ViewModel = App.Current.Services.GetRequiredService<InventoryViewModel>();
-            this.DataContext = ViewModel;
+            // ViewModel will be resolved lazily when DataContext is set or ViewModel is accessed
+            this.Loaded += (s, e) => { if (this.DataContext == null) this.DataContext = ViewModel; };
         }
     }
 }

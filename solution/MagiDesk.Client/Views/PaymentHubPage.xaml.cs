@@ -7,15 +7,15 @@ namespace MagiDesk.Client.Views;
 
 public sealed partial class PaymentHubPage : Page
 {
-    public PaymentHubViewModel ViewModel { get; }
+    private PaymentHubViewModel? _viewModel;
+    public PaymentHubViewModel ViewModel => _viewModel ??= App.GetService<PaymentHubViewModel>()
+        ?? throw new InvalidOperationException("PaymentHubViewModel could not be resolved from DI container");
 
     public PaymentHubPage()
     {
         this.InitializeComponent();
-        
-        // Get ViewModel from DI container
-        ViewModel = App.GetService<PaymentHubViewModel>();
-        DataContext = ViewModel;
+        // ViewModel will be resolved lazily when DataContext is set or ViewModel is accessed
+        this.Loaded += (s, e) => { if (this.DataContext == null) this.DataContext = ViewModel; };
     }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)

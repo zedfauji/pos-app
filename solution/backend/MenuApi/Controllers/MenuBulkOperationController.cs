@@ -149,31 +149,31 @@ public sealed class MenuBulkOperationController : ControllerBase
 
 public sealed record UpdatePricesRequest
 {
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public decimal PriceChange { get; init; }
     public string ChangeType { get; init; } = ""; // "Add", "Subtract", "Multiply", "Set"
 }
 
 public sealed record ChangeCategoryRequest
 {
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public string NewCategory { get; init; } = "";
 }
 
 public sealed record ToggleAvailabilityRequest
 {
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public bool IsAvailable { get; init; }
 }
 
 public sealed record UpdateImagesRequest
 {
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public string ImageUrl { get; init; } = "";
 }
 
 public sealed record ApplyDiscountRequest
 {
-    public List<long> MenuItemIds { get; init; } = new();
+    public List<Guid> MenuItemIds { get; init; } = new();
     public decimal DiscountPercentage { get; init; }
 }

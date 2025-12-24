@@ -37,7 +37,7 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.FromResult(new PagedResult<MenuItemDto>(pageItems, total));
     }
 
-    public Task<MenuItemDetailsDto?> GetItemAsync(long id, CancellationToken ct)
+    public Task<MenuItemDetailsDto?> GetItemAsync(Guid id, CancellationToken ct)
     {
         var item = _items.FirstOrDefault(i => i.Id == id);
         if (item is null) return Task.FromResult<MenuItemDetailsDto?>(null);
@@ -50,7 +50,7 @@ public sealed class InMemoryMenuService : IMenuService
         if (_items.Any(i => string.Equals(i.Sku, dto.Sku, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException("SKU already exists");
 
-        var id = _items.Count == 0 ? 1 : _items.Max(i => i.Id) + 1;
+        var id = Guid.NewGuid();
         var newItem = new MenuItemDto(
             id,
             dto.Sku,
@@ -58,8 +58,7 @@ public sealed class InMemoryMenuService : IMenuService
             dto.Description,
             dto.Category,
             dto.GroupName,
-            dto.SellingPrice,
-            dto.Price,
+            dto.BasePrice,
             dto.PictureUrl,
             dto.IsDiscountable,
             dto.IsPartOfCombo,
@@ -70,7 +69,7 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.FromResult(newItem);
     }
 
-    public Task<MenuItemDto> UpdateItemAsync(long id, UpdateMenuItemDto dto, string user, CancellationToken ct)
+    public Task<MenuItemDto> UpdateItemAsync(Guid id, UpdateMenuItemDto dto, string user, CancellationToken ct)
     {
         var idx = _items.FindIndex(i => i.Id == id);
         if (idx < 0) throw new KeyNotFoundException("Item not found");
@@ -81,8 +80,7 @@ public sealed class InMemoryMenuService : IMenuService
             Description = dto.Description ?? cur.Description,
             Category = dto.Category ?? cur.Category,
             GroupName = dto.GroupName ?? cur.GroupName,
-            SellingPrice = dto.SellingPrice ?? cur.SellingPrice,
-            Price = dto.Price ?? cur.Price,
+            BasePrice = dto.BasePrice ?? cur.BasePrice,
             PictureUrl = dto.PictureUrl ?? cur.PictureUrl,
             IsDiscountable = dto.IsDiscountable ?? cur.IsDiscountable,
             IsPartOfCombo = dto.IsPartOfCombo ?? cur.IsPartOfCombo,
@@ -93,20 +91,20 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.FromResult(updated);
     }
 
-    public Task RestoreItemAsync(long id, string user, CancellationToken ct)
+    public Task RestoreItemAsync(Guid id, string user, CancellationToken ct)
     {
         // In-memory stub: nothing to do
         return Task.CompletedTask;
     }
 
-    public Task DeleteItemAsync(long id, string user, CancellationToken ct)
+    public Task DeleteItemAsync(Guid id, string user, CancellationToken ct)
     {
         var idx = _items.FindIndex(i => i.Id == id);
         if (idx >= 0) _items.RemoveAt(idx);
         return Task.CompletedTask;
     }
 
-    public Task<bool> ExistsSkuAsync(string sku, long? excludeId, CancellationToken ct)
+    public Task<bool> ExistsSkuAsync(string sku, Guid? excludeId, CancellationToken ct)
     {
         var exists = _items.Any(i => string.Equals(i.Sku, sku, StringComparison.OrdinalIgnoreCase) && (!excludeId.HasValue || i.Id != excludeId.Value));
         return Task.FromResult(exists);
@@ -119,7 +117,7 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.FromResult<MenuItemDetailsDto?>(new MenuItemDetailsDto(item, Array.Empty<ModifierDto>()));
     }
 
-    public Task SetItemAvailabilityAsync(long id, bool isAvailable, string user, CancellationToken ct)
+    public Task SetItemAvailabilityAsync(Guid id, bool isAvailable, string user, CancellationToken ct)
     {
         var idx = _items.FindIndex(i => i.Id == id);
         if (idx >= 0)
@@ -211,24 +209,24 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.CompletedTask;
     }
 
-    public Task<(decimal ComputedPrice, IReadOnlyList<(long MenuItemId, int Quantity, decimal UnitPrice)> Items)> ComputeComboPriceAsync(long id, CancellationToken ct)
+    public Task<(decimal ComputedPrice, IReadOnlyList<(Guid MenuItemId, int Quantity, decimal UnitPrice)> Items)> ComputeComboPriceAsync(long id, CancellationToken ct)
     {
         if (!_comboItems.TryGetValue(id, out var links))
         {
-            return Task.FromResult<(decimal, IReadOnlyList<(long, int, decimal)>)>((0m, Array.Empty<(long, int, decimal)>()));
+            return Task.FromResult<(decimal, IReadOnlyList<(Guid, int, decimal)>)>((0m, Array.Empty<(Guid, int, decimal)>()));
         }
-        var lines = new List<(long MenuItemId, int Quantity, decimal UnitPrice)>();
+        var lines = new List<(Guid MenuItemId, int Quantity, decimal UnitPrice)>();
         foreach (var li in links)
         {
             var item = _items.FirstOrDefault(i => i.Id == li.MenuItemId);
-            var unit = item?.Price ?? item?.SellingPrice ?? 0m;
+            var unit = item?.BasePrice ?? 0m;
             lines.Add((li.MenuItemId, li.Quantity, unit));
         }
         var total = lines.Sum(l => l.Quantity * l.UnitPrice);
-        return Task.FromResult<(decimal, IReadOnlyList<(long, int, decimal)>)>((total, lines));
+        return Task.FromResult<(decimal, IReadOnlyList<(Guid, int, decimal)>)>((total, lines));
     }
 
-    public Task RollbackItemAsync(long id, int toVersion, string user, CancellationToken ct)
+    public Task RollbackItemAsync(Guid id, int toVersion, string user, CancellationToken ct)
     {
         // In-memory: no history tracking; no-op
         return Task.CompletedTask;
@@ -240,3 +238,4 @@ public sealed class InMemoryMenuService : IMenuService
         return Task.CompletedTask;
     }
 }
+

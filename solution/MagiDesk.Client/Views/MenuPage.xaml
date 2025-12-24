@@ -7,10 +7,11 @@
     xmlns:vm="using:MagiDesk.Client.ViewModels"
     xmlns:dto="using:MagiDesk.Shared.DTOs.Menu"
     xmlns:converters="using:MagiDesk.Client.Converters"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
     mc:Ignorable="d">
 
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVisConverter" TrueValue="Visible" FalseValue="Collapsed"/>
     </UserControl.Resources>
 
     <Grid>
@@ -25,9 +26,9 @@
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="dto:MenuItemDto">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="{x:Bind Sku}" Width="80" FontWeight="Bold"/>
-                        <TextBlock Text="{x:Bind Name}" Width="200"/>
-                        <TextBlock Text="{x:Bind SellingPrice}" Width="80"/>
+                        <TextBlock Text="{Binding Sku}" Width="80" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Name}" Width="200"/>
+                        <TextBlock Text="{Binding BasePrice}" Width="80"/>
                     </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>

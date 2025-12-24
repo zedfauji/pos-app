@@ -6,7 +6,7 @@ public class ShiftDto
 {
     public Guid ShiftId { get; set; }
     public int ShiftNumber { get; set; }
-    public int OpenedByUserId { get; set; }
+    public string OpenedByUserId { get; set; }
     public string OpenedByName { get; set; }
     public DateTime OpenedAt { get; set; }
     public decimal StartingCash { get; set; }

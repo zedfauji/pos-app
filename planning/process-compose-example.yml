@@ -1,0 +1,232 @@
+# Process Compose Configuration for MagiDesk Backend
+# All 10 microservices orchestrated with health checks and dependencies
+
+version: "0.5"
+
+# Global environment variables
+environment:
+  - ASPNETCORE_ENVIRONMENT=Development
+  - DOTNET_ENVIRONMENT=Development
+
+# Global logging
+log_location: ./logs
+
+# Process definitions
+processes:
+  # Core Services (no dependencies on other APIs)
+  usersapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/UsersApi/UsersApi.csproj
+      - --launch-profile
+      - UsersApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 55162
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+    availability:
+      restart: on-failure
+
+  settingsapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/SettingsApi/SettingsApi.csproj
+      - --launch-profile
+      - SettingsApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 53504
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  inventoryapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/InventoryApi/InventoryApi.csproj
+      - --launch-profile
+      - http
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 5117
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  menuapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/MenuApi/MenuApi.csproj
+      - --launch-profile
+      - http
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 5227
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  discountapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/DiscountApi/DiscountApi.csproj
+      - --launch-profile
+      - http
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 5229
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  customerapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/CustomerApi/CustomerApi.csproj
+      - --launch-profile
+      - CustomerApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 51372
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  tablesapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/TablesApi/TablesApi.csproj
+      - --launch-profile
+      - TablesApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 53505
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  # OrderApi depends on InventoryApi
+  orderapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/OrderApi/OrderApi.csproj
+      - --launch-profile
+      - http
+    working_dir: .
+    namespace: apis
+    depends_on:
+      inventoryapi:
+        condition: process_healthy
+    healthcheck:
+      http:
+        path: /health
+        port: 5256
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  paymentapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/PaymentApi/PaymentApi.csproj
+      - --launch-profile
+      - PaymentApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 55463
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+
+  reportingapi:
+    command: dotnet
+    args:
+      - run
+      - --project
+      - solution/backend/ReportingApi/ReportingApi.csproj
+      - --launch-profile
+      - ReportingApi
+    working_dir: .
+    namespace: apis
+    healthcheck:
+      http:
+        path: /health
+        port: 5228
+        interval: 5s
+        timeout: 2s
+        retries: 3
+    restart:
+      policy: on-failure
+      limit: 3
+

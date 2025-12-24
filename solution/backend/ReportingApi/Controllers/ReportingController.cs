@@ -28,5 +28,19 @@ namespace ReportingApi.Controllers
             var report = await _repo.GetZReportAsync(now);
             return Ok(report);
         }
+
+        [HttpGet("shift/{shiftId:guid}")]
+        public async Task<ActionResult<ZReportDto>> GetShiftReport([FromRoute] Guid shiftId)
+        {
+            try 
+            {
+                var report = await _repo.GetShiftReportAsync(shiftId);
+                return Ok(report);
+            }
+            catch (ArgumentException)
+            {
+                return NotFound("Shift not found");
+            }
+        }
     }
 }

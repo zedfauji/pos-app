@@ -52,8 +52,9 @@ public class ShiftsController : ControllerBase
         try
         {
             // TODO: Get real User ID from Context/Auth
-            int userId = 1; 
-            string userName = "Admin"; 
+            // Use legacy-compatible string ID or get from claims
+            string userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "1"; 
+            string userName = User.Identity?.Name ?? "Admin"; 
 
             var shift = await _service.OpenShiftAsync(userId, userName, request.StartingCash, request.IdempotencyKey ?? Guid.NewGuid());
             
@@ -79,8 +80,8 @@ public class ShiftsController : ControllerBase
     {
         try
         {
-            int userId = 1;
-            string userName = "Admin"; // Placeholder
+            string userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "1";
+            string userName = User.Identity?.Name ?? "Admin"; 
 
             var result = await _service.CloseShiftAsync(id, userId, userName, request.DeclaredCash, request.IdempotencyKey ?? Guid.NewGuid(), request.Note);
             

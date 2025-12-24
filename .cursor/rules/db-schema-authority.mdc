@@ -1,0 +1,124 @@
+---
+alwaysApply: true
+---
+
+# Database Schema Authority Rules
+
+**Status**: ENFORCED  
+**Last Updated**: 2025-12-23  
+**Purpose**: Prevent schema drift and enforce canonical schema
+
+## 🚫 ABSOLUTE PROHIBITIONS
+
+### 1. No Schema Changes Without Documentation Update
+**Rule**: Any change to database schema (tables, columns, types, constraints) MUST update:
+- `docs/schema/CANONICAL_DB_SCHEMA.md`
+- `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md` (if mismatch introduced)
+- `docs/schema/api-expectations/{ApiName}.md` (if API affected)
+
+**Violation Consequence**: PR rejection, code review block
+
+### 2. No New Columns Without FK Consideration
+**Rule**: If adding a column that references another table, MUST:
+- Add foreign key constraint
+- Document in canonical schema
+- Update affected API expectation docs
+
+**Violation Consequence**: PR rejection
+
+### 3. No Type Changes Without Migration Plan
+**Rule**: Changing column types requires:
+- Migration script
+- Data validation
+- Update to canonical schema
+- Update to all affected API expectation docs
+
+**Violation Consequence**: PR rejection
+
+### 4. No Implicit Joins
+**Rule**: All cross-table joins MUST have foreign key constraints
+**Exception**: None
+**Violation Consequence**: PR rejection
+
+### 5. No Schema Duplication
+**Rule**: Cannot create duplicate tables/schemas for same purpose
+**Examples of Violations**:
+- Creating `orders2` schema when `orders` exists
+- Creating `bills_v2` table when `billing.bills` exists
+- Creating `payments_new` when `pay.payments` exists
+
+**Violation Consequence**: PR rejection
+
+## ✅ REQUIRED PATTERNS
+
+### 1. Foreign Key Naming
+**Pattern**: `{table_name}_{column_name}_fkey`
+**Example**: `orders_orders_session_id_fkey`
+
+### 2. Index Naming
+**Pattern**: `idx_{table_name}_{column_name}`
+**Example**: `idx_orders_session_id`
+
+### 3. Primary Key Naming
+**Pattern**: `{table_name}_pkey`
+**Example**: `orders_orders_pkey`
+
+### 4. Column Naming
+**Pattern**: `snake_case` for all columns
+**Example**: `session_id`, `created_at`, `is_deleted`
+
+### 5. Type Consistency
+**Pattern**: Use canonical types:
+- IDs: `uuid` (preferred) or `bigint` (if legacy)
+- Timestamps: `timestamptz` (always with timezone)
+- Money: `numeric(12,2)` or `numeric(10,2)`
+- Status: Enum types where possible, `varchar` otherwise
+- Booleans: `boolean` (not integer)
+
+## 📋 PRE-COMMIT CHECKLIST
+
+Before committing any database-related changes:
+
+- [ ] Updated `docs/schema/CANONICAL_DB_SCHEMA.md`
+- [ ] Updated `docs/schema/api-expectations/{ApiName}.md` for affected APIs
+- [ ] Added foreign key constraints for all references
+- [ ] Verified type consistency (no mismatches)
+- [ ] Checked for schema duplication
+- [ ] Updated `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md` if mismatch introduced
+- [ ] Created migration script if schema changed
+- [ ] Tested migration on development database
+
+## 🔍 CODE REVIEW CHECKS
+
+Reviewers MUST verify:
+
+1. **Schema Changes**: All changes documented in canonical schema
+2. **Foreign Keys**: All references have FK constraints
+3. **Type Consistency**: No type mismatches introduced
+4. **Naming**: Follows conventions
+5. **Duplication**: No duplicate schemas/tables
+6. **Migration**: Migration script exists and tested
+
+## 🚨 VIOLATION REPORTING
+
+If schema drift is detected:
+
+1. **STOP** - Do not merge PR
+2. **DOCUMENT** - Add to mismatch matrix
+3. **FIX** - Require fix before merge
+4. **VERIFY** - Confirm fix before approval
+
+## 📚 REFERENCE DOCUMENTS
+
+- **Canonical Schema**: `docs/schema/CANONICAL_DB_SCHEMA.md`
+- **Mismatch Matrix**: `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md`
+- **API Expectations**: `docs/schema/api-expectations/`
+- **Database Reality**: `docs/schema/db-reality/postgres-schema.md`
+- **Cross-API Dependencies**: `docs/schema/CROSS_API_SCHEMA_DEPENDENCIES.md`
+
+## ⚠️ CURRENT KNOWN VIOLATIONS
+
+See `docs/schema/SYSTEM_SCHEMA_MISMATCH_MATRIX.md` for complete list.
+
+**DO NOT** introduce new violations. Fix existing ones first.
+

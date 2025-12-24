@@ -9,24 +9,20 @@ using System.Linq;
 
 namespace MagiDesk.Client.ViewModels
 {
-    public partial class MenuEditorViewModel : ObservableObject
+    public partial class MenuEditorViewModel : BaseViewModel
     {
         private readonly IMenuApi _menuApi;
         private readonly IDialogService _dialogService;
-
-        [ObservableProperty]
-        private bool _isLoading;
+        private readonly IDispatcherService _dispatcherService;
 
         [ObservableProperty]
         private ObservableCollection<MenuItemDto> _menuItems = new();
 
-        [ObservableProperty]
-        private string _errorMessage = string.Empty;
-
-        public MenuEditorViewModel(IMenuApi menuApi, IDialogService dialogService)
+        public MenuEditorViewModel(IMenuApi menuApi, IDialogService dialogService, IDispatcherService dispatcherService)
         {
             _menuApi = menuApi;
             _dialogService = dialogService;
+            _dispatcherService = dispatcherService;
         }
 
         public async Task InitializeAsync()
@@ -38,14 +34,13 @@ namespace MagiDesk.Client.ViewModels
         public async Task LoadItemsAsync()
         {
             IsLoading = true;
-            ErrorMessage = string.Empty;
+            ClearError();
             try
             {
                 var response = await _menuApi.ListItemsAsync(new MenuItemQueryDto(null, null, null, null, 1, 100)); // Load first 100 for now
                 if (response.IsSuccessStatusCode && response.Content != null)
                 {
-                    var app = (App)Microsoft.UI.Xaml.Application.Current;
-                    app.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                    _dispatcherService.InvokeOnUIThread(() =>
                     {
                         MenuItems = new ObservableCollection<MenuItemDto>(response.Content.Items);
                     });
@@ -104,8 +99,7 @@ namespace MagiDesk.Client.ViewModels
             // For now, let's map to CreateDto to prepopulate the dialog
             var existingData = new CreateMenuItemDto(
                 item.Sku, item.Name, item.Description, item.Category, item.GroupName, 
-                0, // VendorPrice unknown
-                item.SellingPrice, item.Price, item.PictureUrl, item.IsDiscountable, item.IsPartOfCombo, item.IsAvailable
+                item.BasePrice, item.PictureUrl, item.IsDiscountable, item.IsPartOfCombo, item.IsAvailable
             );
 
             var result = await _dialogService.ShowMenuItemDialogAsync(existingData, isEdit: true);
@@ -115,8 +109,7 @@ namespace MagiDesk.Client.ViewModels
                 // Map back to UpdateMenuItemDto
                 var updateDto = new UpdateMenuItemDto(
                     result.Name, result.Description, result.Category, result.GroupName, 
-                    result.VendorPrice, result.SellingPrice, result.Price, 
-                    result.PictureUrl, result.IsDiscountable, result.IsPartOfCombo, result.IsAvailable
+                    result.BasePrice, result.PictureUrl, result.IsDiscountable, result.IsPartOfCombo, result.IsAvailable
                 );
 
                 IsLoading = true;
@@ -158,8 +151,7 @@ namespace MagiDesk.Client.ViewModels
                 var response = await _menuApi.DeleteMenuItemAsync(item.Id);
                 if (response.IsSuccessStatusCode)
                 {
-                    var app = (App)Microsoft.UI.Xaml.Application.Current;
-                    app.MainWindow.DispatcherQueue.TryEnqueue(() =>
+                    _dispatcherService.InvokeOnUIThread(() =>
                     {
                         MenuItems.Remove(item);
                     });

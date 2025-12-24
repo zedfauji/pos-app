@@ -6,6 +6,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:MagiDesk.Client"
     xmlns:converters="using:MagiDesk.Client.Converters"
+    xmlns:toolkitConverters="using:CommunityToolkit.WinUI.Converters"
+    xmlns:ui="using:Windows.UI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
     <Application.Resources>
@@ -14,26 +16,36 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
+            <!-- CommunityToolkit Converters (replacing custom ones where possible) -->
+            <toolkitConverters:BoolNegationConverter x:Key="BoolNegationConverter" />
+            <toolkitConverters:BoolNegationConverter x:Key="InvertBoolConverter" />
+            <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" 
+                TrueValue="Visible" FalseValue="Collapsed" />
+            <toolkitConverters:BoolToVisibilityConverter x:Key="BoolToVisibilityInverseConverter" 
+                TrueValue="Collapsed" FalseValue="Visible" />
+            <toolkitConverters:EmptyStringToObjectConverter x:Key="StringToVisibilityConverter" 
+                EmptyValue="Collapsed" NotEmptyValue="Visible" />
+            <toolkitConverters:EmptyStringToObjectConverter x:Key="EmptyStringToCollapsedConverter" 
+                EmptyValue="Collapsed" NotEmptyValue="Visible" />
+            
+            <!-- Custom Converters (domain-specific or not available in CommunityToolkit) -->
             <converters:CurrencyConverter x:Key="CurrencyConverter" />
-            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
-            <converters:StringToVisibilityConverter x:Key="EmptyStringToCollapsedConverter" />
-            <converters:BoolNegationConverter x:Key="BoolNegationConverter" />
-            <converters:BoolNegationConverter x:Key="InvertBoolConverter" />
             <converters:EnumToBoolConverter x:Key="EnumToBoolConverter" />
             <converters:ZeroToCollapsedConverter x:Key="ZeroToCollapsedConverter" />
             <converters:ZeroToVisibleConverter x:Key="ZeroToVisibleConverter" />
             <converters:StringEqualsToVisibilityConverter x:Key="StringEqualsToVisibilityConverter" />
             <converters:StringEqualsToBoolConverter x:Key="StringEqualsToBoolConverter" />
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityInverseConverter" Reverse="True" />
             <converters:StatusColorConverter x:Key="StatusColorConverter" />
             
-            <Color x:Key="Primary">#512BD4</Color>
+            <ui:Color x:Key="Primary">#512BD4</ui:Color>
 
             <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
             <SolidColorBrush x:Key="WhiteBrush" Color="White" />
             <SolidColorBrush x:Key="BlackBrush" Color="Black" />
+            
+            <!-- Note: x:Bind diagnostics in WinUI 3 -->
+            <!-- Binding errors appear in Visual Studio's Output window (Debug output) -->
+            <!-- x:Bind provides compile-time type checking, reducing runtime binding errors -->
 
             <x:Double x:Key="AppFontSize">14</x:Double>
 

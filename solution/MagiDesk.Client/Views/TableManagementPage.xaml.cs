@@ -6,12 +6,15 @@ namespace MagiDesk.Client.Views
 {
     public sealed partial class TableManagementPage : Page
     {
-        public TableManagementViewModel ViewModel { get; }
+        private TableManagementViewModel? _viewModel;
+        public TableManagementViewModel ViewModel => _viewModel ??= App.GetService<TableManagementViewModel>() 
+            ?? throw new InvalidOperationException("TableManagementViewModel could not be resolved from DI container");
 
         public TableManagementPage()
         {
             this.InitializeComponent();
-            ViewModel = App.GetService<TableManagementViewModel>();
+            // ViewModel will be resolved lazily when DataContext is set or ViewModel is accessed
+            this.Loaded += (s, e) => { if (this.DataContext == null) this.DataContext = ViewModel; };
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)

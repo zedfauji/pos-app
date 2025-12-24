@@ -1,0 +1,18 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  MagiDesk.Shared -> C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\shared\bin\Debug\net8.0\MagiDesk.Shared.dll
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.RestoreItemAsync(Guid, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.DeleteItemAsync(Guid, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.SetItemAvailabilityAsync(Guid, bool, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.RollbackItemAsync(Guid, int, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+
+Build FAILED.
+
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.RestoreItemAsync(Guid, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.DeleteItemAsync(Guid, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.SetItemAvailabilityAsync(Guid, bool, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\Repositories\MenuRepository.cs(7,38): error CS0535: 'MenuRepository' does not implement interface member 'IMenuRepository.RollbackItemAsync(Guid, int, string, CancellationToken)' [C:\Users\giris\Documents\Code\Order-Tracking-By-GPT\solution\backend\MenuApi\MenuApi.csproj]
+    0 Warning(s)
+    4 Error(s)
+
+Time Elapsed 00:00:00.80

@@ -13,7 +13,7 @@ public sealed record ModifierOptionDto(long Id, string Name, decimal PriceDelta,
 
 
 // Combo DTOs
-public sealed record ComboItemLinkDto(long MenuItemId, int Quantity, bool IsRequired);
+public sealed record ComboItemLinkDto(Guid MenuItemId, int Quantity, bool IsRequired);
 public sealed record ComboDto(long Id, string Name, string? Description, decimal Price, bool IsDiscountable, bool IsAvailable, string? PictureUrl, int Version);
 public sealed record ComboDetailsDto(ComboDto Combo, IReadOnlyList<ComboItemLinkDto> Items);
 public sealed record ComboQueryDto(string? Q, bool? AvailableOnly, int Page = 1, int PageSize = 50);
@@ -24,7 +24,7 @@ public sealed record UpdateComboDto(string? Name, string? Description, decimal? 
 public sealed record AvailabilityUpdateDto(bool IsAvailable);
 
 // Combo price compute response
-public sealed record ComboItemPriceLineDto(long MenuItemId, int Quantity, decimal UnitPrice);
+public sealed record ComboItemPriceLineDto(Guid MenuItemId, int Quantity, decimal UnitPrice);
 public sealed record ComboPriceResponseDto(decimal ComputedPrice, IReadOnlyList<ComboItemPriceLineDto> Items);
 
 // History DTOs

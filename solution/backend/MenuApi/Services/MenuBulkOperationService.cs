@@ -63,7 +63,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    public async Task<BulkOperationResultDto> UpdatePricesAsync(List<long> menuItemIds, decimal priceChange, string changeType, string user, CancellationToken ct)
+    public async Task<BulkOperationResultDto> UpdatePricesAsync(List<Guid> menuItemIds, decimal priceChange, string changeType, string user, CancellationToken ct)
     {
         try
         {
@@ -91,7 +91,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    public async Task<BulkOperationResultDto> ChangeCategoryAsync(List<long> menuItemIds, string newCategory, string user, CancellationToken ct)
+    public async Task<BulkOperationResultDto> ChangeCategoryAsync(List<Guid> menuItemIds, string newCategory, string user, CancellationToken ct)
     {
         try
         {
@@ -118,7 +118,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    public async Task<BulkOperationResultDto> ToggleAvailabilityAsync(List<long> menuItemIds, bool isAvailable, string user, CancellationToken ct)
+    public async Task<BulkOperationResultDto> ToggleAvailabilityAsync(List<Guid> menuItemIds, bool isAvailable, string user, CancellationToken ct)
     {
         try
         {
@@ -145,7 +145,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    public async Task<BulkOperationResultDto> UpdateImagesAsync(List<long> menuItemIds, string imageUrl, string user, CancellationToken ct)
+    public async Task<BulkOperationResultDto> UpdateImagesAsync(List<Guid> menuItemIds, string imageUrl, string user, CancellationToken ct)
     {
         try
         {
@@ -171,7 +171,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    public async Task<BulkOperationResultDto> ApplyDiscountAsync(List<long> menuItemIds, decimal discountPercentage, string user, CancellationToken ct)
+    public async Task<BulkOperationResultDto> ApplyDiscountAsync(List<Guid> menuItemIds, decimal discountPercentage, string user, CancellationToken ct)
     {
         try
         {
@@ -198,7 +198,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         }
     }
 
-    private async Task ExecuteSingleOperationAsync(BulkOperationDto operation, long menuItemId, CancellationToken ct)
+    private async Task ExecuteSingleOperationAsync(BulkOperationDto operation, Guid menuItemId, CancellationToken ct)
     {
         try
         {
@@ -244,11 +244,11 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
         
         decimal newPrice = changeType switch
         {
-            "Add" => item.Item.SellingPrice + priceChange,
-            "Subtract" => item.Item.SellingPrice - priceChange,
-            "Multiply" => item.Item.SellingPrice * priceChange,
+            "Add" => item.Item.BasePrice + priceChange,
+            "Subtract" => item.Item.BasePrice - priceChange,
+            "Multiply" => item.Item.BasePrice * priceChange,
             "Set" => priceChange,
-            _ => item.Item.SellingPrice
+            _ => item.Item.BasePrice
         };
         
         if (newPrice < 0)
@@ -261,9 +261,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
             Description: null,
             Category: null,
             GroupName: null,
-            VendorPrice: null,
-            SellingPrice: newPrice,
-            Price: null,
+            BasePrice: newPrice,
             PictureUrl: null,
             IsDiscountable: null,
             IsPartOfCombo: null,
@@ -287,9 +285,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
             Description: null,
             Category: newCategory,
             GroupName: null,
-            VendorPrice: null,
-            SellingPrice: null,
-            Price: null,
+            BasePrice: null,
             PictureUrl: null,
             IsDiscountable: null,
             IsPartOfCombo: null,
@@ -320,9 +316,7 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
             Description: null,
             Category: null,
             GroupName: null,
-            VendorPrice: null,
-            SellingPrice: null,
-            Price: null,
+            BasePrice: null,
             PictureUrl: imageUrl,
             IsDiscountable: null,
             IsPartOfCombo: null,
@@ -341,16 +335,14 @@ public sealed class MenuBulkOperationService : IMenuBulkOperationService
             throw new ArgumentException("Discount percentage must be between 0 and 100");
         }
         
-        var discountedPrice = item.Item.SellingPrice * (1 - discountPercentage / 100);
+        var discountedPrice = item.Item.BasePrice * (1 - discountPercentage / 100);
         
         var updateDto = new UpdateMenuItemDto(
             Name: null,
             Description: null,
             Category: null,
             GroupName: null,
-            VendorPrice: null,
-            SellingPrice: discountedPrice,
-            Price: null,
+            BasePrice: discountedPrice,
             PictureUrl: null,
             IsDiscountable: null,
             IsPartOfCombo: null,

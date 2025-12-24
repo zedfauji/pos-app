@@ -1,18 +1,22 @@
 using OrderApi.Models;
 using OrderApi.Repositories;
+using MagiDesk.Core.Interfaces;
+using MagiDesk.Core.Enums;
 
 namespace OrderApi.Services;
 
 public sealed class OrderService : IOrderService
 {
     private readonly IOrderRepository _repo;
+    private readonly IAuditService _auditService;
 
-    public OrderService(IOrderRepository repo)
+    public OrderService(IOrderRepository repo, IAuditService auditService)
     {
         _repo = repo;
+        _auditService = auditService;
     }
 
-    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, CancellationToken ct)
+    public async Task<OrderDto> CreateOrderAsync(CreateOrderRequestDto req, Guid? shiftId, CancellationToken ct)
     {
         var pricedItems = new List<OrderItemDto>();
         foreach (var i in req.Items)
@@ -31,7 +35,7 @@ public sealed class OrderService : IOrderService
                 var vendor = snap.vendorPrice;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendor) * qty;
-                pricedItems.Add(new OrderItemDto(0, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
+                pricedItems.Add(new OrderItemDto(Guid.Empty, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
             }
             else if (i.ComboId is not null)
             {
@@ -44,12 +48,27 @@ public sealed class OrderService : IOrderService
                 var delta = 0m; // combo-level modifiers not implemented
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendorSum) * qty;
-                pricedItems.Add(new OrderItemDto(0, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
+                pricedItems.Add(new OrderItemDto(Guid.Empty, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
             }
         }
 
         var subtotal = pricedItems.Sum(x => x.LineTotal);
-        var order = new OrderDto(0, req.SessionId, req.TableId, "open", "pending", subtotal, 0m, 0m, subtotal, pricedItems.Sum(x => x.Profit), pricedItems);
+        
+        // FINANCIAL PARITY: Tax Calculation
+        // TODO: Load from SettingsApi, hardcoded 8% for now to match Legacy defaults
+        const decimal TaxRate = 0.08m; 
+        
+        var tax = Math.Round(subtotal * TaxRate, 2, MidpointRounding.AwayFromZero);
+        var discount = req.DiscountTotal ?? 0m;
+        
+        // Formula: Total = Subtotal + Tax - Discount
+        // Note: Discounts are typically applied pre-tax in many regions, but Legacy Check showed "Tax on Subtotal".
+        // If Discount is applied pre-tax, Tax = (Sub - Disc) * Rate. 
+        // For now, mirroring Legacy "Simple Tax" behavior: Tax is on full Subtotal.
+        
+        var total = Math.Round(subtotal + tax - discount, 2, MidpointRounding.AwayFromZero);
+
+        var order = new OrderDto(Guid.Empty, req.SessionId, req.TableId, "open", "pending", subtotal, discount, tax, total, pricedItems.Sum(x => x.Profit), pricedItems);
 
         // Check inventory only for drinks (pre-made items)
         var drinkSkuQty = new List<(string Sku, decimal Quantity)>();
@@ -85,8 +104,20 @@ public sealed class OrderService : IOrderService
             if (!ok) throw new InvalidOperationException("INSUFFICIENT_DRINK_STOCK");
         }
 
-        var orderId = await _repo.CreateOrderAsync(order, pricedItems, req.BillingId, ct);
+        var orderId = await _repo.CreateOrderAsync(order, pricedItems, req.BillingId, shiftId, ct);
         await _repo.AppendLogAsync(orderId, "create", null, order, req.ServerId, ct);
+
+        // AUDIT LOGGING
+        await _auditService.LogEventAsync(
+            actorId: req.ServerId ?? "system",
+            actionType: AuditActionTypes.OrderCreated,
+            entityType: "Order",
+            entityId: orderId.ToString(),
+            beforeState: (OrderDto?)null,
+            afterState: order,
+            correlationId: order.SessionId.ToString(),
+            source: "OrderApi"
+        );
 
         // Deduct inventory for drinks only (best-effort)
         if (drinkSkuQty.Count > 0)
@@ -99,7 +130,7 @@ public sealed class OrderService : IOrderService
         return created!;
     }
 
-    public Task<OrderDto?> GetOrderAsync(long orderId, CancellationToken ct)
+    public Task<OrderDto?> GetOrderAsync(Guid orderId, CancellationToken ct)
         => _repo.GetOrderAsync(orderId, ct);
 
     public Task<IReadOnlyList<OrderDto>> GetOrdersBySessionAsync(Guid sessionId, bool includeHistory, CancellationToken ct)
@@ -111,7 +142,7 @@ public sealed class OrderService : IOrderService
     public Task<IReadOnlyList<OrderItemDto>> GetOrderItemsByBillingIdAsync(Guid billingId, CancellationToken ct)
         => _repo.GetOrderItemsByBillingIdAsync(billingId, ct);
 
-    public async Task<OrderDto> AddItemsAsync(long orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
+    public async Task<OrderDto> AddItemsAsync(Guid orderId, IReadOnlyList<CreateOrderItemDto> items, CancellationToken ct)
     {
         var mapped = new List<OrderItemDto>();
         foreach (var i in items)
@@ -130,7 +161,7 @@ public sealed class OrderService : IOrderService
                 var vendor = snap.vendorPrice;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendor) * qty;
-                mapped.Add(new OrderItemDto(0, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
+                mapped.Add(new OrderItemDto(Guid.Empty, i.MenuItemId, null, qty, 0, basePrice, delta, lineTotal, profit));
             }
             else if (i.ComboId is not null)
             {
@@ -143,7 +174,7 @@ public sealed class OrderService : IOrderService
                 var delta = 0m;
                 var lineTotal = (basePrice + delta) * qty;
                 var profit = (basePrice + delta - vendorSum) * qty;
-                mapped.Add(new OrderItemDto(0, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
+                mapped.Add(new OrderItemDto(Guid.Empty, null, i.ComboId, qty, 0, basePrice, delta, lineTotal, profit));
             }
         }
 
@@ -154,7 +185,7 @@ public sealed class OrderService : IOrderService
         return updated!;
     }
 
-    public async Task<OrderDto> UpdateItemAsync(long orderId, UpdateOrderItemDto item, CancellationToken ct)
+    public async Task<OrderDto> UpdateItemAsync(Guid orderId, UpdateOrderItemDto item, CancellationToken ct)
     {
         var existing = await _repo.GetOrderAsync(orderId, ct) ?? throw new KeyNotFoundException("Order not found");
         var cur = existing.Items.FirstOrDefault(x => x.Id == item.OrderItemId) ?? throw new KeyNotFoundException("Order item not found");
@@ -169,7 +200,7 @@ public sealed class OrderService : IOrderService
         return outOrder!;
     }
 
-    public async Task<OrderDto> DeleteItemAsync(long orderId, long orderItemId, CancellationToken ct)
+    public async Task<OrderDto> DeleteItemAsync(Guid orderId, Guid orderItemId, CancellationToken ct)
     {
         await _repo.SoftDeleteOrderItemAsync(orderId, orderItemId, ct);
         await _repo.AppendLogAsync(orderId, "delete_item", new { OrderItemId = orderItemId }, null, null, ct);
@@ -178,7 +209,7 @@ public sealed class OrderService : IOrderService
         return outOrder!;
     }
 
-    public async Task<OrderDto> CloseOrderAsync(long orderId, CancellationToken ct)
+    public async Task<OrderDto> CloseOrderAsync(Guid orderId, CancellationToken ct)
     {
         await _repo.CloseOrderAsync(orderId, ct);
         await _repo.AppendLogAsync(orderId, "close", null, new { Status = "closed" }, null, ct);
@@ -186,18 +217,18 @@ public sealed class OrderService : IOrderService
         return outOrder!;
     }
 
-    public async Task<PagedResult<OrderLogDto>> ListLogsAsync(long orderId, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<OrderLogDto>> ListLogsAsync(Guid orderId, int page, int pageSize, CancellationToken ct)
     {
         var (items, total) = await _repo.ListLogsAsync(orderId, page, pageSize, ct);
         return new PagedResult<OrderLogDto>(items, total);
     }
 
-    public async Task RecalculateTotalsAsync(long orderId, CancellationToken ct)
+    public async Task RecalculateTotalsAsync(Guid orderId, CancellationToken ct)
     {
         await _repo.RecalculateTotalsAsync(orderId, ct);
     }
 
-    public async Task<OrderDto?> MarkItemsDeliveredAsync(long orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
+    public async Task<OrderDto?> MarkItemsDeliveredAsync(Guid orderId, IReadOnlyList<ItemDeliveryDto> itemDeliveries, CancellationToken ct)
     {
         await _repo.MarkItemsDeliveredAsync(orderId, itemDeliveries, ct);
         await _repo.AppendLogAsync(orderId, "mark_delivered", null, itemDeliveries, null, ct);
@@ -223,7 +254,7 @@ public sealed class OrderService : IOrderService
         return await _repo.GetOrderAsync(orderId, ct);
     }
 
-    public async Task<OrderDto?> MarkOrderWaitingAsync(long orderId, CancellationToken ct)
+    public async Task<OrderDto?> MarkOrderWaitingAsync(Guid orderId, CancellationToken ct)
     {
         await _repo.UpdateOrderStatusAsync(orderId, "waiting", ct);
         await _repo.AppendLogAsync(orderId, "mark_waiting", null, new { Status = "waiting" }, null, ct);
